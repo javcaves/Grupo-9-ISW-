@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "rut": "202563783",
+    "nombre": "Juan",
+    "apellido": "Perez",
+    "correo": "juan.perez@ubb.cl",
+    "cargo": "Operativo",
+    "numero": 912345678,
+    "id": 1,
+    "activo": true
+  },
+  {
+    "rut": "202563783",
+    "nombre": "Antonia",
+    "apellido": "Peña",
+    "correo": "apena@ubb.cl",
+    "cargo": "Administrativo",
+    "numero": 912345678,
+    "id": 2,
+    "activo": true
+  }
+]

@@ -13,9 +13,8 @@
  */
 
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
-import { esRutValido } from '../../../shared/validators.js';
 
-const FOLDER = 'rrhh';
+const FOLDER = 'recursos_humanos';
 const FILE = 'empleados.json';
 const CARGOS_PERMITIDOS = ['Administrativo', 'Operativo'];
 
@@ -45,6 +44,30 @@ export const crearAdmin = async (data) => {
 };
 
 // ################# BUSQUEDA #################
+
+/**
+ * Obtener todos los empleados y admins
+ */
+export const obtenerTodos = async () => {
+    return await jsonDbHandler.leer(FOLDER, FILE);
+};
+
+/**
+ * Obtener solo empleados activos
+ */
+export const obtenerTodosActivos = async () => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    return lista.filter(e => e.activo === true);
+};
+
+/**
+ * Obtener solo empleados activos del cargo correspondiente
+ * @param {string} cargo - cargo a buscar
+ */
+export const obtenerActivosPorCargo = async (cargo) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    return lista.filter(e => e.activo === true && e.cargo === cargo);
+};
 
 /**
  * Obtener un registro único por su ID
