@@ -32,5 +32,35 @@ export const CatPorId = async(req, res) =>{
     }
 }
 
-//registrar categoria
-export const 
+//crear categoria
+export const crearCategoriaC = async(req, res)=>{
+    try{
+        const usuarioId = req.body.usuarioId;
+
+        if(!usuarioId){
+            const error = new Error("se necesita ingresar usuario para crear categoria");
+            error.status = 401;
+            throw error;
+        }
+
+        const categoriaNueva = await CategoriasService.crearCategoria(req.body, usuarioId);
+
+        return sendResponse(res, 201, categoriaNueva);
+
+    } catch (error){
+        return sendResponse(res, error.status || 500, "no se pudo crear la categoria");
+    }
+};
+
+//actualizar categoria
+export const actualizarCatC = async(req, res)=>{
+    try{
+        const { id } = req.params;
+        const catActualizada = await CategoriasService.actualizarCat(req.body, usuarioId);
+        return sendResponse(res, 200, catActualizada);
+    }catch (error){
+        return sendResponse(res, error.status || 500, "no se pudo actualizar la categoria");
+    }
+};
+
+/*********desactivar o eliminar*********/
