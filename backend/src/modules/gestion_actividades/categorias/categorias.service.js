@@ -1,6 +1,6 @@
 /**
  * @typedef {Object} Categoria
- * @property {string} id - id unico
+ * @property {number} id - id unico
  * @property {string} nombre - nombre de la cagtegoria
  * @property {string} descripcion - descripcion detallada de la categoria
  * @property {string} nivelRiesgo - bajo, medio, alto
@@ -20,7 +20,27 @@ const FILE = 'categorias.json';
 const nivelRiesgo_permitido = ['bajo', 'medio', 'alto'];
 
 /******CREAR*******/
-export const crearCategoria = async (data)=>{
+export const crearCategoria = async (data, usuarioId)=>{
+    //validar usuario
+    if(!usuarioId){
+        const error = new Error("se requiere id de usuario para crear categoria");
+        error.status = 400;
+        throw error;
+    }
+    //validar ingreso de nombre de categoria
+    if(!data.nombre){
+        const error = new Error("se requiere nombre de la categoria para crearla");
+        error.status = 400;
+        throw error;
+    }
+
+    //validar nivel de riesgo
+    if(data.nivelRiesgo && !nivelRiesgo_permitido.includes(data.nivelRiesgo.toLowerCase())){
+        const error = new Error("el nivel de riesgo ingresado no es valido");
+        error.status = 400;
+        throw error;
+    }
+
     const yaExiste = await existeCategoria(data.nombre);
 
     if(yaExiste){
@@ -33,7 +53,7 @@ export const crearCategoria = async (data)=>{
     //debo hacer que nivelRiesgo sea valido(?)
 
 
-    return await _procesarguardado(data);
+    return await _procesarguardado(data, usuarioId);
 };  
 
 //validacion en creacion
@@ -99,14 +119,14 @@ export const buscarDinamicoCat = async () =>{
     return lista.filter(c =>{
         const nombre = c.nombre.toLowerCase();
         //agregar espacio vacio de separacion de palabras
-        const descripcion = (c.descripcion || ' ').toLowerCase();
+        const descripcion = (c.descripcion || '').toLowerCase();
 
         return nombre.includes(t) || descripcion.includes(t);
     });
 }
 
 /*****actualizar*****/
-export const actualizarCat = async(id,data) =>{
+export const actualizarCat = async(id, data, usuarioId) =>{
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     const index = lista.findIndex(c => c.id === parseInt(id));
 
@@ -116,11 +136,23 @@ export const actualizarCat = async(id,data) =>{
         throw error;
     }
 
+    //validar nivel de riesgo si es que se ingresa
+    if(data.nivelRiesgo && !nivelRiesgo_permitido.includes(data.nivelRiesgo.toLowerCase())){
+        const error = new Error("el nivel de riesgo ingresado no es valido");
+        error.status = 400;
+        throw error;
+    }
+
+    //dejar fecha de actualizacion al dia de hoy
+    const ahora = new Date().toISOString();
+
     const registroActualizadoCat = {
         ...lista[index],
         ...data,
         id: lista[index].id,
-        nivelRiesgo: lista[index].nivelRiesgo
+        nivelRiesgo: lista[index].nivelRiesgo,
+        actualizadoPor: usuarioId,
+        fecha_actualizacion: ahora
     };
 
     lista[index] = registroActualizadoCat;
@@ -168,15 +200,31 @@ export const eliminarCat = async(criterio = {}) =>{
 
 
 /********helpers**********/
-const _procesarguardado = async(data)=>{
+const _procesarguardado = async(data, usuarioId)=>{
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     //nuevo id hace id automatico?
     const nuevoId = lista.length > 0 ? Math.max(...lista.map(c => c.id)) + 1 : 1;
 
+    // usar atributo de fecha
+    const ahora = new Date().toISOString();
+
     const nuevoRegistro = {
         ...data,
         id: nuevoId,
+        nombre: data.nombre,
+        descripcion: data.descripcion || '',
         nivelRiesgo: nivelRiesgo,
-        activo: true
+        activo: true,
+        fecha_creacion: ahora,
+        fecha_actualizacion: ahora,
+        creadoPor: usuarioId,
+        actualizadoPor: usuarioId
     };
+
+
+    lista.push(nuevoRegistro);
+
+    return nuevoRegistro;
+
+
 };
