@@ -1,1 +1,16 @@
-[]
+[
+    {
+    "id": 1,
+    "tarea": "Aseo de Baño",
+    "id_empleado": 1,
+    "id_categoria": 2,
+    "id_ubicacion": 5,
+    "insumos": [
+        { "id_item": 101, "cantidad": 2 },
+        { "id_item": 205, "cantidad": 1 }
+    ],
+    "fecha": "2027-03-01",
+    "estado": "Pendiente",
+    "activo": true
+    }
+]
