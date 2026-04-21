@@ -1,4 +1,9 @@
 /**
+ * @file inventario.service.js
+ * @description Lógica de negocio para el módulo de inventario de la bodega
+ */
+
+/**
  * @typedef {Object} Inventario
  * @property {number} id - Identificador único autoincremental
  * @property {string} nombre - Nombre del producto en el inventario
@@ -9,35 +14,13 @@
  * @property {boolean} activo - Estado del producto en el inventario (Soft Delete)
 **/
 
-import jsonDbHandler from '../../../shared/jsonDbHandler.js';
+// 1. Imports (Librerías externas -> Propias)
+import jsonDbHandler from '../../../shared/jsonDbHandler.js'; // Manejador de base de datos JSON para operaciones CRUD
 
-const FOLDER = 'bodega';
+const FOLDER = '../../data/bodega';
 const FILE = 'inventario.json';
 
-// ################# CREAR #################
-export const crearProducto = async (data) => {
-    return await _procesarGuardado(data);
-};
-
-// ################# BUSQUEDA #################
-
-/**
- * Obtener todos los productos del inventario
- */
-export const obtenerTodos = async () => {
-    return await jsonDbHandler.leer(FOLDER, FILE);
-};
-
-/**
- * Obtener solo productos activos
- */
-export const obtenerTodosActivos = async () => {
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    return lista.filter(p => p.activo === true);
-};
-
-// ################# FUNCIONES AUXILIARES #################
-
+// 2. Helper functions (Funciones internas no exportadas)
 const _procesarGuardado = async (data) => {
     // Validar campos obligatorios
     if (!data.nombre || !data.descripcion || data.cantidad == null || data.precio == null || !data.categoria) {
@@ -74,8 +57,15 @@ const _obtenerNuevoId = async () => {
     return Math.max(...lista.map(p => p.id)) + 1;
 };
 
+// 3. Main functions (Funciones que exportaremos)
+
+// ################# CREAR #################
+const createProducto = async (data) => {
+    return await _procesarGuardado(data);
+};
+
 // ################# ACTUALIZAR #################
-export const actualizarProducto = async (id, data) => {
+const updateProducto = async (id, data) => {
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     const index = lista.findIndex(p => p.id === id);
 
@@ -114,8 +104,40 @@ export const actualizarProducto = async (id, data) => {
     return productoActualizado;
 };
 
+
+// ################# BUSQUEDA #################
+
+/**
+ * @description Obtener todos los productos del inventario
+ */
+ const getAll = async () => {
+    return await jsonDbHandler.leer(FOLDER, FILE);
+};
+
+/**
+ * @description Obtener solo productos activos
+ */
+ const getAllActivos = async () => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    return lista.filter(p => p.activo === true);
+};
+
+/**
+ * @description Obtener un producto por su ID
+ * @param {number} id - ID del producto a buscar
+ */
+const getProductoById = async (id) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    return lista.find(p => p.id === id);
+};
+
 // ################# ELIMINAR (Soft Delete) #################
-export const eliminarProducto = async (id) => {
+/**
+ * @description Desactivar un producto (soft delete)
+ * @param {number} id - ID del producto a "eliminar"
+ * @returns {Object} - Mensaje de confirmación
+ */
+ const deleteProducto = async (id) => {
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     const index = lista.findIndex(p => p.id === id);
 
@@ -131,3 +153,35 @@ export const eliminarProducto = async (id) => {
     return { message: "Producto eliminado (soft delete)" };
 };
 
+// ################# ELIMINAR (Hard Delete) #################
+/**
+ * @description Eliminar un producto permanentemente
+ * @param {number} id - ID del producto a eliminar
+ * @returns {Object} - Mensaje de confirmación
+ */
+const deleteProductoHard = async (id) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    const index = lista.findIndex(p => p.id === id);
+
+    if (index === -1) {
+        const error = new Error("Producto no encontrado");
+        error.status = 404;
+        throw error;
+    }
+
+    lista.splice(index, 1); // Eliminar completamente
+    await jsonDbHandler.escribir(FOLDER, FILE, lista);
+
+    return { message: "Producto eliminado definitivamente" };
+};
+
+// 4. Exports
+module.exports = {
+    createProducto,
+    updateProducto,
+    getAll,
+    getAllActivos,
+    deleteProducto,
+    deleteProductoHard,
+    getProductoById
+};
