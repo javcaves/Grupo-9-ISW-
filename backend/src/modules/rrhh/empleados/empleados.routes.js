@@ -5,7 +5,7 @@ const router = Router();
 
 // ################# RUTAS DE LECTURA #################
 router.get('/', EmpleadosCtrl.listarTodos);           // Obtener todos
-router.get('/activos', EmpleadosCtrl.listarActivos);  // Obtener activos (opcional: cargo)
+router.get('/activos', EmpleadosCtrl.listarActivos);  // Obtener activos opcional: cargo
 router.get('/buscar', EmpleadosCtrl.buscarEmpleados); // Buscador dinámico
 router.get('/:id', EmpleadosCtrl.obtenerEmpleado);    // Obtener por ID
 
