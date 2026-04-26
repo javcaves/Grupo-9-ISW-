@@ -7,6 +7,7 @@
  * @typedef {Object} Tipo
  * @property {number} id -identficador
  * @property {string} nombre 
+ * @property {string} abreviatura - segun cuestionario prefijo para codigo de maquinaria 
  * @property {string} descripcion
  * @property {boolean} activo -estado para borrado logico
  */
