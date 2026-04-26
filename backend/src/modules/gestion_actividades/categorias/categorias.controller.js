@@ -7,7 +7,10 @@ export const listarTodas = async(req, res) =>{
         const lista = await CategoriasService.obtenerTodasCat();
         return sendResponse(res, 200, lista);
     } catch (error){
-        return sendResponse(res, 500, "error al obtener lista completa");
+        return sendResponse(res, 500, {
+            success: false,
+            message: "error al obtener lista"
+        });
     }
 };
 
@@ -17,7 +20,10 @@ export const listarActivas = async(req, res) =>{
         const lista = await CategoriasService.obtenerTodasActivas();
         return sendResponse(res, 200, lista);
     }catch (error){
-        return sendResponse(res, 500, "error al obtener lista de categorias activas");
+        return sendResponse(res, 500, {
+            success: false,
+            message: "error al obtener lista"
+        });
     }
 }
 
@@ -28,7 +34,10 @@ export const CatPorId = async(req, res) =>{
         const categoria = await CategoriasService.obtenerCatPorId(id);
         return sendResponse(res, 200, categoria);
     }catch (error){
-        return sendResponse(res, error.status || 500, "error al obtener categorias por id");
+        return sendResponse(res, error.status || 500, {
+            success: false,
+            message: error.message //crear mensaje en json
+        });
     }
 }
 
@@ -48,15 +57,19 @@ export const crearCategoriaC = async(req, res)=>{
         return sendResponse(res, 201, categoriaNueva);
 
     } catch (error){
-        return sendResponse(res, error.status || 500, "no se pudo crear la categoria");
+        return sendResponse(res, error.status || 500, {
+            success: false,
+            message: error.message
+        });
     }
 };
 
 //actualizar categoria
 export const actualizarCatC = async(req, res)=>{
     try{
-        const { id } = req.params;
-        const catActualizada = await CategoriasService.actualizarCat(req.body, usuarioId);
+        //defino el id del usuario
+        const usuarioId = req.body.usuarioId || req.user?.id;
+        const catActualizada = await CategoriasService.actualizarCat({ id }, usuarioId);
         return sendResponse(res, 200, catActualizada);
     }catch (error){
         return sendResponse(res, error.status || 500, "no se pudo actualizar la categoria");
@@ -64,3 +77,12 @@ export const actualizarCatC = async(req, res)=>{
 };
 
 /*********desactivar o eliminar*********/
+export const desactivarCatC = async(req, res)=>{
+    try{
+        const { id } = req.params;
+        const catDesactivada = await CategoriasService.desactivarCat({ id });
+        return sendResponse(res, 200, catDesactivada);
+    }catch (error){
+        return sendResponse(res, error.status || 500, "no se pudo desactivar la categoria");
+    }
+};

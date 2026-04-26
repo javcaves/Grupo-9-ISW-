@@ -7,8 +7,8 @@
  * @property {boolean} activo - estado de la categoria (activa o eliminada)
  * @property {date} fecha_creacion - Fecha de creacion de categoria
  * @property {date} fecha_actualizacion - Fecha de creacion de categoria
- * @property {string} creadoPor - muestra quien creo la categoria
- * @property {string} actualizadoPor - muestra quien actualizo por ultima vez la categoria
+ * @property {number} creadoPor - muestra el id de quien creo la categoria
+ * @property {number} actualizadoPor - muestra el id de quien actualizo por ultima vez la categoria
  * @property {boolean} activo - estado de la categoria (activa o eliminada)
  */
 
