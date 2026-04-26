@@ -12,7 +12,7 @@
  * @property {boolean} activo -estado para borrado logico
  */
 
-// 1. Imports
+// 1. IMPORTS
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 
 const FOLDER = '../../data/bodega';
@@ -81,8 +81,6 @@ const getTipoById = async (id) => {
     return lista.find(t => t.id === id);
 };
 
-
-
 // ################# ACTUALIZAR #################
 
 const updateTipo = async (id, data) => {
@@ -106,8 +104,7 @@ const updateTipo = async (id, data) => {
     return lista[index];
 };
 
-
-// ################# ELIMINIAR #################
+// ################# ELIMINAR #################
 const deleteTipo = async (id) => {
     const lista = await leerTodos();
     const index = lista.findIndex(t => t.id === id);
