@@ -93,6 +93,31 @@ const deleteProductoHard = async (req, res) => {
     }
 };
 
+// ################# ASIGNACIÓN DE HERRAMIENTA #################
+const updateToolAssignment = async (req, res) => {
+    try {
+        // Extrae datos de la petición (req)
+        const { id } = req.params; // Viene en la URL, ej: /api/bodega/asignar/ENC-001
+        const { rutTrabajador } = req.body; // Viene en el JSON que manda el Frontend
+
+        // Validación inicial rápida
+        if (!rutTrabajador) {
+            return res.status(400).json({ success: false, error: "El RUT del trabajador es obligatorio." });
+        }
+
+        // Llama al cerebro (Service) y le pasa objetos de JS
+        const resultado = await inventarioService.processToolAssignment(id, rutTrabajador);
+
+        res.status(200).json({ 
+            success: true, 
+            mensaje: "Herramienta asignada correctamente", 
+            data: resultado 
+        });
+    } catch (error) {
+        // Si el Service tira un error (ej. herramienta en uso), cae aquí.
+        res.status(400).json({ success: false, error: error.message });
+    }
+};
 
 // 4. Exports
 
@@ -103,5 +128,6 @@ module.exports = {
     createProducto,
     updateProducto,
     deleteProducto,
-    deleteProductoHard
+    deleteProductoHard,
+    updateToolAssignment
 };
