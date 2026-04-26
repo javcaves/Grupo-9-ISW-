@@ -21,6 +21,8 @@ const FOLDER = '../../data/bodega';
 const FILE = 'inventario.json';
 
 // 2. Helper functions (Funciones internas no exportadas)
+const _isAvailable = (item) => item.estado === 'disponible';
+
 const _procesarGuardado = async (data) => {
     // Validar campos obligatorios
     if (!data.nombre || !data.descripcion || data.cantidad == null || data.precio == null || !data.categoria) {
@@ -111,7 +113,11 @@ const updateProducto = async (id, data) => {
  * @description Obtener todos los productos del inventario
  */
  const getAll = async () => {
-    return await jsonDbHandler.leer(FOLDER, FILE);
+    try {
+        return await jsonDbHandler.read(FOLDER, FILE);
+    } catch (error) {
+        throw new Error("Error al leer el inventario");
+    }
 };
 
 /**
@@ -175,6 +181,38 @@ const deleteProductoHard = async (id) => {
     return { message: "Producto eliminado definitivamente" };
 };
 
+// ################# ASIGNAR HERRAMIENTA #################
+/** 
+ * @description Asignar una herramienta a un trabajador, luego se le puedan asignar tareas.
+ * @param {string} itemId - ID de la maquinaria (ej. ENC-001).
+ * @param {string} rutTrabajador - Identificador del empleado.
+ */
+const processToolAssignment = async (itemId, rutTrabajador) => {
+    try {
+        const items = await findItems();
+        const itemIndex = items.findIndex(i => i.id === itemId);
+
+        if (itemIndex === -1) {
+            throw new Error("Herramienta no encontrada en la base de datos.");
+        }
+
+        if (!_isAvailable(items[itemIndex])) {
+            throw new Error(`La herramienta ${itemId} ya se encuentra en uso por ${items[itemIndex].asignado_a}.`);
+        }
+
+        // Aplicamos los cambios de estado
+        items[itemIndex].estado = 'en_uso';
+        items[itemIndex].asignado_a = rutTrabajador;
+
+        // Guardamos los datos simulando la BD
+        await jsonDbHandler.write(FOLDER, FILE, items);
+        
+        return items[itemIndex];
+    } catch (error) {
+        throw new Error("Error procesando asignación: " + error.message);
+    }
+};
+
 // 4. Exports
 module.exports = {
     createProducto,
@@ -183,5 +221,6 @@ module.exports = {
     getAllActivos,
     deleteProducto,
     deleteProductoHard,
-    getProductoById
+    getProductoById,
+    processToolAssignment
 };
