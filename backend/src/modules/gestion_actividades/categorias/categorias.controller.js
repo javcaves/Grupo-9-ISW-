@@ -72,7 +72,27 @@ export const actualizarCatC = async(req, res)=>{
         const catActualizada = await CategoriasService.actualizarCat({ id }, usuarioId);
         return sendResponse(res, 200, catActualizada);
     }catch (error){
-        return sendResponse(res, error.status || 500, "no se pudo actualizar la categoria");
+        return sendResponse(res, error.status || 500,{
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+//buscar 
+export const buscarCatC = async(req,res)=>{
+    try{
+        const { q } = req.query;
+        if(!q){
+            return sendResponse(res, 400, "se requiere un término de busqueda (q)")
+        };
+        const resultados = await CategoriasService.buscarDinamicoCat(q);
+        return sendResponse(res, 200, resultados);
+    }catch (error){
+        return sendResponse(res, 500,{
+            success: false,
+            message: error.message
+        });
     }
 };
 
@@ -83,6 +103,9 @@ export const desactivarCatC = async(req, res)=>{
         const catDesactivada = await CategoriasService.desactivarCat({ id });
         return sendResponse(res, 200, catDesactivada);
     }catch (error){
-        return sendResponse(res, error.status || 500, "no se pudo desactivar la categoria");
+        return sendResponse(res, error.status || 500, {
+            success: false,
+            message: error.message
+        });
     }
 };
