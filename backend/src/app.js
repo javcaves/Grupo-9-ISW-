@@ -4,7 +4,7 @@ import morgan from 'morgan';
 
 import rrhhRoutes from '../routes/rrhh.routes.js';
 //import bodegaRoutes from '../routes/bodega.routes.js';
-//import actividadesRoutes from '../routes/actividades.routes.js';
+import actividadesRoutes from '../routes/actividades.routes.js';
 
 const app = express();
 
@@ -21,7 +21,7 @@ app.get('/api/health', (req, res) => {
 // ################# RUTAS #################
 app.use('/api/rrhh', rrhhRoutes);
 //app.use('/api/bodega', bodegaRoutes);
-//app.use('/api/actividades', actividadesRoutes);
+app.use('/api/actividades', actividadesRoutes);
 
 // ################# MANEJO DE ERRORES #################
 // MANEJO DE ERRORES FUERA DE APP???

@@ -1,16 +1,36 @@
 [
     {
     "id": 1,
-    "tarea": "Aseo de Baño",
-    "id_empleado": 1,
+    "tarea": "Limpieza general de superficies",
     "id_categoria": 2,
-    "id_ubicacion": 5,
-    "insumos": [
-        { "id_item": 101, "cantidad": 2 },
-        { "id_item": 205, "cantidad": 1 }
-    ],
-    "fecha": "2027-03-01",
-    "estado": "Pendiente",
+    "activo": true
+    },
+
+    {
+    "id": 2,
+    "tarea": "Limpieza de baños",
+    "id_categoria": 3,
+    "activo": true
+    },
+
+    {
+    "id": 3,
+    "tarea": "Limpieza en altura",
+    "id_categoria": 1,
+    "activo": true
+    },
+
+    {
+    "id": 4,
+    "tarea": "Limpieza de vidrios",
+    "id_categoria": 4,
+    "activo": true
+    },
+
+    {
+    "id": 5,
+    "tarea": "Sanitización de espacios",
+    "id_categoria": 5,
     "activo": true
     }
 ]
