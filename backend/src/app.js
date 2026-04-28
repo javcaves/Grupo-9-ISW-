@@ -3,7 +3,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 
 import rrhhRoutes from '../routes/rrhh.routes.js';
-//import bodegaRoutes from '../routes/bodega.routes.js';
+import bodegaRoutes from '../routes/bodega.routes.js';
 import actividadesRoutes from '../routes/actividades.routes.js';
 
 const app = express();
