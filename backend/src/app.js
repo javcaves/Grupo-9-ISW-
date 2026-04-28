@@ -20,7 +20,7 @@ app.get('/api/health', (req, res) => {
 
 // ################# RUTAS #################
 app.use('/api/rrhh', rrhhRoutes);
-//app.use('/api/bodega', bodegaRoutes);
+app.use('/api/bodega', bodegaRoutes);
 app.use('/api/actividades', actividadesRoutes);
 
 // ################# MANEJO DE ERRORES #################

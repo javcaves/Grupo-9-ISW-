@@ -10,3 +10,6 @@ frontend/node_modules/
 # Entorno y variables críticas
 .env
 .env.*
+
+# carpetas 
+.ds_store
