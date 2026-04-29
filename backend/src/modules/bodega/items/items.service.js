@@ -18,7 +18,7 @@ import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 //importamos el servicio de imventario para crear un registro inicial
 import * as InventarioService from '../inventario/inventario.service.js';
 
-const FOLDER = '../../data/bodega';
+const FOLDER = '/bodega';
 const FILE = 'items.json';
 
 //2. HELPER FUNCTIONS

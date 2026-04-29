@@ -14,7 +14,7 @@
 
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 
-const FOLDER = 'gestor_actividades';
+const FOLDER = 'gestion_actividades';
 const FILE = 'categorias.json';
 
 const nivelRiesgo_permitido = ['bajo', 'medio', 'alto'];

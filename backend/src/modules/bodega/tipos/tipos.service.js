@@ -15,7 +15,7 @@
 // 1. IMPORTS
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 
-const FOLDER = '../../data/bodega';
+const FOLDER = 'bodega';
 const FILE = 'tipo.json';
 
 // 2. HELPER FUNCTIONS

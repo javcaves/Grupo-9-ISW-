@@ -17,7 +17,7 @@
 // 1. Imports (Librerías externas -> Propias)
 import jsonDbHandler from '../../../shared/jsonDbHandler.js'; 
 
-const FOLDER = '../../data/bodega';
+const FOLDER = '/bodega';
 const FILE = 'inventario.json';
 
 // 2. Helper functions (Funciones internas no exportadas)
