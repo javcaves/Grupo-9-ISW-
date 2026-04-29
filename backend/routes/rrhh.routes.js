@@ -1,9 +1,11 @@
 import { Router } from 'express';
-import empleadosRoutes from '../src/modules/rrhh/empleados/empleados.routes.js';
+import EmpleadosRoutes from '../src/modules/rrhh/empleados/empleados.routes.js';
+import AsistenciaRoutes from '../src/modules/rrhh/asistencia/asistencia.routes.js';
 
 
 const router = Router();
 
-router.use('/empleados', empleadosRoutes);
+router.use('/empleados', EmpleadosRoutes);
+router.use('/asistencia', AsistenciaRoutes);
 
 export default router;
