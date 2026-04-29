@@ -14,3 +14,5 @@ router.get('/actualizar', CategoriasCtrl.actualizarCatC); //editar categoria exi
 
 //rutas de eliminacion (solo eliminacion soft)*****
 router.get('/:id', CategoriasCtrl.desactivarCatC); //desactivar categoria
+
+export default router;

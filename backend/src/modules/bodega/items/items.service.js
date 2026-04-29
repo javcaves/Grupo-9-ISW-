@@ -16,35 +16,37 @@
 //1. IMPORTS
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 //importamos el servicio de imventario para crear un registro inicial
-import inventarioService from '../inventario/inventario.service.js';
+import * as InventarioService from '../inventario/inventario.service.js';
 
 const FOLDER = '../../data/bodega';
 const FILE = 'items.json';
-//2. HELPER FUNCTIONS
-const leerTodos = () => jsonDbHandler.leer(FOLDER, FILE);
 
-const nuevoId = async () => {
+//2. HELPER FUNCTIONS
+export const leerTodos = () => jsonDbHandler.leer(FOLDER, FILE);
+
+export const nuevoId = async () => {
     const lista = await leerTodos();
     if (lista.length === 0) return 1;
     return Math.max(...lista.map(i => i.id)) + 1;
 };
 
-const lanzarError = (mensaje, status) => {
+export const lanzarError = (mensaje, status) => {
     const error = new Error(mensaje);
     error.status = status;
     throw error;
 };
 
-const validar = (data) => {
+export const validar = (data) => {
     if (!data.nombre || !data.id_tipo || !data.unidad_medida || data.stock_minimo == null)
         lanzarError("Campos obligatorios: nombre, id_tipo, stock_minimo, unidad_medida", 400);
     if (data.stock_minimo < 0)
         lanzarError("El stock mínimo debe ser un valor positivo", 400);
 };
+
 //3.MAIN FUNCTIONS
 
 // ######### CREAR #########
-const createItem = async (data) => {
+export const createItem = async (data) => {
     validar(data);
 
     const nuevoItem = {
@@ -68,27 +70,28 @@ const createItem = async (data) => {
 
     return itemGuardado;
 };
-// ######### LEER #########
-const getAll = async () => await leerTodos();
 
-const getAllActivos = async () => {
+// ######### LEER #########
+export const getAll = async () => await leerTodos();
+
+export const getAllActivos = async () => {
     const lista = await leerTodos();
     return lista.filter(i => i.activo === true);
 };
 
-const getItemById = async (id) => {
+export const getItemById = async (id) => {
     const lista = await leerTodos();
     return lista.find(i => i.id === id);
 };
 
-const getItemsByTipo = async (id_tipo) => {
+export const getItemsByTipo = async (id_tipo) => {
     const lista = await leerTodos();
     return lista.filter(i => i.id_tipo === id_tipo && i.activo === true);
 };
 
 
 // ######### UPDATE #########
-const updateItem = async (id, data) => {
+export const updateItem = async (id, data) => {
     const lista = await leerTodos();
     const index = lista.findIndex(i => i.id === id);
     if (index === -1) lanzarError("Item no encontrado", 404);
@@ -109,7 +112,7 @@ const updateItem = async (id, data) => {
 };
 
 // ######### ELIMINAR #########
-const deleteItem = async (id) => {
+export const deleteItem = async (id) => {
     const lista = await leerTodos();
     const index = lista.findIndex(i => i.id === id);
     if (index === -1) lanzarError("Item no encontrado", 404);
@@ -119,7 +122,7 @@ const deleteItem = async (id) => {
     return { message: "Item eliminado (soft delete)" };
 };
 
-const deleteItemHard = async (id) => {
+export const deleteItemHard = async (id) => {
     const lista = await leerTodos();
     const index = lista.findIndex(i => i.id === id);
     if (index === -1) lanzarError("Item no encontrado", 404);
@@ -128,18 +131,3 @@ const deleteItemHard = async (id) => {
     await jsonDbHandler.escribir(FOLDER, FILE, lista);
     return { message: "Item eliminado definitivamente" };
 };
-
-//4. EXPORTS
-module.exports = {
-    createItem,
-    getAll,
-    getAllActivos,
-    getItemById,
-    getItemsByTipo,
-    updateItem,
-    deleteItem,
-    deleteItemHard
-};
- 
- 
- 

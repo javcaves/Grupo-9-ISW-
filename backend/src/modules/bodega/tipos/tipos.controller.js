@@ -7,7 +7,7 @@
 import * as TiposService from './tipos.service.js';
 
 // 2. Helper functions
-const sendResponse = (res, status, payload) => {
+export const sendResponse = (res, status, payload) => {
     const isError = status >= 400;
     return res.status(status).json({ [isError ? 'error' : 'data']: payload });
 };
@@ -16,7 +16,7 @@ const sendResponse = (res, status, payload) => {
 
 // ################# FUNCIONES DE LECTURA #################
 
-const listarTipos = async (req, res) => {
+export const listarTipos = async (req, res) => {
     try {
         const lista = await TiposService.getAll();
         return sendResponse(res, 200, lista);
@@ -25,7 +25,7 @@ const listarTipos = async (req, res) => {
     }
 };
 
-const listarTiposActivos = async (req, res) => {
+export const listarTiposActivos = async (req, res) => {
     try {
         const lista = await TiposService.getAllActivos();
         return sendResponse(res, 200, lista);
@@ -34,7 +34,7 @@ const listarTiposActivos = async (req, res) => {
     }
 };
 
-const getTipo = async (req, res) => {
+export const getTipo = async (req, res) => {
     try {
         const { id } = req.params;
         const tipo = await TiposService.getTipoById(parseInt(id));
@@ -47,7 +47,7 @@ const getTipo = async (req, res) => {
 
 // ################# FUNCIONES DE ESCRITURA #################
 
-const createTipo = async (req, res) => {
+export const createTipo = async (req, res) => {
     try {
         const nuevoTipo = await TiposService.createTipo(req.body);
         return sendResponse(res, 201, nuevoTipo);
@@ -56,7 +56,7 @@ const createTipo = async (req, res) => {
     }
 };
 
-const updateTipo = async (req, res) => {
+export const updateTipo = async (req, res) => {
     try {
         const { id } = req.params;
         const tipoActualizado = await TiposService.updateTipo(parseInt(id), req.body);
@@ -68,7 +68,7 @@ const updateTipo = async (req, res) => {
 
 // ################# FUNCIONES DE ELIMINACIÓN #################
 
-const deleteTipo = async (req, res) => {
+export const deleteTipo = async (req, res) => {
     try {
         const { id } = req.params;
         await TiposService.deleteTipo(parseInt(id));
@@ -78,7 +78,7 @@ const deleteTipo = async (req, res) => {
     }
 };
 
-const deleteTipoHard = async (req, res) => {
+export const deleteTipoHard = async (req, res) => {
     try {
         const { id } = req.params;
         await TiposService.deleteTipoHard(parseInt(id));
@@ -86,15 +86,4 @@ const deleteTipoHard = async (req, res) => {
     } catch (error) {
         return sendResponse(res, error.status || 500, error.message);
     }
-};
-
-// 4. Exports
-module.exports = {
-    listarTipos,
-    listarTiposActivos,
-    getTipo,
-    createTipo,
-    updateTipo,
-    deleteTipo,
-    deleteTipoHard
 };

@@ -1,8 +1,10 @@
 import { Router } from 'express';
-import actividadesRoutes from '../src/modules/gestion_actividades/actividades/actividades.routes.js';
+import ActividadesRoutes from '../src/modules/gestion_actividades/actividades/actividades.routes.js';
+import CategoriasRoutes from '../src/modules/gestion_actividades/categorias/categorias.routes.js';
 
 const router = Router();
 
-router.use('/actividades', actividadesRoutes);
+router.use('/actividades', ActividadesRoutes);
+router.use('/categorias', CategoriasRoutes);
 
 export default router;

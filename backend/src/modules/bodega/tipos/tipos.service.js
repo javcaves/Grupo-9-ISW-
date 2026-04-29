@@ -20,26 +20,26 @@ const FILE = 'tipo.json';
 
 // 2. HELPER FUNCTIONS
 
-const leerTodos = () => jsonDbHandler.leer(FOLDER, FILE);
+export const leerTodos = () => jsonDbHandler.leer(FOLDER, FILE);
 
-const nuevoId = async () => {
+export const nuevoId = async () => {
     const lista = await leerTodos();
     if (lista.length === 0) return 1;
     return Math.max(...lista.map(t => t.id)) + 1;
 };
 
-const lanzarError = (mensaje, status) => {
+export const lanzarError = (mensaje, status) => {
     const error = new Error(mensaje);
     error.status = status;
     throw error;
 };
 
-const validarAbreviatura = (abreviatura) => {
+export const validarAbreviatura = (abreviatura) => {
     if (!/^[A-Za-z]{1,5}$/.test(abreviatura))
         lanzarError("Abreviatura: solo letras, máximo 5 caracteres", 400);
 };
 
-const validarDuplicado = async (abreviatura, idActual = null) => {
+export const validarDuplicado = async (abreviatura, idActual = null) => {
     const lista = await leerTodos();
     const duplicado = lista.find(t =>
         t.abreviatura.toUpperCase() === abreviatura.toUpperCase() && t.id !== idActual
@@ -51,7 +51,7 @@ const validarDuplicado = async (abreviatura, idActual = null) => {
 //3. MAIN FUNCTIONS
 // ################# CREAR #################
 
-const createTipo = async (data) => {
+export const createTipo = async (data) => {
     if (!data.nombre || !data.abreviatura || !data.descripcion)
         lanzarError("Faltan campos: nombre, abreviatura, descripcion", 400);
 
@@ -69,21 +69,21 @@ const createTipo = async (data) => {
 
 
 // ################# LEER  #################
-const getAll = async () => await leerTodos();
+export const getAll = async () => await leerTodos();
 
-const getAllActivos = async () => {
+export const getAllActivos = async () => {
     const lista = await leerTodos();
     return lista.filter(t => t.activo === true);
 };
 
-const getTipoById = async (id) => {
+export const getTipoById = async (id) => {
     const lista = await leerTodos();
     return lista.find(t => t.id === id);
 };
 
 // ################# ACTUALIZAR #################
 
-const updateTipo = async (id, data) => {
+export const updateTipo = async (id, data) => {
     const lista = await leerTodos();
     const index = lista.findIndex(t => t.id === id);
     if (index === -1) lanzarError("Tipo no encontrado", 404);
@@ -105,7 +105,7 @@ const updateTipo = async (id, data) => {
 };
 
 // ################# ELIMINAR #################
-const deleteTipo = async (id) => {
+export const deleteTipo = async (id) => {
     const lista = await leerTodos();
     const index = lista.findIndex(t => t.id === id);
     if (index === -1) lanzarError("Tipo no encontrado", 404);
@@ -115,7 +115,7 @@ const deleteTipo = async (id) => {
     return { message: "Tipo eliminado (soft delete)" };
 };
 
-const deleteTipoHard = async (id) => {
+export const deleteTipoHard = async (id) => {
     const lista = await leerTodos();
     const index = lista.findIndex(t => t.id === id);
     if (index === -1) lanzarError("Tipo no encontrado", 404);
@@ -123,16 +123,4 @@ const deleteTipoHard = async (id) => {
     lista.splice(index, 1);
     await jsonDbHandler.escribir(FOLDER, FILE, lista);
     return { message: "Tipo eliminado definitivamente" };
-};
-
-//4. EXPORTS
-
-module.exports = { 
-    createTipo, 
-    getAll,
-    getAllActivos,
-    getTipoById,
-    updateTipo,
-    deleteTipo,
-    deleteTipoHard
 };
