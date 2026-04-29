@@ -121,7 +121,7 @@ const updateToolAssignment = async (req, res) => {
 
 // 4. Exports
 
-module.exports = {
+export default {
     listarProductos,
     listarProductosActivos,
     getProducto,

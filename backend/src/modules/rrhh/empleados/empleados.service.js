@@ -11,6 +11,7 @@
  * @property {number} numero - Número de contacto
  * @property {boolean} activo - Estado de la cuenta (Soft Delete)
  */
+// REVALIDAR EMPLEADOS
 
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 

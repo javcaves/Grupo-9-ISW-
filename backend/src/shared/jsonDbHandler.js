@@ -12,7 +12,7 @@ const jsonDbHandler = {
             return JSON.parse(data);
         } catch (error) {
             if (error.code === 'ENOENT') {
-                return []; // Devolver lista vacía si no existe
+                return [];
             }
             throw error;
         }

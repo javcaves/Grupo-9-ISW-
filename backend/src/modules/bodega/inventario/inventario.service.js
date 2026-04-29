@@ -214,7 +214,7 @@ const processToolAssignment = async (itemId, rutTrabajador) => {
 };
 
 // 4. Exports
-module.exports = {
+export default {
     createProducto,
     updateProducto,
     getAll,

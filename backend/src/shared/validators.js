@@ -4,8 +4,8 @@
 
 const validators = {
     /**
-     * Valida RUT
-     * @param {string} rut - RUT con cualquier formato
+     * Valida RUT chileno con algoritmo de dígito verificador (Módulo 11)
+     * @param {string} rut - RUT con o sin puntos y guion
      * @returns {boolean}
      */
     esRutValido(rut) {
@@ -13,8 +13,10 @@ const validators = {
 
         const cleanRut = rut.replace(/\./g, '').replace(/-/g, '').toUpperCase();
         if (cleanRut.length < 8) return false;
+
         const cuerpo = cleanRut.slice(0, -1);
         const dvRecibido = cleanRut.slice(-1);
+
         let suma = 0;
         let multiplicador = 2;
 
@@ -34,9 +36,12 @@ const validators = {
     },
 
     /**
-     * Valida formato simple de Email: example@gmail.com
+     * Valida formato simple de Email: example@domain.com
+     * @param {string} email
+     * @returns {boolean}
      */
     esCorreoValido(email) {
+        if (!email || typeof email !== 'string') return false;
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
     }
