@@ -11,6 +11,10 @@
  * @property {number} actualizadoPor - muestra el id de quien actualizo por ultima vez la categoria
  * @property {boolean} activo - estado de la categoria (activa o eliminada)
  */
+/**
+ * @file categorias.service.js
+ * @description Gestión de categorías de productos con ES Modules
+ */
 
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 
@@ -19,201 +23,32 @@ const FILE = 'categorias.json';
 
 const nivelRiesgo_permitido = ['bajo', 'medio', 'alto'];
 
-/******CREAR*******/
-export const crearCategoria = async (data, usuarioId)=>{
-    //validar usuario
-    if(!usuarioId){
-        const error = new Error("se requiere id de usuario para crear categoria");
-        error.status = 400;
-        throw error;
-    }
-    //validar ingreso de nombre de categoria
-    if(!data.nombre){
-        const error = new Error("se requiere nombre de la categoria para crearla");
-        error.status = 400;
-        throw error;
-    }
+// ################# HELPERS INTERNOS #################
 
-    //validar nivel de riesgo
-    if(data.nivelRiesgo && !nivelRiesgo_permitido.includes(data.nivelRiesgo.toLowerCase())){
-        const error = new Error("el nivel de riesgo ingresado no es valido");
-        error.status = 400;
-        throw error;
-    }
-
-    const yaExiste = await existeCategoria(data.nombre);
-
-    if(yaExiste){
-        const error = new Error("ya existe una categoria con este nombre");
-        error.status = 400;
-        throw error;
-    }
-
-
-    //debo hacer que nivelRiesgo sea valido(?)
-
-
-    return await _procesarguardado(data, usuarioId);
-};  
-
-//validacion en creacion
-export const existeCategoria = async (nombre)=>{
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    return lista.some(c => nombre.toLowerCase() === nombre.toLowerCase());
-};
-
-/******busqueda*****/
-
-//obtener todas las categorias
-export const obtenerTodasCat = async ()=>{
-return await jsonDbHandler.leer(FOLDER, FILE);
+/**
+ * Lanza un objeto de error con estatus
+ */
+const lanzarError = (mensaje, status) => {
+    const error = new Error(mensaje);
+    error.status = status;
+    throw error;
 };
 
 /**
- * Obtener solo categorias activas
+ * Procesa la persistencia de una nueva categoría
  */
-export const obtenerTodasActivas = async () => {
+const _procesarguardado = async (data, usuarioId) => {
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    return lista.filter(c => c.activo === true);
-};
-
-//obtener registro de categorias por id
-export const obtenerCatPorId = async (id) =>{
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    const categoria = lista.find(c => c.id === parseInt(id));
-
-    if (!categoria){
-        const error = new Error("registro no encontrado");
-        error.status = 404;
-        throw error;
-    }
-
-    return categoria;
-};
-
-//obtener un registro de categoria por nivel de riesgo
-
-export const obtenerPorRiesgo = async (nivelRiesgo) =>{
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    //filtro que la categoria esté activa y que nivel de riesgo es valido
-    return lista.filter(c => c.activo === true && c.nivelRiesgo === nivelRiesgo);
-};
-
-//buscar por nombre
-export const buscarNombreCat = async () =>{
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    // filtra que esté activo
-    //return lista.filter(c => c.activo === true && nombre.toLowerCase() === nombre.toLowerCase());
-    // necesario que esteé activo(?
-
-    // solo busca por nombre sin importar que esté activo
-    return lista.filter(c => c.nombre.toLowerCase() === nombre.toLowerCase());
-}
-
-
-//busqueda dinamica por nombre y descripcion
-export const buscarDinamicoCat = async () =>{
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    const t = termino_c.toLowerCase();
-
-    return lista.filter(c =>{
-        const nombre = c.nombre.toLowerCase();
-        //agregar espacio vacio de separacion de palabras
-        const descripcion = (c.descripcion || '').toLowerCase();
-
-        return nombre.includes(t) || descripcion.includes(t);
-    });
-}
-
-/*****actualizar*****/
-export const actualizarCat = async(id, data, usuarioId) =>{
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    const index = lista.findIndex(c => c.id === parseInt(id));
-
-    if (index === -1){
-        const error = new Error("no se encontro registro para actualizar");
-        error.status = 404;
-        throw error;
-    }
-
-    //validar nivel de riesgo si es que se ingresa
-    if(data.nivelRiesgo && !nivelRiesgo_permitido.includes(data.nivelRiesgo.toLowerCase())){
-        const error = new Error("el nivel de riesgo ingresado no es valido");
-        error.status = 400;
-        throw error;
-    }
-
-    //dejar fecha de actualizacion al dia de hoy
-    const ahora = new Date().toISOString();
-
-    const registroActualizadoCat = {
-        ...lista[index],
-        ...data,
-        id: lista[index].id,
-        nivelRiesgo: lista[index].nivelRiesgo,
-        actualizadoPor: usuarioId,
-        fecha_actualizacion: ahora
-    };
-
-    lista[index] = registroActualizadoCat;
-    await jsonDbHandler.escribir(FOLDER, FILE, lista);
-
-    return registroActualizadoCat;
-};
-
-
-
-/******eliminar*****/
-//solo desactivar categoria
-export const desactivarCat = async(criterio ={}) =>{
-    let lista = await jsonDbHandler.leer(FOLDER, FILE);
-    const {id,nombre} = criterio;
-
-    lista = lista.map(c => {
-        let match = false;
-        if (id) match = c.id === c.parseInt(id);
-        else if (nombre) match = c.nombre.toLowerCase() === nombre.toLowerCase();
-        else match = true;
-
-        return match ? {...c, activo: false} : c;
-    });
-
-    await jsonDbHandler.escribir(FOLDER, FILE, lista);
-    return {message: "desactivacion exitosa"};
-};
-
-//eliminar desde raiz (desde el archivo)
-export const eliminarCat = async(criterio = {}) =>{
-    let lista = await jsonDbHandler.leer(FOLDER, FILE);
-    const {id, nombre} = criterio;
-
-    const nuevaLista = lista.filter(c =>{
-        if (id) return c.id !== parseInt(id);
-        if (nombre) return c.nombre.toLowerCase() !== nombre.toLowerCase();
-        return true; //si no hay criterio no elimina
-
-    });
-
-    await jsonDbHandler.escribir(FOLDER, FILE, nuevaLista);
-    return {message: "eliminacion exitosa"};
-};
-
-
-/********helpers**********/
-const _procesarguardado = async(data, usuarioId)=>{
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    //nuevo id hace id automatico?
+    
+    // Generar ID autoincremental
     const nuevoId = lista.length > 0 ? Math.max(...lista.map(c => c.id)) + 1 : 1;
-
-    // usar atributo de fecha
     const ahora = new Date().toISOString();
 
     const nuevoRegistro = {
-        ...data,
         id: nuevoId,
         nombre: data.nombre,
         descripcion: data.descripcion || '',
-        nivelRiesgo: nivelRiesgo,
+        nivelRiesgo: data.nivelRiesgo ? data.nivelRiesgo.toLowerCase() : 'bajo',
         activo: true,
         fecha_creacion: ahora,
         fecha_actualizacion: ahora,
@@ -221,10 +56,130 @@ const _procesarguardado = async(data, usuarioId)=>{
         actualizadoPor: usuarioId
     };
 
-
     lista.push(nuevoRegistro);
-
+    
+    // Guardar físicamente en el archivo JSON
+    await jsonDbHandler.escribir(FOLDER, FILE, lista);
     return nuevoRegistro;
+};
 
+// ################# FUNCIONES DE VALIDACIÓN #################
 
+export const existeCategoria = async (nombre) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    // Corregido: Comparar contra c.nombre
+    return lista.some(c => c.nombre.toLowerCase() === nombre.toLowerCase());
+};
+
+// ################# MAIN FUNCTIONS (CRUD) #################
+
+// ======= CREAR =======
+export const crearCategoria = async (data, usuarioId) => {
+    if (!usuarioId) lanzarError("Se requiere ID de usuario", 400);
+    if (!data.nombre) lanzarError("El nombre de la categoría es obligatorio", 400);
+
+    // Validar nivel de riesgo
+    if (data.nivelRiesgo && !nivelRiesgo_permitido.includes(data.nivelRiesgo.toLowerCase())) {
+        lanzarError("El nivel de riesgo ingresado no es válido (bajo, medio, alto)", 400);
+    }
+
+    // Validar duplicados
+    const yaExiste = await existeCategoria(data.nombre);
+    if (yaExiste) lanzarError("Ya existe una categoría con este nombre", 400);
+
+    return await _procesarguardado(data, usuarioId);
+};
+
+// ======= LEER =======
+
+export const obtenerTodasCat = async () => {
+    return await jsonDbHandler.leer(FOLDER, FILE);
+};
+
+export const obtenerTodasActivas = async () => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    return lista.filter(c => c.activo === true);
+};
+
+export const obtenerCatPorId = async (id) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    const categoria = lista.find(c => c.id === parseInt(id));
+
+    if (!categoria) lanzarError("Registro no encontrado", 404);
+    return categoria;
+};
+
+export const obtenerPorRiesgo = async (nivelRiesgo) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    return lista.filter(c => c.activo === true && c.nivelRiesgo === nivelRiesgo.toLowerCase());
+};
+
+export const buscarDinamicoCat = async (termino) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    if (!termino) return lista;
+    
+    const t = termino.toLowerCase();
+    return lista.filter(c => {
+        const nombre = (c.nombre || '').toLowerCase();
+        const descripcion = (c.descripcion || '').toLowerCase();
+        return nombre.includes(t) || descripcion.includes(t);
+    });
+};
+
+// ======= ACTUALIZAR =======
+
+export const actualizarCat = async (id, data, usuarioId) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    const index = lista.findIndex(c => c.id === parseInt(id));
+
+    if (index === -1) lanzarError("No se encontró el registro para actualizar", 404);
+
+    if (data.nivelRiesgo && !nivelRiesgo_permitido.includes(data.nivelRiesgo.toLowerCase())) {
+        lanzarError("Nivel de riesgo no válido", 400);
+    }
+
+    const ahora = new Date().toISOString();
+
+    const registroActualizado = {
+        ...lista[index],
+        ...data,
+        id: lista[index].id, // El ID nunca debe cambiar
+        actualizadoPor: usuarioId,
+        fecha_actualizacion: ahora
+    };
+
+    lista[index] = registroActualizado;
+    await jsonDbHandler.escribir(FOLDER, FILE, lista);
+
+    return registroActualizado;
+};
+
+// ======= ELIMINAR =======
+
+/**
+ * Borrado lógico (Desactivar)
+ */
+export const desactivarCat = async (id) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    const index = lista.findIndex(c => c.id === parseInt(id));
+
+    if (index === -1) lanzarError("Categoría no encontrada", 404);
+
+    lista[index].activo = false;
+    await jsonDbHandler.escribir(FOLDER, FILE, lista);
+    
+    return { message: "Desactivación exitosa" };
+};
+
+/**
+ * Borrado físico (Hard Delete)
+ */
+export const eliminarCat = async (id) => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    const nuevaLista = lista.filter(c => c.id !== parseInt(id));
+
+    if (lista.length === nuevaLista.length) lanzarError("Categoría no encontrada", 404);
+
+    await jsonDbHandler.escribir(FOLDER, FILE, nuevaLista);
+    return { message: "Eliminación física exitosa" };
 };
