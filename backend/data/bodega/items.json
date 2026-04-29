@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "id": 1,
+    "nombre": "Detergente Industrial Bio",
+    "id_tipo": 4,
+    "stock_minimo": 10,
+    "unidad_medida": "Bidón 5L",
+    "activo": true
+  },
+  {
+    "id": 2,
+    "nombre": "Casco de Seguridad ABS",
+    "id_tipo": 3,
+    "stock_minimo": 5,
+    "unidad_medida": "Unidad",
+    "activo": true
+  },
+  {
+    "id": 3,
+    "nombre": "Filtro de Aceite HeavyDuty",
+    "id_tipo": 5,
+    "stock_minimo": 20,
+    "unidad_medida": "Caja 6un",
+    "activo": true
+  },
+  {
+    "id": 4,
+    "nombre": "Taladro Percutor 800W",
+    "id_tipo": 2,
+    "stock_minimo": 2,
+    "unidad_medida": "Unidad",
+    "activo": true
+  },
+  {
+    "id": 5,
+    "nombre": "Guantes de Nitrilo",
+    "id_tipo": 3,
+    "stock_minimo": 50,
+    "unidad_medida": "Caja 100un",
+    "activo": true
+  },
+  {
+    "id": 6,
+    "nombre": "Desengrasante de Motores",
+    "id_tipo": 4,
+    "stock_minimo": 15,
+    "unidad_medida": "Bidón 10L",
+    "activo": true
+  }
+]

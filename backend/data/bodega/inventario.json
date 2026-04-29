@@ -1,1 +1,57 @@
-[]
+[
+  {
+    "id": 1,
+    "nombre": "Detergente Industrial Bio",
+    "descripcion": "Item creado automáticamente",
+    "cantidad": 150,
+    "precio": 12500,
+    "categoria": 4,
+    "estado": "disponible",
+    "asignado_a": null,
+    "activo": true
+  },
+  {
+    "id": 2,
+    "nombre": "Casco de Seguridad ABS",
+    "descripcion": "Item creado automáticamente",
+    "cantidad": 45,
+    "precio": 8900,
+    "categoria": 3,
+    "estado": "disponible",
+    "asignado_a": null,
+    "activo": true
+  },
+  {
+    "id": 3,
+    "nombre": "Filtro de Aceite HeavyDuty",
+    "descripcion": "Item creado automáticamente",
+    "cantidad": 12,
+    "precio": 15000,
+    "categoria": 5,
+    "estado": "disponible",
+    "asignado_a": null,
+    "activo": true
+  },
+  {
+    "id": 4,
+    "nombre": "Taladro Percutor 800W",
+    "descripcion": "Item creado automáticamente",
+    "cantidad": 1,
+    "precio": 45000,
+    "categoria": 2,
+    "estado": "en_uso",
+    "asignado_a": "202563783",
+    "activo": true
+  },
+  {
+    "id": 5,
+    "nombre": "Guantes de Nitrilo",
+    "descripcion": "Item creado automáticamente",
+    "cantidad": 200,
+    "precio": 450,
+    "categoria": 3,
+    "estado": "disponible",
+    "asignado_a": null,
+    "activo": true
+  }
+]

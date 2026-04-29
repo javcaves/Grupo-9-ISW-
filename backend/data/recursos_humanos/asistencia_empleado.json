@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "asistencia_id": 1,
+    "empleado_id": 1,
+    "nombre": "Juan",
+    "apellido": "Perez",
+    "correo": "juan.perez@ubb.cl",
+    "hora_entrada_real": "07:55",
+    "hora_salida_real": null,
+    "estado": "Presente",
+    "activo": true
+  },
+  {
+    "id": 2,
+    "asistencia_id": 1,
+    "empleado_id": 2,
+    "nombre": "Antonia",
+    "apellido": "Peña",
+    "correo": "apena@ubb.cl",
+    "hora_entrada_real": "08:05",
+    "hora_salida_real": null,
+    "estado": "Atraso",
+    "activo": true
+  }
+]

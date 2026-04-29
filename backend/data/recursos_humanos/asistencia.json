@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": 1,
+    "fecha": "2026-04-28",
+    "nombre_evento": "Turno Mañana",
+    "hora_entrada_esperada": "08:00",
+    "estado_asistencia": "Abierta",
+    "observacion": "Jornada ordinaria de mitad de semana",
+    "activo": true
+  },
+  {
+    "id": 2,
+    "fecha": "2026-04-28",
+    "nombre_evento": "Turno Tarde",
+    "hora_entrada_esperada": "14:00",
+    "estado_asistencia": "Abierta",
+    "observacion": "Sin novedades",
+    "activo": true
+  }
+]

@@ -1,1 +1,57 @@
-[]
+[
+  {
+    "id": 1,
+    "nombre": "Trabajos en Altura",
+    "descripcion": "Actividades realizadas a más de 1.5 metros sobre el nivel del suelo",
+    "nivelRiesgo": "alto",
+    "activo": true,
+    "fecha_creacion": "2026-04-28T10:00:00.000Z",
+    "fecha_actualizacion": "2026-04-28T10:00:00.000Z",
+    "creadoPor": 101,
+    "actualizadoPor": 101
+  },
+  {
+    "id": 2,
+    "nombre": "Limpieza Superficial",
+    "descripcion": "Mantenimiento básico de escritorios, estantes y áreas comunes",
+    "nivelRiesgo": "bajo",
+    "activo": true,
+    "fecha_creacion": "2026-04-28T10:05:00.000Z",
+    "fecha_actualizacion": "2026-04-28T10:05:00.000Z",
+    "creadoPor": 101,
+    "actualizadoPor": 101
+  },
+  {
+    "id": 3,
+    "nombre": "Manejo de Residuos Biológicos",
+    "descripcion": "Limpieza y desinfección de áreas sanitarias y manejo de desechos",
+    "nivelRiesgo": "medio",
+    "activo": true,
+    "fecha_creacion": "2026-04-28T10:10:00.000Z",
+    "fecha_actualizacion": "2026-04-28T10:10:00.000Z",
+    "creadoPor": 102,
+    "actualizadoPor": 102
+  },
+  {
+    "id": 4,
+    "nombre": "Vidrios y Cristalería",
+    "descripcion": "Limpieza de ventanales y superficies de vidrio con químicos específicos",
+    "nivelRiesgo": "medio",
+    "activo": true,
+    "fecha_creacion": "2026-04-28T10:15:00.000Z",
+    "fecha_actualizacion": "2026-04-28T10:15:00.000Z",
+    "creadoPor": 101,
+    "actualizadoPor": 101
+  },
+  {
+    "id": 5,
+    "nombre": "Sanitización Industrial",
+    "descripcion": "Uso de amonio cuaternario o nebulizadores para desinfección profunda",
+    "nivelRiesgo": "alto",
+    "activo": true,
+    "fecha_creacion": "2026-04-28T10:20:00.000Z",
+    "fecha_actualizacion": "2026-04-28T10:20:00.000Z",
+    "creadoPor": 102,
+    "actualizadoPor": 102
+  }
+]

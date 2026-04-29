@@ -1,1 +1,37 @@
-[]
+[
+  {
+    "id": 1,
+    "nombre": "Maquinaria Pesada",
+    "abreviatura": "MAQP",
+    "descripcion": "Equipos de gran tamaño como excavadoras y grúas",
+    "activo": true
+  },
+  {
+    "id": 2,
+    "nombre": "Herramientas Eléctricas",
+    "abreviatura": "HELE",
+    "descripcion": "Taladros, sierras y equipos que requieren energía eléctrica",
+    "activo": true
+  },
+  {
+    "id": 3,
+    "nombre": "Equipos de Protección Personal",
+    "abreviatura": "EPP",
+    "descripcion": "Cascos, guantes, lentes y calzado de seguridad",
+    "activo": true
+  },
+  {
+    "id": 4,
+    "nombre": "Insumos Químicos",
+    "abreviatura": "QUIM",
+    "descripcion": "Detergentes industriales, desinfectantes y solventes",
+    "activo": true
+  },
+  {
+    "id": 5,
+    "nombre": "Repuestos Motores",
+    "abreviatura": "RMOT",
+    "descripcion": "Piezas específicas para mantenimiento de motores",
+    "activo": true
+  }
+]
