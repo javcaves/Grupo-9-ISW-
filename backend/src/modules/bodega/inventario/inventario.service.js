@@ -15,13 +15,19 @@
 **/
 
 // 1. Imports (Librerías externas -> Propias)
-import jsonDbHandler from '../../../shared/jsonDbHandler.js'; // Manejador de base de datos JSON para operaciones CRUD
+import jsonDbHandler from '../../../shared/jsonDbHandler.js'; 
 
 const FOLDER = '../../data/bodega';
 const FILE = 'inventario.json';
 
 // 2. Helper functions (Funciones internas no exportadas)
 const _isAvailable = (item) => item.estado === 'disponible';
+
+const _obtenerNuevoId = async () => {
+    const lista = await jsonDbHandler.leer(FOLDER, FILE);
+    if (lista.length === 0) return 1;
+    return Math.max(...lista.map(p => p.id)) + 1;
+};
 
 const _procesarGuardado = async (data) => {
     // Validar campos obligatorios
@@ -53,21 +59,15 @@ const _procesarGuardado = async (data) => {
     return await jsonDbHandler.guardar(FOLDER, FILE, nuevoProducto);
 };
 
-const _obtenerNuevoId = async () => {
-    const lista = await jsonDbHandler.leer(FOLDER, FILE);
-    if (lista.length === 0) return 1;
-    return Math.max(...lista.map(p => p.id)) + 1;
-};
-
-// 3. Main functions (Funciones que exportaremos)
+// 3. Main functions (Funciones exportadas individualmente)
 
 // ################# CREAR #################
-const createProducto = async (data) => {
+export const createProducto = async (data) => {
     return await _procesarGuardado(data);
 };
 
 // ################# ACTUALIZAR #################
-const updateProducto = async (id, data) => {
+export const updateProducto = async (id, data) => {
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     const index = lista.findIndex(p => p.id === id);
 
@@ -106,15 +106,14 @@ const updateProducto = async (id, data) => {
     return productoActualizado;
 };
 
-
 // ################# BUSQUEDA #################
 
 /**
  * @description Obtener todos los productos del inventario
  */
- const getAll = async () => {
+export const getAll = async () => {
     try {
-        return await jsonDbHandler.read(FOLDER, FILE);
+        return await jsonDbHandler.leer(FOLDER, FILE);
     } catch (error) {
         throw new Error("Error al leer el inventario");
     }
@@ -123,7 +122,7 @@ const updateProducto = async (id, data) => {
 /**
  * @description Obtener solo productos activos
  */
- const getAllActivos = async () => {
+export const getAllActivos = async () => {
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     return lista.filter(p => p.activo === true);
 };
@@ -132,7 +131,7 @@ const updateProducto = async (id, data) => {
  * @description Obtener un producto por su ID
  * @param {number} id - ID del producto a buscar
  */
-const getProductoById = async (id) => {
+export const getProductoById = async (id) => {
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     return lista.find(p => p.id === id);
 };
@@ -140,10 +139,8 @@ const getProductoById = async (id) => {
 // ################# ELIMINAR (Soft Delete) #################
 /**
  * @description Desactivar un producto (soft delete)
- * @param {number} id - ID del producto a "eliminar"
- * @returns {Object} - Mensaje de confirmación
  */
- const deleteProducto = async (id) => {
+export const deleteProducto = async (id) => {
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     const index = lista.findIndex(p => p.id === id);
 
@@ -153,7 +150,7 @@ const getProductoById = async (id) => {
         throw error;
     }
 
-    lista[index].activo = false; // Soft delete
+    lista[index].activo = false; 
     await jsonDbHandler.escribir(FOLDER, FILE, lista);
 
     return { message: "Producto eliminado (soft delete)" };
@@ -162,10 +159,8 @@ const getProductoById = async (id) => {
 // ################# ELIMINAR (Hard Delete) #################
 /**
  * @description Eliminar un producto permanentemente
- * @param {number} id - ID del producto a eliminar
- * @returns {Object} - Mensaje de confirmación
  */
-const deleteProductoHard = async (id) => {
+export const deleteProductoHard = async (id) => {
     const lista = await jsonDbHandler.leer(FOLDER, FILE);
     const index = lista.findIndex(p => p.id === id);
 
@@ -175,7 +170,7 @@ const deleteProductoHard = async (id) => {
         throw error;
     }
 
-    lista.splice(index, 1); // Eliminar completamente
+    lista.splice(index, 1); 
     await jsonDbHandler.escribir(FOLDER, FILE, lista);
 
     return { message: "Producto eliminado definitivamente" };
@@ -183,13 +178,11 @@ const deleteProductoHard = async (id) => {
 
 // ################# ASIGNAR HERRAMIENTA #################
 /** 
- * @description Asignar una herramienta a un trabajador, luego se le puedan asignar tareas.
- * @param {string} itemId - ID de la maquinaria (ej. ENC-001).
- * @param {string} rutTrabajador - Identificador del empleado.
+ * @description Asignar una herramienta a un trabajador
  */
-const processToolAssignment = async (itemId, rutTrabajador) => {
+export const processToolAssignment = async (itemId, rutTrabajador) => {
     try {
-        const items = await findItems();
+        const items = await jsonDbHandler.leer(FOLDER, FILE);
         const itemIndex = items.findIndex(i => i.id === itemId);
 
         if (itemIndex === -1) {
@@ -200,27 +193,13 @@ const processToolAssignment = async (itemId, rutTrabajador) => {
             throw new Error(`La herramienta ${itemId} ya se encuentra en uso por ${items[itemIndex].asignado_a}.`);
         }
 
-        // Aplicamos los cambios de estado
         items[itemIndex].estado = 'en_uso';
         items[itemIndex].asignado_a = rutTrabajador;
 
-        // Guardamos los datos simulando la BD
-        await jsonDbHandler.write(FOLDER, FILE, items);
+        await jsonDbHandler.escribir(FOLDER, FILE, items);
         
         return items[itemIndex];
     } catch (error) {
         throw new Error("Error procesando asignación: " + error.message);
     }
-};
-
-// 4. Exports
-export default {
-    createProducto,
-    updateProducto,
-    getAll,
-    getAllActivos,
-    deleteProducto,
-    deleteProductoHard,
-    getProductoById,
-    processToolAssignment
 };

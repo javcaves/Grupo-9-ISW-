@@ -13,11 +13,11 @@ const sendResponse = (res, status, payload) => {
     return res.status(status).json({ [isError ? 'error' : 'data']: payload });
 };
 
-// 3. Main functions (Funciones que exportaremos)
+// 3. Main functions (Exportadas individualmente)
 
 // ################# FUNCIONES DE LECTURA #################
 
-const listarProductos = async (req, res) => {
+export const listarProductos = async (req, res) => {
     try {
         const lista = await InventarioService.getAll();
         return sendResponse(res, 200, lista);
@@ -26,7 +26,7 @@ const listarProductos = async (req, res) => {
     }
 };
 
-const listarProductosActivos = async (req, res) => {
+export const listarProductosActivos = async (req, res) => {
     try {
         const lista = await InventarioService.getAllActivos();
         return sendResponse(res, 200, lista);
@@ -35,7 +35,7 @@ const listarProductosActivos = async (req, res) => {
     }
 };
 
-const getProducto = async (req, res) => {
+export const getProducto = async (req, res) => {
     try {
         const { id } = req.params;
         const producto = await InventarioService.getProductoById(parseInt(id));
@@ -50,7 +50,7 @@ const getProducto = async (req, res) => {
 
 // ################# FUNCIONES DE ESCRITURA #################
 
-const createProducto = async (req, res) => {
+export const createProducto = async (req, res) => {
     try {
         const data = req.body;
         const nuevoProducto = await InventarioService.createProducto(data);
@@ -60,7 +60,7 @@ const createProducto = async (req, res) => {
     }
 };
 
-const updateProducto = async (req, res) => {
+export const updateProducto = async (req, res) => {
     try {
         const { id } = req.params;
         const data = req.body;
@@ -73,7 +73,7 @@ const updateProducto = async (req, res) => {
 
 // ################# FUNCIONES DE ELIMINACIÓN #################
 
-const deleteProducto = async (req, res) => {
+export const deleteProducto = async (req, res) => {
     try {
         const { id } = req.params;
         await InventarioService.deleteProducto(parseInt(id));
@@ -83,7 +83,7 @@ const deleteProducto = async (req, res) => {
     }
 };
 
-const deleteProductoHard = async (req, res) => {
+export const deleteProductoHard = async (req, res) => {
     try {
         const { id } = req.params;
         await InventarioService.deleteProductoHard(parseInt(id));
@@ -94,19 +94,19 @@ const deleteProductoHard = async (req, res) => {
 };
 
 // ################# ASIGNACIÓN DE HERRAMIENTA #################
-const updateToolAssignment = async (req, res) => {
+export const updateToolAssignment = async (req, res) => {
     try {
         // Extrae datos de la petición (req)
-        const { id } = req.params; // Viene en la URL, ej: /api/bodega/asignar/ENC-001
-        const { rutTrabajador } = req.body; // Viene en el JSON que manda el Frontend
+        const { id } = req.params; 
+        const { rutTrabajador } = req.body; 
 
         // Validación inicial rápida
         if (!rutTrabajador) {
             return res.status(400).json({ success: false, error: "El RUT del trabajador es obligatorio." });
         }
 
-        // Llama al cerebro (Service) y le pasa objetos de JS
-        const resultado = await inventarioService.processToolAssignment(id, rutTrabajador);
+        // Llama al cerebro (Service)
+        const resultado = await InventarioService.processToolAssignment(id, rutTrabajador);
 
         res.status(200).json({ 
             success: true, 
@@ -114,20 +114,6 @@ const updateToolAssignment = async (req, res) => {
             data: resultado 
         });
     } catch (error) {
-        // Si el Service tira un error (ej. herramienta en uso), cae aquí.
         res.status(400).json({ success: false, error: error.message });
     }
-};
-
-// 4. Exports
-
-export default {
-    listarProductos,
-    listarProductosActivos,
-    getProducto,
-    createProducto,
-    updateProducto,
-    deleteProducto,
-    deleteProductoHard,
-    updateToolAssignment
 };
