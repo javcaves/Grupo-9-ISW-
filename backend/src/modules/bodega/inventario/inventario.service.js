@@ -56,7 +56,7 @@ const _procesarGuardado = async (data) => {
     };
 
     // Guardar en la base de datos
-    return await jsonDbHandler.guardar(FOLDER, FILE, nuevoProducto);
+    return await jsonDbHandler.escribir(FOLDER, FILE, nuevoProducto);
 };
 
 // 3. Main functions (Funciones exportadas individualmente)

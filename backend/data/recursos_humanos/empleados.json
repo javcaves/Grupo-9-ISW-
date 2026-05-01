@@ -18,5 +18,15 @@
     "numero": 912345678,
     "id": 2,
     "activo": true
+  },
+  {
+    "rut": "218042287",
+    "nombre": "Carlos",
+    "apellido": "Bustos",
+    "correo": "juan.perez@ubb.cl",
+    "cargo": "Operativo",
+    "numero": 912345678,
+    "id": 3,
+    "activo": true
   }
 ]

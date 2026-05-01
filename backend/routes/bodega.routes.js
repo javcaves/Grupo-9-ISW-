@@ -6,7 +6,7 @@ import TiposRoutes from '../src/modules/bodega/tipos/tipos.routes.js';
 const router = Router();
 
 router.use('/inventario', InventarioRoutes);
-router.use('/items', TiposRoutes);
-router.use('/tipos', ItemsRoutes);
+router.use('/items', ItemsRoutes);
+router.use('/tipos', TiposRoutes);
 
 export default router;

@@ -114,7 +114,6 @@ export const desactivarCatC = async (req, res) => {
     try {
         const { id } = req.params;
         
-        // ERROR CORREGIDO: Tu service espera el ID directo, no un objeto {id}
         const catDesactivada = await CategoriasService.desactivarCat(id);
         
         return sendResponse(res, 200, catDesactivada);

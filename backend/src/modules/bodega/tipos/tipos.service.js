@@ -58,7 +58,7 @@ export const createTipo = async (data) => {
     validarAbreviatura(data.abreviatura);
     await validarDuplicado(data.abreviatura);
 
-    return await jsonDbHandler.guardar(FOLDER, FILE, {
+    return await jsonDbHandler.escribir(FOLDER, FILE, {
         id: await nuevoId(),
         nombre: data.nombre,
         abreviatura: data.abreviatura.toUpperCase(),
