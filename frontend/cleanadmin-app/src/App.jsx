@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import './App.css';
 import Header from './layouts/header.js';
 import HomeSidebar from './pages/Admin/Home/home_sidebar.js';
-import MainPersonal from './pages/Admin/Home/main_personal.js';
-import MainActividades from './pages/Admin/Home/main_actividades.js';
+import MainPersonal, { ContentPersonal } from './pages/Admin/Home/main_personal.js';
+import MainActividades, { ContentActividades } from './pages/Admin/Home/main_actividades.js';
 import MainInventario from './pages/Admin/Home/main_inventario.js';
 
 function App() {
@@ -28,8 +28,8 @@ function App() {
 
           {/* Contenido de la pestaña activa */}
           <div className='tab-content'>
-            {tabActiva === 'Personal' && <p>Contenido de la tabla de Personal...</p>}
-            {tabActiva === 'Actividades' && <p>Contenido de Actividades...</p>}
+            {tabActiva === 'Personal' && <ContentPersonal />}
+            {tabActiva === 'Actividades' && <ContentActividades />}
             {tabActiva === 'Inventario' && <p>Contenido de Inventario...</p>}
           </div>
           
