@@ -1,73 +1,38 @@
 import React, { useState } from 'react';
 import './App.css';
+import Header from './layouts/header.js';
+import HomeSidebar from './pages/Admin/Home/home_sidebar.js';
+import MainPersonal from './pages/Admin/Home/main_personal.js';
+import MainActividades from './pages/Admin/Home/main_actividades.js';
+import MainInventario from './pages/Admin/Home/main_inventario.js';
 
 function App() {
   // Estado para controlar qué pestaña está activa
   const [tabActiva, setTabActiva] = useState('Personal');
   return (
     <div className="App">
-      <header className="App-header">
-        <div className='logo'>
-          <h3>CleanAdmin</h3>
-        </div>
-        <div className='vistas'>
-          <button>home</button>
-          <button>stadistics</button>
-        </div>
-        <div className='config'>
-          <button>alerts</button>
-          <button>settings</button>
-        </div>
-      </header>
+      <Header />
+      
       <div className='main-container'>
-        <div className='sidebar'>
-          <div className='foto-perfil'>
-            <img src="path/to/profile/image.jpg" alt="Profile"></img>
-          </div>
-          <div className='hora'>
-            <h3>Hora</h3>
-          </div>
-          <div className='fecha'>
-            <h3>Fecha</h3>
-          </div>
-          <div className='nombre-proyecto'>
-            <h3>Nombre del Proyecto</h3>
-          </div>
-          <div className='token'>
-            <button>Token</button>
-          </div>
-        </div>
+        <HomeSidebar />
         <div className='main'>
           <div className='supervisor'>
             <h2>Nombre Supervisor</h2>
           </div>
           {/* Contenedor de Tabs */}
           <div className='container-tabs'>
-            <button 
-              className={tabActiva === 'Personal' ? 'tab active' : 'tab'} 
-              onClick={() => setTabActiva('Personal')}
-            >
-              Registro Personal
-            </button>
-            <button 
-              className={tabActiva === 'Actividades' ? 'tab active' : 'tab'} 
-              onClick={() => setTabActiva('Actividades')}
-            >
-              Actividades
-            </button>
-            <button 
-              className={tabActiva === 'Inventario' ? 'tab active' : 'tab'} 
-              onClick={() => setTabActiva('Inventario')}
-            >
-              Inventario
-            </button>
+            <MainPersonal activa={tabActiva} setTabActiva={setTabActiva} />
+            <MainActividades activa={tabActiva} setTabActiva={setTabActiva} />
+            <MainInventario activa={tabActiva} setTabActiva={setTabActiva} />
           </div>
-          {/* Contenido dinámico según la pestaña */}
+
+          {/* Contenido de la pestaña activa */}
           <div className='tab-content'>
-            {tabActiva === 'Personal' && <div>aquí va la tabla de personal...</div>}
-            {tabActiva === 'Actividades' && <div>aquí van las actividades...</div>}
-            {tabActiva === 'Inventario' && <div>aquí va el inventario...</div>}
+            {tabActiva === 'Personal' && <p>Contenido de la tabla de Personal...</p>}
+            {tabActiva === 'Actividades' && <p>Contenido de Actividades...</p>}
+            {tabActiva === 'Inventario' && <p>Contenido de Inventario...</p>}
           </div>
+          
         </div>
       </div>
     </div>
