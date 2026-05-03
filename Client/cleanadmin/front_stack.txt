@@ -1,0 +1,28 @@
+// Idea de stack de front 
+
+src
+├── assets/             // Imágenes, logo de CleanAdmin
+├── components/         // Componentes reutilizables (Botones, inputs, tablas)
+├── layouts/            // Header.js, Sidebar.js 
+├── pages/              
+│   ├── Admin/
+│   │   ├── Home/
+|   |   |   ├── main_personal.js
+|   │   |   ├── main_actividades.js
+│   |   |   ├── main_inventario.js
+|   |   |   └── home_sidebar.js //profile, hora, fecha. nombre proyecto y token
+│   │   ├── Statistics/
+|   │   |   ├── stats_actividades
+|   |   |   |     ├── stats_actividades.js
+|   |   |   |     └── actividades_graph.js
+|   |   |
+|   │   |   ├── stats_asistencia
+|   |   |   |     ├── stats_asistencia.js
+|   |   |   |     └── asistencia_graph.js
+|   |   |   └── stats_sidebar.js
+|   |   ├── Alarms/
+|   |   └── Config/
+│   └── Empleados/      // empleados_app
+├── services/           // Llamadas al backend
+├── context/            // manejo de Token y roles de usuario
+└── App.js              // Definición de rutas (React Router)
