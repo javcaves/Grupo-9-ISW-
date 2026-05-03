@@ -3,7 +3,7 @@ import '../../../App.css';
 
 function MainInventario({ activa, setTabActiva }) {
     return (
-        <button 
+        <button type="button"
               className={activa === 'Inventario' ? 'tab active' : 'tab'} 
               onClick={() => setTabActiva('Inventario')}>
               Inventario
