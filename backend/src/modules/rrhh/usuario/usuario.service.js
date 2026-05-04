@@ -12,9 +12,10 @@
  * @property {boolean} activo - Estado de la cuenta (Soft Delete)
  */
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
+import * as PowerService from './power.service.js';
 
 const FOLDER = 'recursos_humanos';
-const FILE = 'empleados.json';
+const FILE = 'usuarios.json';
 
 const NIVELES = {
     'ROOT': 0,
@@ -25,79 +26,79 @@ const NIVELES = {
     'SIN_ASIGNAR': 5
 };
 
-// ################# CREAR #################
+// ################# HELPERS DE LINAJE #################
 
 /**
- * @param {Object} data - Datos del nuevo empleado
- * @param {Object} ejecutor - Objeto del usuario que logueado { id, cargo, powers }
+ * Función recursiva para verificar si un ejecutor es ancestro de un objetivo
  */
-export const crearEmpleado = async (data, ejecutor) => {
-    // REGLA 0: No se puede crear otro ROOT
-    if (data.cargo === 'ROOT') {
-        throw Object.assign(new Error("Acción prohibida: El ROOT es único."), { status: 403 });
-    }
+const esAncestor = async (idEjecutor, idObjetivo, listaUsuarios) => {
+    const objetivo = listaUsuarios.find(u => u.id === idObjetivo);
+    
+    if (!objetivo || !objetivo.creado_por) return false;
+    if (objetivo.creado_por === idEjecutor) return true;
 
-    // Validar quién puede crear a quién
+    // Si no es el padre directo, buscamos al padre del padre
+    return await esAncestor(idEjecutor, objetivo.creado_por, listaUsuarios);
+};
+
+// ################# CREAR #################
+
+export const crearUsuario = async (data, ejecutor) => {
+    if (data.rol === 'ROOT') throw Object.assign(new Error("El ROOT es único."), { status: 403 });
+
     const nivelEjecutor = NIVELES[ejecutor.cargo];
-    const nivelNuevo = NIVELES[data.cargo];
+    const nivelNuevo = NIVELES[data.rol];
 
-    // Los Admin pueden crear otros Admin (nivel 1 == 1)
-    // Supervisores/Encargados solo pueden crear Empleados (nivel 4 > nivel 2/3)
     if (nivelNuevo < nivelEjecutor) {
-        throw Object.assign(new Error("No puedes crear un cargo superior al tuyo."), { status: 403 });
+        throw Object.assign(new Error("No puedes crear un cargo superior."), { status: 403 });
     }
 
-    // Si es Admin creando Admin, validar que no otorgue poderes que él no tiene
-    if (ejecutor.cargo === 'ADMIN' && data.cargo === 'ADMIN') {
-        const tienePoderesValidos = data.powers.every(p => ejecutor.powers.includes(p));
-        if (!tienePoderesValidos) {
-            throw Object.assign(new Error("No puedes otorgar poderes que tú no posees."), { status: 403 });
-        }
+    const usuarios = await obtenerTodos();
+    if (usuarios.some(u => u.rut === data.rut)) {
+        throw Object.assign(new Error("El RUT ya existe."), { status: 400 });
     }
 
-    const empleadoExistente = await existeEmpleado(data.rut, data.cargo);
-    if (empleadoExistente) {
-        throw Object.assign(new Error("El trabajador ya existe en este rol."), { status: 400 });
-    }
+    const nuevoId = usuarios.length > 0 ? Math.max(...usuarios.map(u => u.id)) + 1 : 1;
 
-    const empleados = await obtenerTodos();
-    const nuevoId = empleados.length > 0 ? Math.max(...empleados.map(e => e.id)) + 1 : 1;
-
-    const nuevoEmpleado = {
+    const nuevoUsuario = {
         ...data,
         id: nuevoId,
-        creado_por: ejecutor.id, // REGISTRO DE LINAJE
-        fecha_asignacion: new Date().toISOString(),
-        activo: true
+        creado_por: ejecutor.id,
+        activo: true,
+        fecha_registro: new Date().toISOString()
     };
 
-    empleados.push(nuevoEmpleado);
-    await jsonDbHandler.escribir(FOLDER, FILE, empleados);
-    return nuevoEmpleado;
+    usuarios.push(nuevoUsuario);
+    await jsonDbHandler.escribir(FOLDER, FILE, usuarios);
+
+    if (data.powers) {
+        await PowerService.asignarPoderes(nuevoId, data.powers, ejecutor);
+    }
+
+    return nuevoUsuario;
 };
 
 // ################# ACTUALIZAR #################
 
 export const actualizar = async (id, data, ejecutor) => {
     const lista = await obtenerTodos();
-    const index = lista.findIndex(e => e.id === parseInt(id));
-
+    const index = lista.findIndex(u => u.id === parseInt(id));
     if (index === -1) throw Object.assign(new Error("No encontrado"), { status: 404 });
 
     const objetivo = lista[index];
-
-    // REGLA 3: Un Admin puede editar a quien creó o a hijos de quien creó (Simplificado a creador directo)
-    const esCreadorDirecto = objetivo.creado_por === ejecutor.id;
     const esRoot = ejecutor.cargo === 'ROOT';
-
-    if (!esRoot && !esCreadorDirecto) {
-        throw Object.assign(new Error("No tienes permiso para editar a este usuario (No eres su creador)."), { status: 403 });
-    }
-
-    // Si edita poderes, validar que no asigne lo que no tiene
-    if (data.powers && ejecutor.cargo !== 'ROOT') {
-        const tienePoderesValidos = data.powers.every(p => ejecutor.powers.includes(p));
-        if (!tienePoderesValidos) throw new Error("No puedes otorgar poderes que no tienes.");
+    
+    // REGLA: Si es ADMIN, solo ancestros o ROOT.
+    if (objetivo.rol === 'ADMIN') {
+        const esPadreOAncestro = await esAncestor(ejecutor.id, objetivo.id, lista);
+        if (!esRoot && !esPadreOAncestro) {
+            throw Object.assign(new Error("Solo ancestros directos pueden editar a un ADMIN."), { status: 403 });
+        }
+    } 
+    // Para cargos inferiores, basta con tener el poder USER:UPDATE (validado en controlador)
+    
+    if (data.powers) {
+        await PowerService.asignarPoderes(id, data.powers, ejecutor);
     }
 
     lista[index] = { ...objetivo, ...data, id: objetivo.id, creado_por: objetivo.creado_por };
@@ -109,41 +110,71 @@ export const actualizar = async (id, data, ejecutor) => {
 
 export const eliminar = async (id, ejecutor) => {
     let lista = await obtenerTodos();
-    const index = lista.findIndex(e => e.id === parseInt(id));
-
+    const index = lista.findIndex(u => u.id === parseInt(id));
     if (index === -1) throw Object.assign(new Error("No encontrado"), { status: 404 });
 
     const objetivo = lista[index];
-
-    // REGLA 0: Root es irrevocable
-    if (objetivo.cargo === 'ROOT') {
-        throw Object.assign(new Error("El ROOT no puede ser eliminado."), { status: 403 });
-    }
-
-    // REGLA 2: Root elimina todo. Admin elimina lo que él generó.
     const esRoot = ejecutor.cargo === 'ROOT';
-    const esCreador = objetivo.creado_por === ejecutor.id;
 
-    if (!esRoot && !esCreador) {
-        throw Object.assign(new Error("Solo el creador o el ROOT pueden eliminar este registro."), { status: 403 });
+    if (objetivo.rol === 'ROOT') throw new Error("ROOT es intocable.");
+
+    // Lógica de jerarquía para eliminación
+    if (objetivo.rol === 'ADMIN') {
+        const esPadreOAncestro = await esAncestor(ejecutor.id, objetivo.id, lista);
+        if (!esRoot && !esPadreOAncestro) {
+            throw Object.assign(new Error("No tienes autoridad sobre este ADMIN."), { status: 403 });
+        }
+    } else {
+        // Para Supervisor, Encargado, Empleado: Cualquier Admin (con poder DELETE) puede.
+        if (NIVELES[ejecutor.cargo] > NIVELES.ADMIN) {
+            // Si el ejecutor no es Admin/Root, solo puede borrar si es el padre directo
+            if (objetivo.creado_por !== ejecutor.id) {
+                throw Object.assign(new Error("No tienes permiso para eliminar a este usuario."), { status: 403 });
+            }
+        }
     }
 
-    // REGLA 2: El rol pasa a SIN_ASIGNAR y activo a false
     lista[index].activo = false;
-    lista[index].cargo = 'SIN_ASIGNAR';
-    lista[index].powers = [];
+    lista[index].rol = 'SIN_ASIGNAR';
+    await PowerService.revocarPoderesPorEliminacion(id);
 
     await jsonDbHandler.escribir(FOLDER, FILE, lista);
-    return { message: "Usuario desvinculado y rol revocado correctamente." };
+    return { message: "Eliminado con éxito." };
 };
 
-// ################# BUSQUEDA #################
+// ################# BÚSQUEDAS (READ) #################
 
 export const obtenerTodos = async () => {
     return await jsonDbHandler.leer(FOLDER, FILE) || [];
 };
 
-export const existeEmpleado = async (rut, cargo) => {
+export const buscar = async (filtros) => {
     const lista = await obtenerTodos();
-    return lista.some(e => e.rut === rut && e.cargo === cargo);
+    const asignaciones = await jsonDbHandler.leer(FOLDER, 'usuario_power.json') || [];
+
+    return lista.filter(u => {
+        let match = true;
+        if (filtros.id) match = match && u.id === parseInt(filtros.id);
+        if (filtros.rut) match = match && u.rut === filtros.rut;
+        if (filtros.nombre) match = match && u.nombre.toLowerCase().includes(filtros.nombre.toLowerCase());
+        if (filtros.cargo) match = match && u.rol === filtros.cargo;
+        if (filtros.activo !== undefined) match = match && u.activo === filtros.activo;
+        
+        // Filtro especial por PODER
+        if (filtros.poder) {
+            const tieneEsePoder = asignaciones.some(asig => 
+                asig.id_usuario === u.id && 
+                asig.id_power === filtros.poder && 
+                asig.activo
+            );
+            match = match && tieneEsePoder;
+        }
+
+        return match;
+    });
+};
+
+export const obtenerPorId = async (id) => {
+    const lista = await obtenerTodos();
+    return lista.find(u => u.id === parseInt(id));
 };

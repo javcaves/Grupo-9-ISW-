@@ -1,0 +1,32 @@
+[
+  { "id_power": "USER:CREATE", "nombre": "Crear Usuario", "descripcion": "Crear admins, supervisores o empleados", "activo": true },
+  { "id_power": "USER:READ", "nombre": "Ver Usuarios", "descripcion": "Ver lista completa de personal", "activo": true },
+  { "id_power": "USER:UPDATE", "nombre": "Editar Usuario", "descripcion": "Modificar datos de usuarios creados por el ejecutor", "activo": true },
+  { "id_power": "USER:DELETE", "nombre": "Eliminar Usuario", "descripcion": "Desactivar (Soft Delete) usuarios creados por el ejecutor", "activo": true },
+
+  { "id_power": "PROY:CREATE", "nombre": "Crear Proyecto", "descripcion": "Generar nuevos proyectos en el sistema", "activo": true },
+  { "id_power": "PROY:READ", "nombre": "Ver Proyectos", "descripcion": "Visualizar detalles y estados de proyectos", "activo": true },
+  { "id_power": "PROY:UPDATE", "nombre": "Editar Proyecto", "descripcion": "Modificar fechas, personal o ubicación de un proyecto", "activo": true },
+  { "id_power": "PROY:DELETE", "nombre": "Eliminar Proyecto", "descripcion": "Desactivar proyectos (Soft Delete)", "activo": true },
+
+  { "id_power": "ITEM:CREATE", "nombre": "Crear Item", "descripcion": "Definir nuevos productos o herramientas en inventario", "activo": true },
+  { "id_power": "ITEM:READ", "nombre": "Ver Inventario", "descripcion": "Visualizar stock y movimientos de bodega", "activo": true },
+  { "id_power": "ITEM:UPDATE", "nombre": "Editar Item", "descripcion": "Modificar descripción o naturaleza del item", "activo": true },
+  { "id_power": "ITEM:DELETE", "nombre": "Eliminar Item", "descripcion": "Eliminar items sin stock activo", "activo": true },
+
+  { "id_power": "CAT:GESTION", "nombre": "Gestionar Categorías", "descripcion": "CRUD completo de categorías de actividades", "activo": true },
+  { "id_power": "ACT:CREATE", "nombre": "Crear Actividad", "descripcion": "Definir nuevas actividades bajo una categoría", "activo": true },
+  { "id_power": "ACT:READ", "nombre": "Ver Actividades", "descripcion": "Visualizar panel de actividades del proyecto", "activo": true },
+  { "id_power": "ACT:UPDATE", "nombre": "Editar Actividad", "descripcion": "Modificar recurrencia o descripción de actividades", "activo": true },
+  { "id_power": "ACT:DELETE", "nombre": "Eliminar Actividad", "descripcion": "Eliminar actividades y sus tareas asociadas", "activo": true },
+
+  { "id_power": "TURN:CREATE", "nombre": "Crear Turno", "descripcion": "Definir horarios de ingreso y salida", "activo": true },
+  { "id_power": "TURN:READ", "nombre": "Ver Turnos", "descripcion": "Visualizar la planificación de turnos", "activo": true },
+  { "id_power": "TURN:UPDATE", "nombre": "Editar Turno", "descripcion": "Modificar horarios o asignar personal al turno", "activo": true },
+  { "id_power": "TURN:DELETE", "nombre": "Eliminar Turno", "descripcion": "Desactivar turnos vacíos", "activo": true },
+
+  { "id_power": "ASIS:CRUD", "nombre": "Gestionar Asistencia", "descripcion": "Crear token, editar estados y ver historial (Solo Encargados)", "activo": true },
+  { "id_power": "ASIS:READ", "nombre": "Ver Asistencia", "descripcion": "Poder básico para ver registros de asistencia", "activo": true },
+
+  { "id_power": "USER:ASSIGN_POWER", "nombre": "Delegar Poderes", "descripcion": "Permite asignar a otros los mismos poderes que uno posee", "activo": true }
+]

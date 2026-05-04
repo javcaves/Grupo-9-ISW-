@@ -1,21 +1,32 @@
 import { Router } from 'express';
-import * as EmpleadosCtrl from './empleados.controller.js';
+import * as UsuarioController from './usuario.controller.js';
+import { validarUsuario } from './usuario.schema.js';
 
 const router = Router();
 
-// ################# RUTAS DE LECTURA #################
-router.get('/', EmpleadosCtrl.listarTodos);           // Obtener todos
-router.get('/activos', EmpleadosCtrl.listarActivos);  // Obtener activos opcional: cargo
-router.get('/buscar', EmpleadosCtrl.buscarEmpleados); // Buscador dinámico
-router.get('/:id', EmpleadosCtrl.obtenerEmpleado);    // Obtener por ID
+/**
+ * Gestión de Usuarios
+ * Prefijo sugerido desde el router principal: /usuarios
+ */
 
-// ################# RUTAS DE ESCRITURA #################
-router.post('/registrar', EmpleadosCtrl.registrarEmpleado); // Registrar operativo
-router.post('/registrar-admin', EmpleadosCtrl.registrarAdmin); // Registrar admin
-router.put('/:id', EmpleadosCtrl.actualizarEmpleado);     // Actualizar
+// --- BÚSQUEDA Y LISTADO ---
+// Soporta queries: ?nombre=...&cargo=...&poder=...&rut=...
+router.get('/', UsuarioController.buscarUsuarios);
+router.get('/:id', UsuarioController.obtenerUsuarioPorId);
 
-// ################# RUTAS DE ELIMINACIÓN #################
-router.delete('/:id', EmpleadosCtrl.eliminarEmpleado);           // Soft Delete
-router.delete('/hard/:id', EmpleadosCtrl.borrarEmpleadoDefinitivamente); // Hard Delete
+// --- REGISTRO ---
+router.post('/', validarUsuario, UsuarioController.registrarUsuario);
+
+// --- ACTUALIZACIÓN ---
+router.put('/:id', validarUsuario, UsuarioController.actualizarUsuario);
+
+// --- ELIMINACIÓN (Soft Delete) ---
+router.delete('/:id', UsuarioController.eliminarUsuario);
+
+// --- UTILIDADES DE PERMISOS (Para el Administrador) ---
+// Obtiene el diccionario maestro de powers.json
+router.get('/config/catalogo-powers', UsuarioController.obtenerCatalogoPoderes);
+// Obtiene solo los IDs de poderes que el usuario logueado puede asignar a otros
+router.get('/config/mis-poderes', UsuarioController.obtenerMisPoderesAsignables);
 
 export default router;

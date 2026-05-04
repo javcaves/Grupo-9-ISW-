@@ -1,101 +1,144 @@
-import * as AsistenciaService from './asistencia.service.js';
-import validators from '../../../shared/validators.js';
+import * as AsistenciaService from '../../services/rrhh/asistencia.service.js';
 
-const sendResponse = (res, status, payload) => {
-    const isError = status >= 400;
-    return res.status(status).json({ [isError ? 'error' : 'data']: payload });
-};
-
-export const listarAsistencias = async (req, res) => {
+/**
+ * 1. Generar Token/QR de Asistencia (Encargado/Supervisor)
+ * POST /asistencia/generar
+ */
+export const crearAsistencia = async (req, res) => {
     try {
-        const lista = await AsistenciaService.obtenerAsistenciasActivas();
-        return sendResponse(res, 200, lista);
+        const { id_turno } = req.body;
+        const ejecutor = req.user; // Viene del middleware de autenticación
+
+        const nuevaAsistencia = await AsistenciaService.crearAsistencia(id_turno, ejecutor);
+        
+        return res.status(201).json({
+            success: true,
+            message: "Asistencia generada exitosamente.",
+            data: nuevaAsistencia
+        });
     } catch (error) {
-        return sendResponse(res, 500, "Error al obtener las asistencias");
+        return res.status(error.status || 500).json({
+            success: false,
+            error: error.message
+        });
     }
 };
 
-export const obtenerDetalleAsistencia = async (req, res) => {
+/**
+ * 2 & 3. Ver y Editar Detalle (Encargado/Supervisor)
+ * PUT /asistencia/:idAsistencia/empleado/:idEmpleado
+ */
+export const actualizarEstadoManual = async (req, res) => {
     try {
-        const { id } = req.params;
-        const detalle = await AsistenciaService.obtenerDetallePorAsistencia(id);
-        return sendResponse(res, 200, detalle);
+        const { idAsistencia, idEmpleado } = req.params;
+        const data = req.body; // Puede contener: estado, descripcion, hora_ingreso
+        const ejecutor = req.user;
+
+        const actualizado = await AsistenciaService.actualizarEstadoManual(
+            idAsistencia, 
+            idEmpleado, 
+            data, 
+            ejecutor
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Registro de asistencia actualizado.",
+            data: actualizado
+        });
     } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
+        return res.status(error.status || 500).json({
+            success: false,
+            error: error.message
+        });
     }
 };
 
-export const crearCabeceraAsistencia = async (req, res) => {
-    try {
-        const nueva = await AsistenciaService.crearAsistenciaGeneral(req.body);
-        return sendResponse(res, 201, nueva);
-    } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
-    }
-};
-
-export const registrarEmpleadoEnAsistencia = async (req, res) => {
-    try {
-        const { correo } = req.body;
-        if (correo && !validators.esCorreoValido(correo)) {
-            return sendResponse(res, 400, "Correo inválido");
-        }
-
-        const registro = await AsistenciaService.registrarAsistenciaEmpleado(req.body);
-        return sendResponse(res, 201, registro);
-    } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
-    }
-};
-
-export const buscarEnAsistencias = async (req, res) => {
-    try {
-        const { q } = req.query;
-        if (!q) return sendResponse(res, 400, "Se requiere un término de búsqueda (q)");
-
-        const resultados = await AsistenciaService.buscarEmpleadoEnAsistencia(q);
-        return sendResponse(res, 200, resultados);
-    } catch (error) {
-        return sendResponse(res, 500, error.message);
-    }
-};
-
-export const actualizarRegistroEmpleado = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const actualizado = await AsistenciaService.actualizarAsistenciaEmpleado(id, req.body);
-        return sendResponse(res, 200, actualizado);
-    } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
-    }
-};
-
-export const actualizarCabecera = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const actualizado = await AsistenciaService.actualizarCabeceraAsistencia(id, req.body);
-        return sendResponse(res, 200, actualizado);
-    } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
-    }
-};
-
+/**
+ * 4. Eliminar Asistencia (Encargado/Supervisor)
+ * DELETE /asistencia/:idAsistencia
+ */
 export const eliminarAsistencia = async (req, res) => {
     try {
-        const { id } = req.params;
-        const resultado = await AsistenciaService.eliminarAsistenciaCompleta(id);
-        return sendResponse(res, 200, resultado.message);
+        const { idAsistencia } = req.params;
+        const ejecutor = req.user;
+
+        const resultado = await AsistenciaService.eliminarAsistencia(idAsistencia, ejecutor);
+
+        return res.status(200).json({
+            success: true,
+            message: resultado.message
+        });
     } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
+        return res.status(error.status || 500).json({
+            success: false,
+            error: error.message
+        });
     }
 };
 
-export const borrarDetalleFisico = async (req, res) => {
+/**
+ * 5. Obtener Historial (Encargado/Supervisor)
+ * GET /asistencia/historial
+ */
+export const obtenerHistorial = async (req, res) => {
     try {
-        const { id } = req.params;
-        const resultado = await AsistenciaService.ELIMINAR_DETALLE_HARD(id);
-        return sendResponse(res, 200, resultado.message);
+        const filtros = req.query;
+        const historial = await AsistenciaService.obtenerHistorial(filtros);
+
+        return res.status(200).json({
+            success: true,
+            data: historial
+        });
     } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
+        return res.status(500).json({
+            success: false,
+            error: "Error al obtener el historial de asistencia."
+        });
+    }
+};
+
+/**
+ * Obtener detalle de una asistencia específica
+ * GET /asistencia/:idAsistencia/detalle
+ */
+export const obtenerDetalleAsistencia = async (req, res) => {
+    try {
+        const { idAsistencia } = req.params;
+        const detalle = await AsistenciaService.obtenerDetalleAsistencia(idAsistencia);
+
+        return res.status(200).json({
+            success: true,
+            data: detalle
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            error: "Error al obtener el detalle de la asistencia."
+        });
+    }
+};
+
+/**
+ * 6. Registro de Asistencia por Token (Empleado)
+ * POST /asistencia/marcar
+ */
+export const registrarMarcaEmpleado = async (req, res) => {
+    try {
+        const { token } = req.body;
+        const idEmpleado = req.user.id; // El empleado está logueado
+
+        const registro = await AsistenciaService.registrarMarcaEmpleado(token, idEmpleado);
+
+        return res.status(200).json({
+            success: true,
+            message: "Asistencia registrada correctamente.",
+            data: registro
+        });
+    } catch (error) {
+        return res.status(error.status || 500).json({
+            success: false,
+            error: error.message
+        });
     }
 };

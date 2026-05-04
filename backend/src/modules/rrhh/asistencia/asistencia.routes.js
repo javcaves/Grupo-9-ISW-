@@ -1,39 +1,55 @@
 import { Router } from 'express';
-import * as AsistenciaCtrl from './asistencia.controller.js';
+import * as AsistenciaController from './asistencia.controller.js';
+import * as AsistenciaSchema from './asistencia.schema.js';
 
 const router = Router();
 
-// ################# RUTAS DE LECTURA #################
+/**
+ * RUTAS DE ASISTENCIA
+ * Prefijo sugerido: /asistencia
+ */
 
-// Obtener todas las cabeceras de asistencia activas
-router.get('/', AsistenciaCtrl.listarAsistencias);
+// --- GESTIÓN DEL ENCARGADO / SUPERVISOR ---
 
-// Obtener el detalle de todos los empleados de una asistencia específica
-router.get('/detalle/:id', AsistenciaCtrl.obtenerDetalleAsistencia);
+/**
+ * 1. Generar asistencia y Token/QR para un turno
+ * Requiere poder: ASIS:CRUD
+ */
+router.post('/generar', 
+    AsistenciaSchema.validarCreacionAsistencia, 
+    AsistenciaController.crearAsistencia
+);
 
-// Buscador dinámico en los registros de asistencia (por apellido o correo)
-router.get('/buscar', AsistenciaCtrl.buscarEnAsistencias);
+/**
+ * 2, 3 y 5. Historial y Visualización de detalles
+ */
+router.get('/historial', AsistenciaController.obtenerHistorial);
+router.get('/:idAsistencia/detalle', AsistenciaController.obtenerDetalleAsistencia);
 
-// ################# RUTAS DE ESCRITURA #################
+/**
+ * 3. Edición manual de un registro de empleado (Estado, Hora, Descripción)
+ * Requiere poder: ASIS:CRUD
+ */
+router.put('/:idAsistencia/empleado/:idEmpleado', 
+    AsistenciaSchema.validarEdicionAsistencia, 
+    AsistenciaController.actualizarEstadoManual
+);
 
-// Crear una nueva jornada/cabecera de asistencia
-router.post('/cabecera', AsistenciaCtrl.crearCabeceraAsistencia);
+/**
+ * 4. Eliminar una asistencia (Solo si no hay marcas activas)
+ */
+router.delete('/:idAsistencia', AsistenciaController.eliminarAsistencia);
 
-// Registrar a un empleado en una asistencia existente
-router.post('/registrar-empleado', AsistenciaCtrl.registrarEmpleadoEnAsistencia);
 
-// Actualizar datos de la cabecera (ej. cerrar jornada)
-router.put('/cabecera/:id', AsistenciaCtrl.actualizarCabecera);
+// --- OPERATIVA DEL EMPLEADO ---
 
-// Actualizar registro de un empleado (ej. marcar salida o cambiar estado)
-router.put('/empleado/:id', AsistenciaCtrl.actualizarRegistroEmpleado);
-
-// ################# RUTAS DE ELIMINACIÓN #################
-
-// Desactivar asistencia completa y sus registros (Soft Delete)
-router.delete('/:id', AsistenciaCtrl.eliminarAsistencia);
-
-// Eliminar físicamente un registro de empleado (Hard Delete por error de ingreso)
-router.delete('/detalle/hard/:id', AsistenciaCtrl.borrarDetalleFisico);
+/**
+ * 6. Registro de asistencia mediante Token
+ * El empleado usa esta ruta para marcar su ingreso
+ */
+router.post('/marcar', 
+    AsistenciaSchema.validarRegistroToken, 
+    AsistenciaController.registrarMarcaEmpleado
+);
 
 export default router;

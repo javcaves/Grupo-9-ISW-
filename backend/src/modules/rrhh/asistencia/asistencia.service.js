@@ -1,200 +1,182 @@
 /**
- * @typedef {Object} asistencia
- * @property {number} id - Identificador único autoincremental
- * @property {string} fecha - Fecha de la asistencia (YYYY-MM-DD)
- * @property {string} nombre_evento - Nombre del turno o evento (ej. Turno Mañana)
- * @property {string} hora_entrada_esperada - Hora de entrada estándar
- * @property {string} estado_asistencia - Estado del registro (Abierta/Cerrada)
- * @property {string} observacion - Notas generales sobre la jornada
- * @property {boolean} activo - Estado del registro (Soft Delete)
+ * @typedef {Object} Asistencia
+ * @property {number} id_asistencia - ID único
+ * @property {number} id_proyecto - Proyecto vinculado
+ * @property {number} id_turno - Turno del cual emana la asistencia
+ * @property {string} fecha - Fecha de la jornada (YYYY-MM-DD)
+ * @property {string} token - Código único para el registro del empleado
+ * @property {boolean} activo - Soft delete
  */
-
-
-import jsonDbHandler from '../../../shared/jsonDbHandler.js';
-
-const FOLDER = 'recursos_humanos';
-const FILE_ASISTENCIA = 'asistencia.json';
-const FILE_DETALLE = 'asistencia_empleado.json';
-
-
-// ################# CREAR #################
 
 /**
- * Crea una nueva jornada de asistencia
+ * @typedef {Object} AsistenciaEmpleado
+ * @property {number} id_asistencia - ID de la cabecera de asistencia
+ * @property {number} id_empleado - ID del usuario empleado
+ * @property {string} hora_ingreso - HH:mm:ss o null si no ha marcado
+ * @property {string} estado - [EN_ESPERA, ASISTIDO, RETIRADO, ATRASO, FALTA_JUSTIFICADA, FALTA_INJUSTIFICADA]
+ * @property {string} descripcion - Notas del encargado
+ * @property {boolean} activo - Soft delete
  */
-export const crearAsistenciaGeneral = async (data) => {
-    const lista = await jsonDbHandler.leer(FOLDER, FILE_ASISTENCIA);
-    
-    const existe = lista.find(a => a.fecha === data.fecha && a.nombre_evento === data.nombre_evento);
-    if (existe) {
-        const error = new Error(`Ya existe una asistencia registrada para ${data.nombre_evento} en la fecha ${data.fecha}`);
-        error.status = 400;
-        throw error;
-    }
 
-    const nuevoId = lista.length > 0 ? Math.max(...lista.map(a => a.id)) + 1 : 1;
+import jsonDbHandler from '../../shared/jsonDbHandler.js';
+import { v4 as uuidv4 } from 'uuid'; // Para generar tokens únicos
+
+const dbAsistencia = jsonDbHandler('recursos_humanos', 'asistencia.json');
+const dbAsisEmpleado = jsonDbHandler('recursos_humanos', 'asistencia_empleado.json');
+const dbTurno = jsonDbHandler('recursos_humanos', 'turno.json');
+const dbTurnoEmp = jsonDbHandler('recursos_humanos', 'turno_empleado.json');
+const dbProyectoUser = jsonDbHandler('recursos_humanos', 'proyecto_usuario.json');
+
+/**
+ * REGLA DE ORO: Solo Encargado o Supervisor asignado al proyecto
+ */
+const validarPermisoGestion = async (idUsuario, idProyecto, cargo) => {
+    const permitidos = ['SUPERVISOR', 'ENCARGADO'];
+    if (!permitidos.includes(cargo)) throw { status: 403, message: "No tienes rango para gestionar asistencia." };
+
+    const vinculos = await dbProyectoUser.leer() || [];
+    const estaEnProyecto = vinculos.some(v => v.id_proyecto === parseInt(idProyecto) && v.id_usuario === parseInt(idUsuario) && v.activo);
+    if (!estaEnProyecto) throw { status: 403, message: "No estás asignado a este proyecto." };
+};
+
+// ################# GESTIÓN DEL ENCARGADO #################
+
+/**
+ * 1. Generar Token/QR de Asistencia
+ */
+export const crearAsistencia = async (id_turno, ejecutor) => {
+    const turnos = await dbTurno.leer() || [];
+    const turno = turnos.find(t => t.id_turno === parseInt(id_turno) && t.activo);
+    if (!turno) throw { status: 404, message: "Turno no encontrado." };
+
+    await validarPermisoGestion(ejecutor.id, turno.id_proyecto, ejecutor.cargo);
+
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    const asistencias = await dbAsistencia.leer() || [];
+
+    // Regla: Solo una asistencia por turno al día
+    const existe = asistencias.find(a => a.id_turno === id_turno && a.fecha === fechaHoy && a.activo);
+    if (existe) throw { status: 400, message: "La asistencia para este turno ya fue generada hoy." };
+
     const nuevaAsistencia = {
-        ...data,
-        id: nuevoId,
+        id_asistencia: Date.now(),
+        id_proyecto: turno.id_proyecto,
+        id_turno: parseInt(id_turno),
+        fecha: fechaHoy,
+        token: uuidv4().substring(0, 6).toUpperCase(), // Token corto de 6 caracteres
         activo: true
     };
 
-    lista.push(nuevaAsistencia);
-    await jsonDbHandler.escribir(FOLDER, FILE_ASISTENCIA, lista);
+    // Al crear la asistencia, inicializamos a todos los empleados del turno en "EN_ESPERA"
+    const asignacionesTurno = await dbTurnoEmp.leer() || [];
+    const empleadosDelTurno = asignacionesTurno.filter(at => at.id_turno === id_turno && at.activo);
+
+    const detallesIniciales = empleadosDelTurno.map(emp => ({
+        id_asistencia: nuevaAsistencia.id_asistencia,
+        id_empleado: emp.id_empleado,
+        hora_ingreso: null,
+        estado: "EN_ESPERA",
+        descripcion: "",
+        activo: true
+    }));
+
+    await dbAsistencia.escribir([...asistencias, nuevaAsistencia]);
+    const asisDetalles = await dbAsisEmpleado.leer() || [];
+    await dbAsisEmpleado.escribir([...asisDetalles, ...detallesIniciales]);
+
     return nuevaAsistencia;
 };
 
-// ################# REGISTRO DE EMPLEADOS #################
+/**
+ * 2 & 3. Ver y Editar Detalle (Encargado/Supervisor)
+ */
+export const actualizarEstadoManual = async (idAsistencia, idEmpleado, data, ejecutor) => {
+    const cabecera = (await dbAsistencia.leer()).find(a => a.id_asistencia === parseInt(idAsistencia));
+    await validarPermisoGestion(ejecutor.id, cabecera.id_proyecto, ejecutor.cargo);
+
+    const detalles = await dbAsisEmpleado.leer() || [];
+    const index = detalles.findIndex(d => d.id_asistencia === parseInt(idAsistencia) && d.id_empleado === parseInt(idEmpleado));
+
+    if (index === -1) throw { status: 404, message: "Registro de empleado no encontrado." };
+
+    detalles[index] = { ...detalles[index], ...data }; // data puede traer estado, descripcion, hora_ingreso
+    await dbAsisEmpleado.escribir(detalles);
+    return detalles[index];
+};
 
 /**
- * Registra la asistencia de un empleado específico vinculada a una cabecera
+ * 4. Eliminar Asistencia
  */
-export const registrarAsistenciaEmpleado = async (data) => {
-    const listaDetalle = await jsonDbHandler.leer(FOLDER, FILE_DETALLE);
+export const eliminarAsistencia = async (idAsistencia, ejecutor) => {
+    const asistencias = await dbAsistencia.leer() || [];
+    const asisIdx = asistencias.findIndex(a => a.id_asistencia === parseInt(idAsistencia));
+    if (asisIdx === -1) throw { status: 404, message: "Asistencia no encontrada." };
+
+    await validarPermisoGestion(ejecutor.id, asistencias[asisIdx].id_proyecto, ejecutor.cargo);
+
+    const detalles = await dbAsisEmpleado.leer() || [];
+    const misDetalles = detalles.filter(d => d.id_asistencia === parseInt(idAsistencia));
+
+    // Regla: No eliminar si hay alguien que no esté "EN ESPERA" o "FALTA_INJUSTIFICADA"
+    const hayRegistrosActivos = misDetalles.some(d => !["EN_ESPERA", "FALTA_INJUSTIFICADA"].includes(d.estado));
+    if (hayRegistrosActivos) {
+        throw { status: 400, message: "No puedes eliminar una asistencia con personal ya marcado como ASISTIDO o ATRASO." };
+    }
+
+    asistencias[asisIdx].activo = false;
+    await dbAsistencia.escribir(asistencias);
+    return { message: "Asistencia eliminada." };
+};
+
+// ################# LÓGICA DEL EMPLEADO #################
+
+/**
+ * 6. Registrar Asistencia (Auto-marcado por el empleado)
+ */
+export const registrarMarcaEmpleado = async (token, idEmpleado) => {
+    const asistencias = await dbAsistencia.leer() || [];
+    const asistencia = asistencias.find(a => a.token === token.toUpperCase() && a.activo);
+    if (!asistencia) throw { status: 404, message: "Token inválido o expirado." };
+
+    // Verificar que el empleado pertenezca a esta asistencia (esté en el turno)
+    const detalles = await dbAsisEmpleado.leer() || [];
+    const detalleIdx = detalles.findIndex(d => d.id_asistencia === asistencia.id_asistencia && d.id_empleado === parseInt(idEmpleado));
     
-    // Verificar si ya tiene registro en esa asistencia
-    const yaRegistrado = listaDetalle.find(d => 
-        d.asistencia_id === parseInt(data.asistencia_id) && 
-        d.empleado_id === parseInt(data.empleado_id)
-    );
+    if (detalleIdx === -1) throw { status: 403, message: "No estás vinculado a este turno de asistencia." };
+    if (detalles[detalleIdx].estado !== "EN_ESPERA") throw { status: 400, message: "Ya posees un registro de asistencia para este turno." };
 
-    if (yaRegistrado) {
-        const error = new Error("El empleado ya tiene un registro de asistencia para este evento");
-        error.status = 400;
-        throw error;
+    // Validar fin del turno
+    const turno = (await dbTurno.leer()).find(t => t.id_turno === asistencia.id_turno);
+    const ahora = new Date();
+    const horaActualStr = ahora.getHours().toString().padStart(2, '0') + ":" + ahora.getMinutes().toString().padStart(2, '0');
+
+    if (horaActualStr > turno.hora_salida) {
+        throw { status: 403, message: "El turno ya ha finalizado. No puedes marcar asistencia." };
     }
 
-    const nuevoId = listaDetalle.length > 0 ? Math.max(...listaDetalle.map(d => d.id)) + 1 : 1;
-    
-    const nuevoRegistro = {
-        ...data,
-        id: nuevoId,
-        asistencia_id: parseInt(data.asistencia_id),
-        empleado_id: parseInt(data.empleado_id),
-        activo: true
-    };
-
-    listaDetalle.push(nuevoRegistro);
-    await jsonDbHandler.escribir(FOLDER, FILE_DETALLE, listaDetalle);
-    return nuevoRegistro;
-};
-
-// ################# BUSQUEDAS #################
-
-/**
- * Obtener todas las cabeceras de asistencia activas
- */
-export const obtenerAsistenciasActivas = async () => {
-    const lista = await jsonDbHandler.leer(FOLDER, FILE_ASISTENCIA);
-    return lista.filter(a => a.activo === true);
-};
-
-/**
- * Obtener el detalle de todos los empleados para una asistencia específica
- */
-export const obtenerDetallePorAsistencia = async (asistenciaId) => {
-    const listaDetalle = await jsonDbHandler.leer(FOLDER, FILE_DETALLE);
-    return listaDetalle.filter(d => d.asistencia_id === parseInt(asistenciaId) && d.activo === true);
-};
-
-/**
- * Obtener una cabecera por ID
- */
-export const obtenerAsistenciaPorID = async (id) => {
-    const lista = await jsonDbHandler.leer(FOLDER, FILE_ASISTENCIA);
-    const item = lista.find(a => a.id === parseInt(id));
-
-    if (!item) {
-        const error = new Error("Asistencia no encontrada");
-        error.status = 404;
-        throw error;
-    }
-    return item;
-};
-
-/**
- * Buscador Dinámico en registros de empleados: Filtra por Apellido o Correo
- */
-export const buscarEmpleadoEnAsistencia = async (termino) => {
-    const listaDetalle = await jsonDbHandler.leer(FOLDER, FILE_DETALLE);
-    const t = termino.toLowerCase();
-
-    return listaDetalle.filter(d => 
-        d.apellido.toLowerCase().includes(t) || 
-        d.correo.toLowerCase().includes(t)
-    );
-};
-
-// ################# ACTUALIZAR #################
-
-/**
- * Actualiza los datos de asistencia de un empleado (ej. agregar hora de salida o cambiar estado)
- */
-export const actualizarAsistenciaEmpleado = async (id, data) => {
-    const lista = await jsonDbHandler.leer(FOLDER, FILE_DETALLE);
-    const index = lista.findIndex(d => d.id === parseInt(id));
-
-    if (index === -1) {
-        const error = new Error("No se encontró el registro de asistencia del empleado");
-        error.status = 404;
-        throw error;
+    // Calcular Estado (Margen de 15 minutos para ser "ASISTIDO", sino "ATRASO")
+    // Aquí comparamos horaActualStr vs turno.hora_ingreso
+    let estadoFinal = "ASISTIDO";
+    if (horaActualStr > turno.hora_ingreso) {
+        estadoFinal = "ATRASO";
     }
 
-    const registroActualizado = {
-        ...lista[index],
-        ...data,
-        id: lista[index].id,
-        asistencia_id: lista[index].asistencia_id
-    };
+    detalles[detalleIdx].hora_ingreso = horaActualStr;
+    detalles[detalleIdx].estado = estadoFinal;
 
-    lista[index] = registroActualizado;
-    await jsonDbHandler.escribir(FOLDER, FILE_DETALLE, lista);
-    return registroActualizado;
+    await dbAsisEmpleado.escribir(detalles);
+    return detalles[detalleIdx];
 };
 
-/**
- * Actualiza la cabecera
- */
-export const actualizarCabeceraAsistencia = async (id, data) => {
-    const lista = await jsonDbHandler.leer(FOLDER, FILE_ASISTENCIA);
-    const index = lista.findIndex(a => a.id === parseInt(id));
+// ################# HISTORIAL Y REPORTES #################
 
-    if (index === -1) {
-        const error = new Error("No se encontró la cabecera de asistencia");
-        error.status = 404;
-        throw error;
-    }
-
-    lista[index] = { ...lista[index], ...data, id: lista[index].id };
-    await jsonDbHandler.escribir(FOLDER, FILE_ASISTENCIA, lista);
-    return lista[index];
+export const obtenerHistorial = async (filtros) => {
+    const cabeceras = await dbAsistencia.leer() || [];
+    // Ordenar por fecha descendente
+    return cabeceras.filter(a => a.activo).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 };
 
-// ################# ELIMINAR #################
-
-/**
- * ELIMINACIÓN SOFT de una cabecera y (opcionalmente) sus detalles
- */
-export const eliminarAsistenciaCompleta = async (id) => {
-    // 1. Desactivar Cabecera
-    let listaCabecera = await jsonDbHandler.leer(FOLDER, FILE_ASISTENCIA);
-    listaCabecera = listaCabecera.map(a => a.id === parseInt(id) ? { ...a, activo: false } : a);
-    await jsonDbHandler.escribir(FOLDER, FILE_ASISTENCIA, listaCabecera);
-
-    // 2. Desactivar detalles asociados
-    let listaDetalle = await jsonDbHandler.leer(FOLDER, FILE_DETALLE);
-    listaDetalle = listaDetalle.map(d => d.asistencia_id === parseInt(id) ? { ...d, activo: false } : d);
-    await jsonDbHandler.escribir(FOLDER, FILE_DETALLE, listaDetalle);
-
-    return { message: "Asistencia y registros asociados desactivados" };
-};
-
-/**
- * ELIMINACIÓN HARD de un registro de empleado específico (por error de dedo)
- */
-export const ELIMINAR_DETALLE_HARD = async (id) => {
-    let lista = await jsonDbHandler.leer(FOLDER, FILE_DETALLE);
-    const nuevaLista = lista.filter(d => d.id !== parseInt(id));
-    await jsonDbHandler.escribir(FOLDER, FILE_DETALLE, nuevaLista);
-    return { message: "Registro eliminado físicamente" };
+export const obtenerDetalleAsistencia = async (idAsistencia) => {
+    const detalles = await dbAsisEmpleado.leer() || [];
+    return detalles.filter(d => d.id_asistencia === parseInt(idAsistencia) && d.activo);
 };
