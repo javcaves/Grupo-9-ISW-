@@ -1,4 +1,4 @@
-import * as EmpleadosService from './empleados.service.js';
+import * as EmpleadosService from './usuario.service.js';
 import validators from '../../../shared/validators.js';
 
 // Helper para uniformar respuestas: { data: ... } o { error: ... }
