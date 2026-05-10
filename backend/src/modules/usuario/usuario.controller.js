@@ -1,5 +1,5 @@
 import * as UsuarioService from './usuario.service.js';
-import * as PowerService from './power.service.js';
+import * as PowerService from '../power/power.service.js';
 
 // Helper para respuestas uniformes
 const sendResponse = (res, status, payload) => {

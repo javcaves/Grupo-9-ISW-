@@ -15,8 +15,6 @@
 
 //1. IMPORTS
 import jsonDbHandler from '../../shared/jsonDbHandler.js';
-//importamos el servicio de imventario para crear un registro inicial
-import * as InventarioService from '../inventario/inventario.service.js';
 
 const FOLDER = '/bodega';
 const FILE = 'items.json';
@@ -60,13 +58,7 @@ export const createItem = async (data) => {
 
     const itemGuardado = await jsonDbHandler.guardar(FOLDER, FILE, nuevoItem);
 
-    await inventarioService.createProducto({
-        nombre: data.nombre,
-        descripcion: 'Item creado automáticamente',
-        cantidad: 0,
-        precio: 0,
-        categoria: data.id_tipo
-    });
+    // ELIMINADO INVENTARIOSERVICE
 
     return itemGuardado;
 };

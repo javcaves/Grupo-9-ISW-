@@ -18,7 +18,7 @@
  * @property {boolean} activo - Soft delete
  */
 
-import jsonDbHandler from '../../shared/jsonDbHandler.js';
+import jsonDbHandler from '../../shared/jsonDbHandler.js'
 import { v4 as uuidv4 } from 'uuid'; // Para generar tokens únicos
 
 const dbAsistencia = jsonDbHandler('recursos_humanos', 'asistencia.json');

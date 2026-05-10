@@ -1,4 +1,4 @@
-import * as AsistenciaService from '../../services/rrhh/asistencia.service.js';
+import * as AsistenciaService from './asistencia.service.js';
 
 /**
  * 1. Generar Token/QR de Asistencia (Encargado/Supervisor)
