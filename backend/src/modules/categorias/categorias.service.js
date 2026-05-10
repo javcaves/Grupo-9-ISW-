@@ -16,7 +16,7 @@
  * @description Gestión de categorías de productos con ES Modules
  */
 
-import jsonDbHandler from '../../../shared/jsonDbHandler.js';
+import jsonDbHandler from '../../shared/jsonDbHandler.js';
 
 const FOLDER = 'gestion_actividades';
 const FILE = 'categorias.json';

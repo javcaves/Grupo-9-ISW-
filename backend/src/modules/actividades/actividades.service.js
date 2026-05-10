@@ -6,7 +6,7 @@
  * @property {boolean} activo - Estado del registro (Soft Delete)
  */
 
-import jsonDbHandler from '../../../shared/jsonDbHandler.js';
+import jsonDbHandler from '../../shared/jsonDbHandler.js';
 
 const FOLDER = 'gestion_actividades';
 const FILE = 'actividades.json';

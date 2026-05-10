@@ -5,7 +5,7 @@
 
 // 1. Imports (Librerías externas -> Propias)
 import * as InventarioService from './inventario.service.js';
-import validators from '../../../shared/validators.js';
+import validators from '../../shared/validators.js';
 
 // 2. Helper functions (Funciones internas no exportadas)
 const sendResponse = (res, status, payload) => {
