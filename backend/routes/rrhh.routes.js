@@ -7,7 +7,7 @@ import PowerRoutes from '../src/modules/power/power.routes.js';
 
 const router = Router();
 
-router.use('/usuario', UsuarioRoutes);
+router.use('/usuarios', UsuarioRoutes);
 router.use('/asistencia', AsistenciaRoutes);
 router.use('/power', PowerRoutes);
 router.use('/turno', TurnoRoutes);

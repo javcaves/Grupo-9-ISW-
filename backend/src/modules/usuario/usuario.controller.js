@@ -106,9 +106,9 @@ export const eliminarUsuario = async (req, res) => {
 
 /**
  * Permite a un Admin ver los poderes que él mismo posee para poder asignar.
- * Útil para renderizar el checklist de "Powers menores o iguales" (Req 1 Usuario)
+ * Útil para renderizar el checklist de "Powers menores o iguales"
  */
-export const obtenerMisPoderesAsignables = async (req, res) => {
+export const obtenerMisPoderesPropios = async (req, res) => {
     try {
         const poderes = await PowerService.obtenerPoderesDeUsuario(req.user.id);
         // Retornamos solo los IDs para el checklist

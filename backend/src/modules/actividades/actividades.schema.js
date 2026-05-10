@@ -1,0 +1,1 @@
+// Aqui van las verificaciones especiales de actividades, como su formato

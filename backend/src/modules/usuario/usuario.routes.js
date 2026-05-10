@@ -27,6 +27,6 @@ router.delete('/:id', UsuarioController.eliminarUsuario);
 // Obtiene el diccionario maestro de powers.json
 router.get('/config/catalogo-powers', UsuarioController.obtenerCatalogoPoderes);
 // Obtiene solo los IDs de poderes que el usuario logueado puede asignar a otros
-router.get('/config/mis-poderes', UsuarioController.obtenerMisPoderesAsignables);
+router.get('/config/mis-poderes', UsuarioController.obtenerMisPoderesPropios);
 
 export default router;
