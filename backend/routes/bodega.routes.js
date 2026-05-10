@@ -1,12 +1,8 @@
 import { Router } from 'express';
-import InventarioRoutes from '../src/modules/bodega/inventario/inventario.routes.js';
-import ItemsRoutes from '../src/modules/bodega/items/items.routes.js'; 
-import TiposRoutes from '../src/modules/bodega/tipos/tipos.routes.js'; 
+import ItemsRoutes from '../src/modules/items/items.routes.js'; 
 
 const router = Router();
 
-router.use('/inventario', InventarioRoutes);
 router.use('/items', ItemsRoutes);
-router.use('/tipos', TiposRoutes);
 
 export default router;

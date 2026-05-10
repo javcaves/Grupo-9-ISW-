@@ -1,11 +1,15 @@
 import { Router } from 'express';
-import EmpleadosRoutes from '../src/modules/rrhh/empleados/empleados.routes.js';
-import AsistenciaRoutes from '../src/modules/rrhh/asistencia/asistencia.routes.js';
+import UsuarioRoutes from '../src/modules/usuario/usuario.routes.js';
+import AsistenciaRoutes from '../src/modules/asistencia/asistencia.routes.js';
+import TurnoRoutes from '../src/modules/turno/turno.routes.js';
+import PowerRoutes from '../src/modules/power/power.routes.js';
 
 
 const router = Router();
 
-router.use('/empleados', EmpleadosRoutes);
+router.use('/usuario', UsuarioRoutes);
 router.use('/asistencia', AsistenciaRoutes);
+router.use('/power', PowerRoutes);
+router.use('/turno', TurnoRoutes);
 
 export default router;

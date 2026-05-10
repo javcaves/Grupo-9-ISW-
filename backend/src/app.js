@@ -19,9 +19,9 @@ app.get('/api/health', (req, res) => {
 });
 
 // ################# RUTAS #################
-app.use('/api/rrhh', rrhhRoutes);
-app.use('/api/bodega', bodegaRoutes);
-app.use('/api/actividades', actividadesRoutes);
+app.use('/api', rrhhRoutes);
+app.use('/api', bodegaRoutes);
+app.use('/api', actividadesRoutes);
 
 // ################# MANEJO DE ERRORES #################
 // MANEJO DE ERRORES FUERA DE APP???
