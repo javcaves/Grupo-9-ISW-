@@ -89,15 +89,17 @@ export const actualizar = async (id, data, ejecutor) => {
     const esRoot = ejecutor.cargo === 'ROOT';
     
     // REGLA: Si es ADMIN, solo ancestros o ROOT.
-    if (objetivo.rol === 'ADMIN') {
-        const esPadreOAncestro = await esAncestor(ejecutor.id, objetivo.id, lista);
-        if (!esRoot && !esPadreOAncestro) {
-            throw Object.assign(new Error("Solo ancestros directos pueden editar a un ADMIN."), { status: 403 });
-        }
-    } 
-    // Para cargos inferiores, basta con tener el poder USER:UPDATE (validado en controlador)
+
     
     if (data.powers) {
+        if (objetivo.rol === 'ADMIN') {
+            const esPadreOAncestro = await esAncestor(ejecutor.id, objetivo.id, lista);
+                if (!esRoot && !esPadreOAncestro) {
+                    throw Object.assign(new Error("Solo ancestros directos pueden editar a un ADMIN."), { status: 403 });
+                }
+        } 
+
+        // Para cargos inferiores, basta con tener el poder USER:UPDATE (validado en controlador)
         await PowerService.asignarPoderes(id, data.powers, ejecutor);
     }
 
@@ -124,9 +126,10 @@ export const eliminar = async (id, ejecutor) => {
         if (!esRoot && !esPadreOAncestro) {
             throw Object.assign(new Error("No tienes autoridad sobre este ADMIN."), { status: 403 });
         }
+
     } else {
         // Para Supervisor, Encargado, Empleado: Cualquier Admin (con poder DELETE) puede.
-        if (NIVELES[ejecutor.cargo] > NIVELES.ADMIN) {
+        if (ejecutor.cargo !== 'ADMIN' && ejecutor.cargo !== 'ROOT') {
             // Si el ejecutor no es Admin/Root, solo puede borrar si es el padre directo
             if (objetivo.creado_por !== ejecutor.id) {
                 throw Object.assign(new Error("No tienes permiso para eliminar a este usuario."), { status: 403 });

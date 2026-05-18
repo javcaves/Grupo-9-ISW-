@@ -50,7 +50,19 @@ export const registrarUsuario = async (req, res) => {
     try {
         // req.user viene del middleware de autenticación { id, cargo, ... }
         // req.body debe cumplir con usuario.schema.js
-        const nuevoUsuario = await UsuarioService.crearUsuario(req.body, req.user);
+
+        const ejecutor = req.user;
+        //valido que tenga el permiso de crear
+        const tienePoder = await PowerService.tienePermiso(ejecutor.id, 'USER:CREATE');
+
+        if(ejecutor.cargo !== 'ROOT' && !tienePoder){
+            return sendResponse(res, 403, {
+                success: false,
+                error: "no tienes permiso para registrar este usuario"
+            });
+        }
+
+        const nuevoUsuario = await UsuarioService.crearUsuario(req.body, ejecutor);
         
         return sendResponse(res, 201, {
             message: "Usuario creado exitosamente",
@@ -70,9 +82,20 @@ export const registrarUsuario = async (req, res) => {
 export const actualizarUsuario = async (req, res) => {
     try {
         const { id } = req.params;
+        const ejecutor = req.user;
+
+        //hago la misma validacion que registro
+        const tienePoder = await PowerService.tienePermiso(ejecutor.id, 'USER:CREATE');
+
+        if(ejecutor.cargo !== 'ROOT' && !tienePoder){
+            return sendResponse(res, 403, {
+                success: false,
+                error: "no tienes permiso para editar este usuario"
+            });
+        }
         
         // El service se encarga de verificar si req.user es ancestro o tiene permiso
-        const actualizado = await UsuarioService.actualizar(id, req.body, req.user);
+        const actualizado = await UsuarioService.actualizar(id, req.body, ejecutor);
         
         return sendResponse(res, 200, {
             message: "Usuario actualizado correctamente",
@@ -92,9 +115,21 @@ export const actualizarUsuario = async (req, res) => {
 export const eliminarUsuario = async (req, res) => {
     try {
         const { id } = req.params;
+
+        const ejecutor = req.user;
+
+        //hago la misma validacion que registro y actualizar
+        const tienePoder = await PowerService.tienePermiso(ejecutor.id, 'USER:CREATE');
+
+        if(ejecutor.cargo !== 'ROOT' && !tienePoder){
+            return sendResponse(res, 403, {
+                success: false,
+                error: "no tienes permiso para eliminar este usuario"
+            });
+        }
         
         // Aplica lógica: ADMIN (solo ancestros), OTROS (cualquier admin con poder)
-        const resultado = await UsuarioService.eliminar(id, req.user);
+        const resultado = await UsuarioService.eliminar(id, ejecutor);
         
         return sendResponse(res, 200, resultado);
     } catch (error) {
