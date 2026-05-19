@@ -1,1 +1,0 @@
-// Aqui van las verificaciones especiales de categorias de actividades, como su formato
