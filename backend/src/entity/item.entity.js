@@ -21,7 +21,7 @@ export class Item {
         enum: [
             "MAQUINARIA",
             "HERRAMIENTA",
-            "UTENCILIO",
+            "UTENSILIO",
             "PRODUCTO"
         ]
     })
