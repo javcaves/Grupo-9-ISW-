@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as ProyectoController from './proyecto.controller.js';
-import * as ProyectoSchema from './proyecto.schema.js';
+import * as ProyectoSchema from '../entity/proyecto.schema.js';
 
 const router = Router();
 

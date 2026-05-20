@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as UsuarioController from './usuario.controller.js';
-import { validarUsuario } from './usuario.schema.js';
+import { validarUsuario } from '../entity/usuario.schema.js';
 
 const router = Router();
 

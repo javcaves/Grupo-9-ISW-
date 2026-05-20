@@ -1,4 +1,4 @@
-import jsonDbHandler from '../../shared/jsonDbHandler.js';
+import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 
 const FOLDER = 'recursos_humanos';
 const FILE_DICCIONARIO = 'powers.json'; // Estático

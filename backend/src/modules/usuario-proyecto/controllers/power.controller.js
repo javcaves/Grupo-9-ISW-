@@ -1,4 +1,4 @@
-import * as PowerService from './power.service.js';
+import * as PowerService from '../services/power.service.js';
 
 /**
  * Obtener el catálogo maestro de poderes (Diccionario estático)

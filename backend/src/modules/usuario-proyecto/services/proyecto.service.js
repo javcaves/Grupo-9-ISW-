@@ -20,7 +20,7 @@
  * @property {boolean} activo - Define si la vinculación está vigente actualmente
  */
 
-import jsonDbHandler from '../../shared/jsonDbHandler.js';
+import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 
 const dbProyecto = jsonDbHandler('recursos_humanos', 'proyecto.json');
 const dbProyectoUsuario = jsonDbHandler('recursos_humanos', 'proyecto_usuario.json');
