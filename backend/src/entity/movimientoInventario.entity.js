@@ -39,7 +39,7 @@ export class MovimientoInventario {
     })
     tipo_movimiento;
 
-    @Column()
+    @Column({ type: "int" })
     cantidad;
 
     @CreateDateColumn()
