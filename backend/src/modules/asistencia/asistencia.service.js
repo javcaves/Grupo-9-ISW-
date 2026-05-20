@@ -1,24 +1,6 @@
-/**
- * @typedef {Object} Asistencia
- * @property {number} id_asistencia - ID único
- * @property {number} id_proyecto - Proyecto vinculado
- * @property {number} id_turno - Turno del cual emana la asistencia
- * @property {string} fecha - Fecha de la jornada (YYYY-MM-DD)
- * @property {string} token - Código único para el registro del empleado
- * @property {boolean} activo - Soft delete
- */
 
-/**
- * @typedef {Object} AsistenciaEmpleado
- * @property {number} id_asistencia - ID de la cabecera de asistencia
- * @property {number} id_empleado - ID del usuario empleado
- * @property {string} hora_ingreso - HH:mm:ss o null si no ha marcado
- * @property {string} estado - [EN_ESPERA, ASISTIDO, RETIRADO, ATRASO, FALTA_JUSTIFICADA, FALTA_INJUSTIFICADA]
- * @property {string} descripcion - Notas del encargado
- * @property {boolean} activo - Soft delete
- */
-
-import jsonDbHandler from '../../shared/jsonDbHandler.js'
+import { AppDataSource } from '../../config/ConfigDB.js';
+import { ILike } from "typeorm";
 import { v4 as uuidv4 } from 'uuid'; // Para generar tokens únicos
 
 const dbAsistencia = jsonDbHandler('recursos_humanos', 'asistencia.json');
@@ -28,7 +10,7 @@ const dbTurnoEmp = jsonDbHandler('recursos_humanos', 'turno_empleado.json');
 const dbProyectoUser = jsonDbHandler('recursos_humanos', 'proyecto_usuario.json');
 
 /**
- * REGLA DE ORO: Solo Encargado o Supervisor asignado al proyecto
+ * Solo Encargado o Supervisor asignado al proyecto
  */
 const validarPermisoGestion = async (idUsuario, idProyecto, cargo) => {
     const permitidos = ['SUPERVISOR', 'ENCARGADO'];
