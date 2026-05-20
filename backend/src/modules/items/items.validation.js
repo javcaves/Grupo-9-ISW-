@@ -1,0 +1,1 @@
+// validaciones para los items y tablas intermedias
