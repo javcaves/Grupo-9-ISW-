@@ -5,7 +5,7 @@ export const validarAsignacionPower = (req, res, next) => {
     const { powers } = req.body;
     const { idDestino } = req.params;
     const errores = [];
-
+  
     // 1. Validar que el ID de destino sea un número válido
     if (!idDestino || isNaN(parseInt(idDestino))) {
         errores.push("El ID del usuario destino es obligatorio y debe ser un número.");

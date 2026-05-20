@@ -11,6 +11,42 @@
  * @property {number} numero - Número de contacto
  * @property {boolean} activo - Estado de la cuenta (Soft Delete)
  */
+import { AppDataSource } from '../../../config/ConfigDB.js';
+import { usuario } from "../entity/usuario.entity.js";
+
+//obtener usuario por query (id o rut)
+export async function getUsuarioService(query) {
+    try{
+        const usuarioRepository = AppDataSource.getRepository(Usuario);
+        const {id_usuario, rut} = query;
+
+        const queryBuilder = usuarioRepository.createQueryBuilder("usuario");
+
+        if(id_usuario){
+            queryBuilder.where("usuario.id_usuario = :id_usuario", { id_usuario });
+        } else if (rut){
+            queryBuilder.where("usuario.rut = :rut", { rut });
+        } else{
+            return[null, "debe proporcionar id o rut de usuario"];
+        }
+
+        const usuario = await queryBuilder.getOne();
+
+        if(!usuario){
+            return[null, "usuario no encontrado"];
+        }
+
+        return[usuario, null];
+    } catch(error){
+        console.log("error en getUsuarioService", error);
+        return[null, "error interno del servidor"];
+    }
+    
+};
+
+
+
+/*
 import jsonDbHandler from '../../../shared/jsonDbHandler.js';
 import * as PowerService from './power.service.js';
 
@@ -31,6 +67,8 @@ const NIVELES = {
 /**
  * Función recursiva para verificar si un ejecutor es ancestro de un objetivo
  */
+
+/*
 const esAncestor = async (idEjecutor, idObjetivo, listaUsuarios) => {
     const objetivo = listaUsuarios.find(u => u.id === idObjetivo);
     
@@ -181,3 +219,4 @@ export const obtenerPorId = async (id) => {
     const lista = await obtenerTodos();
     return lista.find(u => u.id === parseInt(id));
 };
+*/

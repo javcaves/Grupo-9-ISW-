@@ -29,10 +29,17 @@ const Usuario = new EntitySchema({
             type:"text",
             nullable:false,
         },
-        correo:{
+        email:{
             type: "varchar",
             length: 100,
             nullable: false,
+        },
+        numero:{
+            type: "varchar",
+            length: 15,
+            nullable: false,
+            unique: true,
+
         },
         cargo:{
             type: "varchar",
