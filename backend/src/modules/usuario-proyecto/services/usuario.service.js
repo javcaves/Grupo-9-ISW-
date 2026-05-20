@@ -11,8 +11,8 @@
  * @property {number} numero - Número de contacto
  * @property {boolean} activo - Estado de la cuenta (Soft Delete)
  */
-import jsonDbHandler from '../../shared/jsonDbHandler.js';
-import * as PowerService from '../power/power.service.js';
+import jsonDbHandler from '../../../shared/jsonDbHandler.js';
+import * as PowerService from './power.service.js';
 
 const FOLDER = 'recursos_humanos';
 const FILE = 'usuarios.json';

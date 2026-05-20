@@ -1,4 +1,4 @@
-import * as ProyectoService from './proyecto.service.js';
+import * as ProyectoService from '../services/proyecto.service.js';
 
 /**
  * 1. Crear nuevo proyecto (Solo Admin/Root)

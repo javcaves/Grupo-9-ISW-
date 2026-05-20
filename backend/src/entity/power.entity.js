@@ -1,21 +1,42 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column
-} from "typeorm";
+import {EntitySchema} from "typeorm";
 
-@Entity()
-export class Power {
+const Power = new EntitySchema({
+    name: "Power",
+    tableNane: "power",
 
-    @PrimaryGeneratedColumn()
-    id_power;
+    columns:{
+        id_power:{
+           type: "varchar",
+            length: 50,
+            primary: true,
+        },
+        nombre:{
+            type: "varchar",
+            length: 100,
+            nullable: false,
+        },
+        descripcion:{
+            type:"text",
+            nullable: false,
+        },
+        categoria:{
+            type: "enum",
+            enum: ["USUARIO", "PROYECTO", "BODEGA", "ACTIVIDAD", "ASISTENCIA"],
+            nullable: false,
+        },
+        activo:{
+            type: "boolean",
+            nullable: false,
+            default: true,
+        }
+    },
 
-    @Column({ unique: true })
-    nombre_power;
+    indices:[
+        {
+            name: "IDX_POWER_CATEGORIA",
+            columns: ["categoria"],
+        }
+    ]
+});
 
-    @Column("text")
-    descripcion;
-
-    @Column({ default: true })
-    activo;
-}
+export default Power;
