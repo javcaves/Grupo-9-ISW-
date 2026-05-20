@@ -127,7 +127,20 @@ export const listarSolicitudesPendientes = async (req, res) => {
         return sendResponse(res, 500, "Error al obtener solicitudes pendientes");
     }
 };
+
+export const registrarMovimiento = async (req, res) => {
+    try {
+        const { error, value } = movimientoCreateValidation.validate(req.body);
+        if (error) return sendResponse(res, 400, error.message);
  
+        const [nuevoMovimiento, err] = await ItemsService.registrarMovimiento(value);
+        if (err) return sendResponse(res, 400, err);
+ 
+        return sendResponse(res, 201, nuevoMovimiento);
+    } catch (error) {
+        return sendResponse(res, 500, error.message);
+    }
+};
 export const obtenerMovimiento = async (req, res) => {
     try {
         const [mov, err] = await ItemsService.obtenerMovimientoPorId(parseInt(req.params.id_mov));
