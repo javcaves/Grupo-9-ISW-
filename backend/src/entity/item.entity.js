@@ -21,7 +21,7 @@ export class Item {
         enum: [
             "MAQUINARIA",
             "HERRAMIENTA",
-            "UTENCILIO",
+            "UTENSILIO",
             "PRODUCTO"
         ]
     })
@@ -48,6 +48,12 @@ export class Item {
         ]
     })
     control;
+
+    @Column({ type: "int", default: 0 })
+    stock_actual;
+
+    @Column({ type: "int", default: 0 })
+    stock_minimo;
 
     @Column({ default: true })
     activo;

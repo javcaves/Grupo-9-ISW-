@@ -1,8 +1,12 @@
 import {
     Entity,
     PrimaryGeneratedColumn,
-    Column
+    Column,
+    ManyToOne,
+    JoinColumn,
+    CreateDateColumn
 } from "typeorm";
+import { Item } from "./item.entity.js";
 
 @Entity()
 export class MovimientoInventario {
@@ -10,8 +14,9 @@ export class MovimientoInventario {
     @PrimaryGeneratedColumn()
     id_mov;
 
-    @Column()
-    id_item;
+    @ManyToOne(() => Item)
+    @JoinColumn({ name: "id_item" })
+    item;
 
     @Column()
     id_proyecto;
@@ -37,7 +42,7 @@ export class MovimientoInventario {
     @Column()
     cantidad;
 
-    @Column()
+    @CreateDateColumn()
     fecha;
 
     @Column("text")
@@ -54,3 +59,4 @@ export class MovimientoInventario {
     })
     estado_solicitud;
 }
+
