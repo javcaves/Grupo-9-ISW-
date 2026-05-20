@@ -57,4 +57,6 @@ export class Item {
 
     @Column({ default: true })
     activo;
+
+    @OneToMany(() => MovimientoInventario, (mov) => mov.item)movimientos;
 }
