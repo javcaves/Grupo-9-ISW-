@@ -1,220 +1,402 @@
-/**
- * @typedef {Object} Turno
- * @property {number} id_turno - Identificador único
- * @property {number} id_proyecto - Proyecto al que pertenece el turno
- * @property {string} hora_ingreso - HH:mm
- * @property {string} hora_salida - HH:mm
- * @property {string} descripcion - Nombre o detalle del turno
- * @property {boolean} activo - Soft delete
- */
+import { AppDataSource } from '../../config/ConfigDB.js';
 
-/**
- * @typedef {Object} TurnoEmpleado
- * @property {number} id_turno - ID del turno
- * @property {number} id_empleado - ID del usuario (rol empleado)
- * @property {string} fecha_ingreso - Fecha inicio asignación (ISO)
- * @property {string} fecha_egreso - Fecha fin asignación o null
- * @property {boolean} activo - Estado de la vinculación
- */
+// ----- Crear -----
+export const crearTurno = async (data) => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    const proyectoRepo = AppDataSource.getRepository("Proyecto");
+    const usuarioRepo = AppDataSource.getRepository("Usuario");
 
-import jsonDbHandler from '../../shared/jsonDbHandler.js';
+    // Validar que el proyecto exista
+    const proyecto = await proyectoRepo.findOne({ where: { id_proyecto: data.id_proyecto, activo: true } });
+    if (!proyecto) return [null, "El proyecto especificado no existe o no se encuentra activo."];
 
-const dbTurno = jsonDbHandler('recursos_humanos', 'turno.json');
-const dbTurnoEmpleado = jsonDbHandler('recursos_humanos', 'turno_empleado.json');
-const dbProyectoUsuario = jsonDbHandler('recursos_humanos', 'proyecto_usuario.json');
+    // Validar unicidad: no puede existir un turno con mismo proyecto, hora_ingreso y hora_salida
+    const turnoExistente = await turnoRepo.findOne({
+        where: {
+            proyecto: { id_proyecto: data.id_proyecto },
+            hora_ingreso: data.hora_ingreso,
+            hora_salida: data.hora_salida,
+            activo: true
+        }
+    });
+    if (turnoExistente) return [null, "Ya existe un turno activo con el mismo proyecto, hora de ingreso y hora de salida."];
 
-// --- HELPERS DE VALIDACIÓN ---
-
-/**
- * Verifica si un usuario tiene permisos de gestión en el proyecto.
- * Regla: Solo SUPERVISOR o ENCARGADO vinculados al proyecto pueden modificar.
- */
-const validarPermisoGestionProyecto = async (idUsuario, idProyecto, cargo) => {
-    const rolesPermitidos = ['SUPERVISOR', 'ENCARGADO'];
-    if (!rolesPermitidos.includes(cargo)) {
-        throw { status: 403, message: "No tienes permisos de jerarquía para modificar turnos." };
+    // Validar que se ingrese al menos 1 empleado
+    if (!data.empleados || data.empleados.length === 0) {
+        return [null, "Se requiere al menos un empleado para crear el turno."];
     }
 
-    const vinculaciones = await dbProyectoUsuario.leer() || [];
-    const estaVinculado = vinculaciones.some(rel => 
-        rel.id_proyecto === parseInt(idProyecto) && 
-        rel.id_usuario === parseInt(idUsuario) && 
-        rel.activo === true
-    );
-
-    if (!estaVinculado) {
-        throw { status: 403, message: "No estás asignado formalmente a este proyecto para gestionarlo." };
-    }
-};
-
-/**
- * Valida si la hora actual está dentro del rango del turno.
- * Soporta turnos que cruzan la medianoche (ej: 22:00 a 06:00).
- */
-const estaEnRangoHorario = (inicio, fin) => {
-    const ahora = new Date();
-    const actual = `${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}`;
-    
-    if (inicio <= fin) {
-        return actual >= inicio && actual <= fin;
-    } else {
-        // Caso turno nocturno
-        return actual >= inicio || actual <= fin;
-    }
-};
-
-// --- MÉTODOS DEL SERVICIO ---
-
-/**
- * Crear un nuevo turno dentro de un proyecto
- */
-export const crearTurno = async (datosTurno, ejecutor) => {
-    const { id_proyecto, hora_ingreso, hora_salida, descripcion } = datosTurno;
-
-    await validarPermisoGestionProyecto(ejecutor.id, id_proyecto, ejecutor.cargo);
-
-    const turnos = await dbTurno.leer() || [];
-    
-    const coincidencia = turnos.find(t => 
-        t.id_proyecto === id_proyecto && 
-        t.hora_ingreso === hora_ingreso && 
-        t.hora_salida === hora_salida &&
-        t.activo === true
-    );
-
-    if (coincidencia) {
-        throw { status: 400, message: "Ya existe un turno idéntico activo en este proyecto." };
-    }
-
-    const nuevoTurno = {
-        id_turno: turnos.length > 0 ? Math.max(...turnos.map(t => t.id_turno)) + 1 : 1,
-        id_proyecto,
-        hora_ingreso,
-        hora_salida,
-        descripcion,
+    // Crear el turno
+    const nuevoTurno = turnoRepo.create({
+        proyecto: data.id_proyecto,
+        hora_ingreso: data.hora_ingreso,
+        hora_salida: data.hora_salida,
+        descripcion: data.descripcion ?? null,
         activo: true
-    };
+    });
+    const turnoGuardado = await turnoRepo.save(nuevoTurno);
 
-    await dbTurno.escribir([...turnos, nuevoTurno]);
-    return nuevoTurno;
-};
+    // Crear registros en TURNO_EMPLEADO para cada empleado asignado
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+    const hoy = new Date().toISOString().split("T")[0];
+    const erroresEmpleados = [];
 
-/**
- * Asignar empleados a un turno específico
- */
-export const asignarEmpleadosATurno = async (id_turno, empleadosNuevos, ejecutor) => {
-    const turnos = await dbTurno.leer() || [];
-    const turno = turnos.find(t => t.id_turno === parseInt(id_turno));
-    
-    if (!turno || !turno.activo) throw { status: 404, message: "Turno no encontrado." };
-
-    await validarPermisoGestionProyecto(ejecutor.id, turno.id_proyecto, ejecutor.cargo);
-
-    const asignaciones = await dbTurnoEmpleado.leer() || [];
-    const vinculacionesProyecto = await dbProyectoUsuario.leer() || [];
-
-    for (const data of empleadosNuevos) {
-        const { id_empleado, fecha_ingreso, fecha_egreso } = data;
-
-        // 1. El empleado debe pertenecer al proyecto
-        const enProyecto = vinculacionesProyecto.some(rel => 
-            rel.id_proyecto === turno.id_proyecto && 
-            rel.id_usuario === id_empleado && 
-            rel.activo === true
-        );
-
-        if (!enProyecto) {
-            throw { status: 403, message: `El empleado ID ${id_empleado} no pertenece a este proyecto.` };
+    for (const emp of data.empleados) {
+        // Validar que el empleado exista y pertenezca al proyecto
+        const empleado = await usuarioRepo.findOne({ where: { id_usuario: emp.id_empleado, activo: true } });
+        if (!empleado) {
+            erroresEmpleados.push(`Empleado con ID ${emp.id_empleado} no encontrado.`);
+            continue;
         }
 
-        // 2. No puede tener otro turno activo en el mismo proyecto
-        const yaTieneTurno = asignaciones.some(asig => 
-            asig.id_empleado === id_empleado && 
-            asig.activo === true &&
-            turnos.some(t => t.id_turno === asig.id_turno && t.id_proyecto === turno.id_proyecto && t.activo === true)
+        // Validar que el empleado no esté en otro turno del mismo proyecto con horario solapado
+        const solapado = await _verificarSolapamientoHorario(
+            turnoEmpleadoRepo, turnoRepo, emp.id_empleado, data.id_proyecto,
+            data.hora_ingreso, data.hora_salida, null
         );
-
-        if (yaTieneTurno) {
-            throw { status: 400, message: `El empleado ${id_empleado} ya tiene una asignación activa en este proyecto.` };
+        if (solapado) {
+            erroresEmpleados.push(`El empleado ${emp.id_empleado} ya está asignado a un turno con horario solapado en este proyecto.`);
+            continue;
         }
 
-        asignaciones.push({
-            id_asignacion: Date.now() + Math.floor(Math.random() * 1000),
-            id_turno: parseInt(id_turno),
-            id_empleado,
-            fecha_ingreso,
-            fecha_egreso: fecha_egreso || null,
+        const turnoEmpleado = turnoEmpleadoRepo.create({
+            turno: turnoGuardado.id_turno,
+            empleado: emp.id_empleado,
+            fecha_ingreso: hoy,
+            fecha_egreso: emp.fecha_egreso ?? null,
+            trabaja_feriados: emp.trabaja_feriados ?? false,
             activo: true
         });
+        await turnoEmpleadoRepo.save(turnoEmpleado);
     }
 
-    await dbTurnoEmpleado.escribir(asignaciones);
-    return { success: true };
+    if (erroresEmpleados.length > 0) {
+        return [{ turno: turnoGuardado, advertencias: erroresEmpleados }, null];
+    }
+
+    return [turnoGuardado, null];
 };
 
-/**
- * Desvincular un empleado del turno (Regla de horario activa)
- */
-export const eliminarEmpleadoDeTurno = async (id_turno, id_empleado, ejecutor) => {
-    const turnos = await dbTurno.leer() || [];
-    const turno = turnos.find(t => t.id_turno === parseInt(id_turno));
-    if (!turno) throw { status: 404, message: "Turno no existe." };
+// ----- Búsqueda -----
 
-    await validarPermisoGestionProyecto(ejecutor.id, turno.id_proyecto, ejecutor.cargo);
+export const obtenerTodosActivosPorProyecto = async (id_proyecto) => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    return await turnoRepo.find({
+        where: { proyecto: { id_proyecto }, activo: true },
+        relations: ["proyecto", "turnoEmpleados", "turnoEmpleados.empleado"]
+    });
+};
 
-    // REGLA: Fuera del horario del turno
-    if (estaEnRangoHorario(turno.hora_ingreso, turno.hora_salida)) {
-        throw { status: 403, message: "Restricción: No puedes desvincular personal mientras el turno está en curso." };
+export const obtenerTurnoPorID = async (id) => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    const turno = await turnoRepo.findOne({
+        where: { id_turno: id },
+        relations: ["proyecto", "turnoEmpleados", "turnoEmpleados.empleado"]
+    });
+
+    if (!turno) return [null, "Turno no encontrado."];
+    return [turno, null];
+};
+
+// ----- Actualizar -----
+
+export const actualizarTurno = async (id, data) => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+
+    const turno = await turnoRepo.findOne({ where: { id_turno: id, activo: true } });
+    if (!turno) return [null, "No se encontró el turno o se encuentra inactivo."];
+
+    if (data.descripcion !== undefined) turno.descripcion = data.descripcion;
+    if (data.activo !== undefined) turno.activo = data.activo;
+
+    const turnoActualizado = await turnoRepo.save(turno);
+    return [turnoActualizado, null];
+};
+
+// ----- Eliminar turno -----
+
+export const eliminarTurno = async (id) => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+
+    const turno = await turnoRepo.findOne({ where: { id_turno: id } });
+    if (!turno) return [null, "Turno no encontrado."];
+
+    // Validar que no haya empleados activos en el turno
+    const empleadosActivos = await turnoEmpleadoRepo.count({
+        where: { turno: { id_turno: id }, activo: true }
+    });
+    if (empleadosActivos > 0) {
+        return [null, "No se puede eliminar el turno: aún tiene empleados activos asignados. Desvincúlelos primero."];
     }
 
-    const asignaciones = await dbTurnoEmpleado.leer() || [];
-    const index = asignaciones.findIndex(a => 
-        a.id_turno === parseInt(id_turno) && 
-        a.id_empleado === parseInt(id_empleado) && 
-        a.activo === true
+    await turnoRepo.update(id, { activo: false });
+    return [{ message: "Turno eliminado correctamente. Los registros históricos se conservan." }, null];
+};
+
+// ==================== TURNO_EMPLEADO ====================
+
+// ----- Agregar empleado a turno -----
+
+export const agregarEmpleadoATurno = async (id_turno, data) => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+    const usuarioRepo = AppDataSource.getRepository("Usuario");
+
+    const turno = await turnoRepo.findOne({
+        where: { id_turno, activo: true },
+        relations: ["proyecto"]
+    });
+    if (!turno) return [null, "Turno no encontrado o inactivo."];
+
+    const empleado = await usuarioRepo.findOne({ where: { id_usuario: data.id_empleado, activo: true } });
+    if (!empleado) return [null, "Empleado no encontrado."];
+
+    // Validar que el empleado no esté en otro proyecto activo simultáneamente
+    const enOtroProyecto = await _verificarEmpleadoEnOtroProyecto(
+        turnoEmpleadoRepo, turnoRepo, data.id_empleado, turno.proyecto.id_proyecto
+    );
+    if (enOtroProyecto) {
+        return [null, "El empleado ya está activo en otro proyecto. Un empleado no puede estar en dos proyectos simultáneamente."];
+    }
+
+    // Validar solapamiento de horario dentro del mismo proyecto
+    const solapado = await _verificarSolapamientoHorario(
+        turnoEmpleadoRepo, turnoRepo, data.id_empleado, turno.proyecto.id_proyecto,
+        turno.hora_ingreso, turno.hora_salida, id_turno
+    );
+    if (solapado) {
+        return [null, "El empleado ya está asignado a otro turno con horario solapado en este proyecto."];
+    }
+
+    const hoy = new Date().toISOString().split("T")[0];
+    const nuevoRegistro = turnoEmpleadoRepo.create({
+        turno: id_turno,
+        empleado: data.id_empleado,
+        fecha_ingreso: data.fecha_ingreso ?? hoy,
+        fecha_egreso: data.fecha_egreso ?? null,
+        trabaja_feriados: data.trabaja_feriados ?? false,
+        activo: true
+    });
+
+    return [await turnoEmpleadoRepo.save(nuevoRegistro), null];
+};
+
+// ----- Eliminar empleado de turno -----
+
+export const eliminarEmpleadoDeTurno = async (id_turno, id_empleado) => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+    const asistenciaRepo = AppDataSource.getRepository("Asistencia");
+    const asistenciaEmpleadoRepo = AppDataSource.getRepository("AsistenciaEmpleado");
+
+    const turno = await turnoRepo.findOne({ where: { id_turno, activo: true } });
+    if (!turno) return [null, "Turno no encontrado o inactivo."];
+
+    // Validar que la acción se ejecute fuera del horario activo del turno
+    const ahora = _obtenerHoraActual();
+    if (_estaEnHorarioActivo(turno.hora_ingreso, turno.hora_salida, ahora)) {
+        return [null, "No se puede desvincular a un empleado durante el horario activo del turno."];
+    }
+
+    const turnoEmpleado = await turnoEmpleadoRepo.findOne({
+        where: { turno: { id_turno }, empleado: { id_usuario: id_empleado }, activo: true }
+    });
+    if (!turnoEmpleado) return [null, "El empleado no está asignado a este turno."];
+
+    // Verificar si existe asistencia activa hoy para este turno (requisito 8 de Asistencia)
+    const hoy = new Date().toISOString().split("T")[0];
+    const asistenciaHoy = await asistenciaRepo.findOne({
+        where: { turno: { id_turno }, fecha: hoy, activo: true }
+    });
+
+    if (asistenciaHoy) {
+        const registroAsistencia = await asistenciaEmpleadoRepo.findOne({
+            where: {
+                asistencia: { id_asistencia: asistenciaHoy.id_asistencia },
+                empleado: { id_usuario: id_empleado },
+                activo: true
+            }
+        });
+
+        if (registroAsistencia) {
+            const estadosBloqueantes = ["PRESENTE", "ATRASO", "RETIRADO"];
+            if (estadosBloqueantes.includes(registroAsistencia.estado)) {
+                return [null, `No se puede desvincular: el empleado tiene estado "${registroAsistencia.estado}" en la asistencia de hoy.`];
+            }
+
+            if (registroAsistencia.estado === "EN_ESPERA") {
+                // Retornar señal para que el controller pida confirmación al frontend
+                return [{ requiere_confirmacion: true, id_asistencia_empleado: registroAsistencia.id_asistencia_empleado }, null];
+            }
+            // Para FALTA_JUSTIFICADA o FALTA_INJUSTIFICADA: desvincula pero conserva historial
+        }
+    }
+
+    await turnoEmpleadoRepo.update(
+        { turno: { id_turno }, empleado: { id_usuario: id_empleado } },
+        { activo: false }
     );
 
-    if (index === -1) throw { status: 404, message: "Asignación no encontrada." };
-
-    asignaciones[index].activo = false;
-    await dbTurnoEmpleado.escribir(asignaciones);
-    return { message: "Empleado desvinculado con éxito." };
+    return [{ message: "Empleado desvinculado del turno correctamente." }, null];
 };
 
-/**
- * Eliminar el turno completo (Solo si no tiene empleados)
- */
-export const eliminarTurno = async (id_turno, ejecutor) => {
-    const turnos = await dbTurno.leer() || [];
-    const index = turnos.findIndex(t => t.id_turno === parseInt(id_turno));
-    
-    if (index === -1) throw { status: 404, message: "Turno no encontrado." };
+// ----- Confirmar eliminación con baja de asistencia del día -----
 
-    await validarPermisoGestionProyecto(ejecutor.id, turnos[index].id_proyecto, ejecutor.cargo);
+export const confirmarEliminacionConAsistencia = async (id_turno, id_empleado) => {
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+    const asistenciaRepo = AppDataSource.getRepository("Asistencia");
+    const asistenciaEmpleadoRepo = AppDataSource.getRepository("AsistenciaEmpleado");
 
-    const asignaciones = await dbTurnoEmpleado.leer() || [];
-    const tienePersonal = asignaciones.some(a => a.id_turno === parseInt(id_turno) && a.activo === true);
+    const hoy = new Date().toISOString().split("T")[0];
 
-    if (tienePersonal) {
-        throw { status: 400, message: "No se puede eliminar un turno con personal asignado. Vacíalo primero." };
+    const asistenciaHoy = await asistenciaRepo.findOne({
+        where: { turno: { id_turno }, fecha: hoy, activo: true }
+    });
+
+    if (asistenciaHoy) {
+        await asistenciaEmpleadoRepo.update(
+            {
+                asistencia: { id_asistencia: asistenciaHoy.id_asistencia },
+                empleado: { id_usuario: id_empleado },
+                estado: "EN_ESPERA"
+            },
+            { activo: false }
+        );
     }
 
-    turnos[index].activo = false;
-    await dbTurno.escribir(turnos);
-    return { message: "Turno desactivado." };
+    await turnoEmpleadoRepo.update(
+        { turno: { id_turno }, empleado: { id_usuario: id_empleado } },
+        { activo: false }
+    );
+
+    return [{ message: "Empleado desvinculado del turno y eliminado de la asistencia del día." }, null];
 };
 
-/**
- * Obtener turnos de un proyecto con métricas básicas
- */
-export const obtenerTurnosPorProyecto = async (idProyecto) => {
-    const turnos = await dbTurno.leer() || [];
-    const asignaciones = await dbTurnoEmpleado.leer() || [];
+// ----- Configurar colaciones -----
 
-    return turnos
-        .filter(t => t.id_proyecto === parseInt(idProyecto) && t.activo === true)
-        .map(t => ({
-            ...t,
-            cantidad_empleados: asignaciones.filter(a => a.id_turno === t.id_turno && a.activo).length
-        }));
+export const configurarColacion = async (id_turno, id_empleado, data) => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+
+    const turno = await turnoRepo.findOne({ where: { id_turno, activo: true } });
+    if (!turno) return [null, "Turno no encontrado o inactivo."];
+
+    const turnoEmpleado = await turnoEmpleadoRepo.findOne({
+        where: { turno: { id_turno }, empleado: { id_usuario: id_empleado }, activo: true }
+    });
+    if (!turnoEmpleado) return [null, "El empleado no está asignado a este turno."];
+
+    // Validar que los horarios de colación estén dentro del rango del turno
+    if (data.inicio_colacion < turno.hora_ingreso || data.fin_colacion > turno.hora_salida) {
+        return [null, "Los horarios de colación deben estar dentro del rango del turno."];
+    }
+
+    // Validar cobertura mínima: en todo momento debe haber al menos 1 empleado disponible
+    const conflicto = await _validarCoberturaMinimaColacion(
+        turnoEmpleadoRepo, turno, id_empleado, data.inicio_colacion, data.fin_colacion
+    );
+    if (conflicto) {
+        return [null, `Conflicto de cobertura mínima detectado en el tramo ${conflicto}. Debe haber al menos 1 empleado disponible en todo momento.`];
+    }
+
+    turnoEmpleado.inicio_colacion = data.inicio_colacion;
+    turnoEmpleado.fin_colacion = data.fin_colacion;
+    const actualizado = await turnoEmpleadoRepo.save(turnoEmpleado);
+
+    return [actualizado, null];
+};
+
+// ----- Configurar trabajo en feriados -----
+
+export const configurarTrabajadorFeriado = async (id_turno, id_empleado, trabaja_feriados) => {
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+
+    const turnoEmpleado = await turnoEmpleadoRepo.findOne({
+        where: { turno: { id_turno }, empleado: { id_usuario: id_empleado }, activo: true }
+    });
+    if (!turnoEmpleado) return [null, "El empleado no está asignado a este turno."];
+
+    turnoEmpleado.trabaja_feriados = trabaja_feriados;
+    const actualizado = await turnoEmpleadoRepo.save(turnoEmpleado);
+
+    return [actualizado, null];
+};
+
+// ==================== HELPERS PRIVADOS ====================
+
+const _obtenerHoraActual = () => {
+    const ahora = new Date();
+    return `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+};
+
+const _estaEnHorarioActivo = (hora_ingreso, hora_salida, horaActual) => {
+    return horaActual >= hora_ingreso && horaActual <= hora_salida;
+};
+
+const _verificarSolapamientoHorario = async (
+    turnoEmpleadoRepo, turnoRepo, id_empleado, id_proyecto, hora_ingreso, hora_salida, id_turno_excluir
+) => {
+    const asignaciones = await turnoEmpleadoRepo.find({
+        where: { empleado: { id_usuario: id_empleado }, activo: true },
+        relations: ["turno", "turno.proyecto"]
+    });
+
+    for (const asig of asignaciones) {
+        if (!asig.turno.activo) continue;
+        if (asig.turno.proyecto.id_proyecto !== id_proyecto) continue;
+        if (id_turno_excluir && asig.turno.id_turno === id_turno_excluir) continue;
+
+        const solapa = hora_ingreso < asig.turno.hora_salida && hora_salida > asig.turno.hora_ingreso;
+        if (solapa) return true;
+    }
+    return false;
+};
+
+const _verificarEmpleadoEnOtroProyecto = async (turnoEmpleadoRepo, turnoRepo, id_empleado, id_proyecto_actual) => {
+    const asignaciones = await turnoEmpleadoRepo.find({
+        where: { empleado: { id_usuario: id_empleado }, activo: true },
+        relations: ["turno", "turno.proyecto"]
+    });
+
+    for (const asig of asignaciones) {
+        if (!asig.turno.activo) continue;
+        if (asig.turno.proyecto.id_proyecto !== id_proyecto_actual) return true;
+    }
+    return false;
+};
+
+const _validarCoberturaMinimaColacion = async (
+    turnoEmpleadoRepo, turno, id_empleado_modificado, nuevo_inicio, nuevo_fin
+) => {
+    const todosEmpleados = await turnoEmpleadoRepo.find({
+        where: { turno: { id_turno: turno.id_turno }, activo: true },
+        relations: ["empleado"]
+    });
+
+    if (todosEmpleados.length < 2) {
+        return `${nuevo_inicio} - ${nuevo_fin} (se requieren al menos 2 empleados para configurar colaciones)`;
+    }
+
+    // Construir lista de colaciones simulando el cambio
+    const colaciones = todosEmpleados.map((te) => {
+        if (te.empleado.id_usuario === id_empleado_modificado) {
+            return { inicio: nuevo_inicio, fin: nuevo_fin };
+        }
+        return te.inicio_colacion && te.fin_colacion
+            ? { inicio: te.inicio_colacion, fin: te.fin_colacion }
+            : null;
+    }).filter(Boolean);
+
+    // Recolectar puntos de tiempo únicos para evaluar cobertura
+    const puntos = [...new Set(colaciones.flatMap(c => [c.inicio, c.fin]))].sort();
+
+    for (const punto of puntos) {
+        const enColacion = colaciones.filter(c => punto >= c.inicio && punto < c.fin).length;
+        if (enColacion >= todosEmpleados.length) {
+            return punto;
+        }
+    }
+
+    return null;
 };

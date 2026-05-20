@@ -1,33 +1,51 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column
-} from "typeorm";
+import { EntitySchema } from "typeorm";
 
-@Entity()
-export class Asistencia {
-
-    @PrimaryGeneratedColumn()
-    id_asistencia;
-
-    @Column()
-    id_encargado;
-
-    @Column()
-    id_proyecto;
-
-    @Column()
-    id_turno;
-
-    @Column()
-    fecha;
-
-    @Column({ unique: true })
-    token;
-
-    @Column()
-    token_expira;
-
-    @Column({ default: true })
-    activo;
-}
+export const Asistencia = new EntitySchema({
+    name: "Asistencia",
+    tableName: "asistencia",
+    columns: {
+        id_asistencia: {
+            type: "int",
+            primary: true,
+            generated: true,
+        },
+        fecha: {
+            type: "date",
+            nullable: false,
+        },
+        token: {
+            type: "varchar",
+            length: 64,
+            unique: true,
+            nullable: false,
+        },
+        token_expira: {
+            type: "timestamp",
+            nullable: false,
+        },
+        activo: {
+            type: "boolean",
+            default: true,
+        },
+    },
+    relations: {
+        turno: {
+            target: "Turno",
+            type: "many-to-one",
+            joinColumn: { name: "id_turno" },
+            nullable: false,
+        },
+        encargado: {
+            target: "Usuario",
+            type: "many-to-one",
+            joinColumn: { name: "id_encargado" },
+            nullable: false,
+        },
+        proyecto: {
+            target: "Proyecto",
+            type: "many-to-one",
+            joinColumn: { name: "id_proyecto" },
+            nullable: false,
+        },
+    },
+});

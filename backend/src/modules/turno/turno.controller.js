@@ -1,116 +1,164 @@
-import * as TurnoService from './turno.service.js';
+import {
+    turnoCreateValidation,
+    turnoUpdateValidation,
+    turnoEmpleadoAddValidation,
+    turnoColacionValidation,
+    turnoFeriadoValidation,
+} from "./turno.validation.js";
+import * as TurnoService from "./turno.service.js";
+import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
-/**
- * Crear un nuevo turno (Encargado/Supervisor del proyecto)
- * POST /turnos
- */
+// ==================== TURNO ====================
+
+// ----- Listar -----
+
+export const listarTurnosPorProyecto = async (req, res) => {
+    try {
+        const { id_proyecto } = req.params;
+        const lista = await TurnoService.obtenerTodosActivosPorProyecto(id_proyecto);
+        return handleSuccess(res, 200, "Turnos del proyecto obtenidos", lista);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error al obtener los turnos", error.message);
+    }
+};
+
+export const obtenerTurno = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [turno, err] = await TurnoService.obtenerTurnoPorID(id);
+        if (err) return handleErrorClient(res, 404, "No encontrado", err);
+        return handleSuccess(res, 200, "Turno obtenido", turno);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error interno", error.message);
+    }
+};
+
+// ----- Registro -----
+
 export const crearTurno = async (req, res) => {
     try {
-        const datosTurno = req.body;
-        const ejecutor = req.user; 
+        const { error, value } = turnoCreateValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
 
-        const nuevoTurno = await TurnoService.crearTurno(datosTurno, ejecutor);
-
-        return res.status(201).json({
-            success: true,
-            message: "Turno creado exitosamente.",
-            data: nuevoTurno
-        });
+        const [nuevo, err] = await TurnoService.crearTurno(value);
+        if (err) return handleErrorClient(res, 400, "Error de validación de negocio", err);
+        return handleSuccess(res, 201, "Turno creado con éxito", nuevo);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
     }
 };
 
-/**
- * Asignar una lista de empleados a un turno
- * POST /turnos/:idTurno/empleados
- */
-export const asignarEmpleadosATurno = async (req, res) => {
+// ----- Actualización -----
+
+export const actualizarTurno = async (req, res) => {
     try {
-        const { idTurno } = req.params;
-        const { empleados } = req.body; // Array de {id_empleado, fecha_ingreso, fecha_egreso}
-        const ejecutor = req.user;
+        const { id } = req.params;
+        const { error, value } = turnoUpdateValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
 
-        await TurnoService.asignarEmpleadosATurno(idTurno, empleados, ejecutor);
+        if (Object.keys(value).length === 0) {
+            return handleErrorClient(res, 400, "Error", "Debe enviar al menos un campo para actualizar");
+        }
 
-        return res.status(200).json({
-            success: true,
-            message: "Empleados asignados al turno correctamente."
-        });
+        const [actualizado, err] = await TurnoService.actualizarTurno(id, value);
+        if (err) return handleErrorClient(res, 400, "No se pudo actualizar", err);
+        return handleSuccess(res, 200, "Turno actualizado", actualizado);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
     }
 };
 
-/**
- * Desvincular un empleado de un turno
- * DELETE /turnos/:idTurno/empleados/:idEmpleado
- */
-export const eliminarEmpleadoDeTurno = async (req, res) => {
-    try {
-        const { idTurno, idEmpleado } = req.params;
-        const ejecutor = req.user;
+// ----- Eliminación -----
 
-        const resultado = await TurnoService.eliminarEmpleadoDeTurno(idTurno, idEmpleado, ejecutor);
-
-        return res.status(200).json({
-            success: true,
-            message: resultado.message
-        });
-    } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
-    }
-};
-
-/**
- * Desactivar un turno (Soft Delete)
- * DELETE /turnos/:idTurno
- */
 export const eliminarTurno = async (req, res) => {
     try {
-        const { idTurno } = req.params;
-        const ejecutor = req.user;
-
-        const resultado = await TurnoService.eliminarTurno(idTurno, ejecutor);
-
-        return res.status(200).json({
-            success: true,
-            message: resultado.message
-        });
+        const { id } = req.params;
+        const [resultado, err] = await TurnoService.eliminarTurno(id);
+        if (err) return handleErrorClient(res, 400, "Operación denegada", err);
+        return handleSuccess(res, 200, "Operación exitosa", resultado);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
     }
 };
 
-/**
- * Obtener todos los turnos activos de un proyecto específico
- * GET /turnos/proyecto/:idProyecto
- */
-export const obtenerTurnosPorProyecto = async (req, res) => {
-    try {
-        const { idProyecto } = req.params;
-        const turnos = await TurnoService.obtenerTurnosPorProyecto(idProyecto);
+// ==================== TURNO_EMPLEADO ====================
 
-        return res.status(200).json({
-            success: true,
-            data: turnos
-        });
+// ----- Agregar empleado -----
+
+export const agregarEmpleadoATurno = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { error, value } = turnoEmpleadoAddValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
+
+        const [registro, err] = await TurnoService.agregarEmpleadoATurno(id, value);
+        if (err) return handleErrorClient(res, 400, "No se pudo agregar el empleado", err);
+        return handleSuccess(res, 201, "Empleado agregado al turno", registro);
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            error: "Error al obtener los turnos del proyecto."
-        });
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
+    }
+};
+
+// ----- Eliminar empleado -----
+
+export const eliminarEmpleadoDeTurno = async (req, res) => {
+    try {
+        const { id, id_empleado } = req.params;
+        const [resultado, err] = await TurnoService.eliminarEmpleadoDeTurno(id, id_empleado);
+        if (err) return handleErrorClient(res, 400, "Operación denegada", err);
+
+        // El service retorna requiere_confirmacion cuando el empleado tiene estado EN_ESPERA en asistencia
+        if (resultado?.requiere_confirmacion) {
+            return handleSuccess(res, 200, "Se requiere confirmación para eliminar también el registro de asistencia del día", resultado);
+        }
+
+        return handleSuccess(res, 200, "Operación exitosa", resultado);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
+    }
+};
+
+// ----- Confirmar eliminación con baja de asistencia -----
+
+export const confirmarEliminacionConAsistencia = async (req, res) => {
+    try {
+        const { id, id_empleado } = req.params;
+        const [resultado, err] = await TurnoService.confirmarEliminacionConAsistencia(id, id_empleado);
+        if (err) return handleErrorClient(res, 400, "Operación denegada", err);
+        return handleSuccess(res, 200, "Empleado desvinculado y asistencia del día eliminada", resultado);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
+    }
+};
+
+// ----- Configurar colación -----
+
+export const configurarColacion = async (req, res) => {
+    try {
+        const { id, id_empleado } = req.params;
+        const { error, value } = turnoColacionValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
+
+        const [actualizado, err] = await TurnoService.configurarColacion(id, id_empleado, value);
+        if (err) return handleErrorClient(res, 400, "No se pudo configurar la colación", err);
+        return handleSuccess(res, 200, "Colación configurada", actualizado);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
+    }
+};
+
+// ----- Configurar feriados -----
+
+export const configurarTrabajadorFeriado = async (req, res) => {
+    try {
+        const { id, id_empleado } = req.params;
+        const { error, value } = turnoFeriadoValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
+
+        const [actualizado, err] = await TurnoService.configurarTrabajadorFeriado(id, id_empleado, value.trabaja_feriados);
+        if (err) return handleErrorClient(res, 400, "No se pudo actualizar la configuración de feriados", err);
+        return handleSuccess(res, 200, "Configuración de feriados actualizada", actualizado);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
     }
 };

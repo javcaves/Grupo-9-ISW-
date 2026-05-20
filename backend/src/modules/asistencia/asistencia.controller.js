@@ -1,144 +1,105 @@
-import * as AsistenciaService from './asistencia.service.js';
 
-/**
- * 1. Generar Token/QR de Asistencia (Encargado/Supervisor)
- * POST /asistencia/generar
- */
+import * as AsistenciaService from "./asistencia.service.js";
+import { 
+    asistenciaCreateValidation, 
+    registroIndividualUpdateValidation, 
+    empleadoRegistrarValidation 
+} from "./asistencia.validations.js";
+import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
+
 export const crearAsistencia = async (req, res) => {
     try {
-        const { id_turno } = req.body;
-        const ejecutor = req.user; // Viene del middleware de autenticación
+        const { error, value } = asistenciaCreateValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Datos de entrada inválidos", error.message);
 
-        const nuevaAsistencia = await AsistenciaService.crearAsistencia(id_turno, ejecutor);
-        
-        return res.status(201).json({
-            success: true,
-            message: "Asistencia generada exitosamente.",
-            data: nuevaAsistencia
-        });
+        // id_usuario viene inyectado por tu middleware authenticateJwt
+        const [nueva, err] = await AsistenciaService.crearAsistenciaService(value.id_turno, req.user.id_usuario);
+        if (err) return handleErrorClient(res, 400, "No se pudo crear la jornada", err);
+
+        return handleSuccess(res, 201, "Jornada de asistencia inicializada y QR/Token disponible.", nueva);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, "Error crítico de servidor", error.message);
     }
 };
 
-/**
- * 2 & 3. Ver y Editar Detalle (Encargado/Supervisor)
- * PUT /asistencia/:idAsistencia/empleado/:idEmpleado
- */
-export const actualizarEstadoManual = async (req, res) => {
+export const mostrarAsistenciaActual = async (req, res) => {
     try {
-        const { idAsistencia, idEmpleado } = req.params;
-        const data = req.body; // Puede contener: estado, descripcion, hora_ingreso
-        const ejecutor = req.user;
+        const { id_turno } = req.params;
+        const [resultado, err] = await AsistenciaService.mostrarAsistenciaActualService(id_turno);
+        if (err) return handleErrorClient(res, 404, "Asistencia no disponible", err);
 
-        const actualizado = await AsistenciaService.actualizarEstadoManual(
-            idAsistencia, 
-            idEmpleado, 
-            data, 
-            ejecutor
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Registro de asistencia actualizado.",
-            data: actualizado
-        });
+        return handleSuccess(res, 200, "Snapshot actual obtenido", resultado);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, "Error interno de servidor", error.message);
     }
 };
 
-/**
- * 4. Eliminar Asistencia (Encargado/Supervisor)
- * DELETE /asistencia/:idAsistencia
- */
+export const editarRegistroIndividual = async (req, res) => {
+    try {
+        const { id_asistencia, id_empleado } = req.params;
+        const { error, value } = registroIndividualUpdateValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Parámetros de edición inválidos", error.message);
+
+        const [actualizado, err] = await AsistenciaService.editarRegistroIndividualService(
+            id_asistencia, id_empleado, value, req.user.id_usuario
+        );
+        if (err) return handleErrorClient(res, 400, "Modificación denegada", err);
+
+        return handleSuccess(res, 200, "Registro actualizado y auditoría grabada con éxito", actualizado);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error en edición manual", error.message);
+    }
+};
+
 export const eliminarAsistencia = async (req, res) => {
     try {
-        const { idAsistencia } = req.params;
-        const ejecutor = req.user;
+        const { id_asistencia } = req.params;
+        const [resultado, err] = await AsistenciaService.eliminarAsistenciaTurnoService(id_asistencia);
+        if (err) return handleErrorClient(res, 403, "Imposible eliminar", err);
 
-        const resultado = await AsistenciaService.eliminarAsistencia(idAsistencia, ejecutor);
-
-        return res.status(200).json({
-            success: true,
-            message: resultado.message
-        });
+        return handleSuccess(res, 200, "Baja de asistencia completada", resultado);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, "Error al eliminar jornada", error.message);
     }
 };
 
-/**
- * 5. Obtener Historial (Encargado/Supervisor)
- * GET /asistencia/historial
- */
-export const obtenerHistorial = async (req, res) => {
+export const listarHistorial = async (req, res) => {
     try {
-        const filtros = req.query;
-        const historial = await AsistenciaService.obtenerHistorial(filtros);
-
-        return res.status(200).json({
-            success: true,
-            data: historial
-        });
+        const { id_proyecto } = req.params;
+        const lista = await AsistenciaService.obtenerHistorialService(id_proyecto);
+        return handleSuccess(res, 200, "Historial cargado correctamente", lista);
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            error: "Error al obtener el historial de asistencia."
-        });
+        return handleErrorServer(res, 500, "Error de base de datos", error.message);
     }
 };
 
-/**
- * Obtener detalle de una asistencia específica
- * GET /asistencia/:idAsistencia/detalle
- */
-export const obtenerDetalleAsistencia = async (req, res) => {
+export const editarHistorialPasado = async (req, res) => {
     try {
-        const { idAsistencia } = req.params;
-        const detalle = await AsistenciaService.obtenerDetalleAsistencia(idAsistencia);
+        const { id_asistencia, id_empleado } = req.params;
+        const { error, value } = registroIndividualUpdateValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Datos erróneos", error.message);
 
-        return res.status(200).json({
-            success: true,
-            data: detalle
-        });
+        const [modificado, err] = await AsistenciaService.editarHistorialPasadoService(
+            id_asistencia, id_empleado, value, req.user.id_usuario
+        );
+        if (err) return handleErrorClient(res, 400, "Error en reglas históricas", err);
+
+        return handleSuccess(res, 200, "Historial modificado con éxito", modificado);
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            error: "Error al obtener el detalle de la asistencia."
-        });
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
     }
 };
 
-/**
- * 6. Registro de Asistencia por Token (Empleado)
- * POST /asistencia/marcar
- */
-export const registrarMarcaEmpleado = async (req, res) => {
+export const registrarAutoAsistenciaEmpleado = async (req, res) => {
     try {
-        const { token } = req.body;
-        const idEmpleado = req.user.id; // El empleado está logueado
+        const { error, value } = empleadoRegistrarValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, "Error en formato de marcaje", error.message);
 
-        const registro = await AsistenciaService.registrarMarcaEmpleado(token, idEmpleado);
+        const [resultado, err] = await AsistenciaService.marcarAsistenciaEmpleadoService(req.user.id_usuario, value);
+        if (err) return handleErrorClient(res, 400, "Marcaje rechazado", err);
 
-        return res.status(200).json({
-            success: true,
-            message: "Asistencia registrada correctamente.",
-            data: registro
-        });
+        return handleSuccess(res, 200, "Operación exitosa", resultado);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, "Error al procesar el registro", error.message);
     }
 };
