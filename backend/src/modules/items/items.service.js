@@ -1,6 +1,6 @@
 /**
  * @file items.service.js
- * @description Lógica para el módulo de items de bodega
+ * @description Lógica para el módulo de items de bodega y movimientos de inventario
  */
 
 /**
@@ -14,112 +14,203 @@
  */
 
 //1. IMPORTS
-import jsonDbHandler from '../../shared/jsonDbHandler.js';
-
-const FOLDER = '/bodega';
-const FILE = 'items.json';
+import { AppDataSource } from '../../config/ConfigDB.js';
 
 //2. HELPER FUNCTIONS
-export const leerTodos = () => jsonDbHandler.leer(FOLDER, FILE);
-
-export const nuevoId = async () => {
-    const lista = await leerTodos();
-    if (lista.length === 0) return 1;
-    return Math.max(...lista.map(i => i.id)) + 1;
-};
-
+const itemRepo = () => AppDataSource.getRepository('Item');
+const movRepo  = () => AppDataSource.getRepository('MovimientoInventario');
+ 
+const TIPOS_QUE_SUMAN  = ['ENTRADA', 'ABASTECIMIENTO', 'COMPRA'];
+const TIPOS_QUE_RESTAN = ['SALIDA'];
+ 
 export const lanzarError = (mensaje, status) => {
     const error = new Error(mensaje);
     error.status = status;
     throw error;
 };
 
-export const validar = (data) => {
-    if (!data.nombre || !data.id_tipo || !data.unidad_medida || data.stock_minimo == null)
-        lanzarError("Campos obligatorios: nombre, id_tipo, stock_minimo, unidad_medida", 400);
-    if (data.stock_minimo < 0)
-        lanzarError("El stock mínimo debe ser un valor positivo", 400);
-};
 
 //3.MAIN FUNCTIONS
 
-// ######### CREAR #########
-export const createItem = async (data) => {
-    validar(data);
+// ######### ITEMS CREAR #########
 
-    const nuevoItem = {
-        id: await nuevoId(),
-        nombre: data.nombre,
-        id_tipo: data.id_tipo,
-        stock_minimo: data.stock_minimo,
+export const crearItem = async (data) => {
+    const repo = itemRepo();
+ 
+    const existe = await repo.findOne({ where: { nombre: data.nombre } });
+    if (existe) return [null, 'Ya existe un item con ese nombre.'];
+ 
+    const nuevo = repo.create({
+        nombre:        data.nombre,
+        descripcion:   data.descripcion || '',
+        tipo:          data.tipo,
         unidad_medida: data.unidad_medida,
-        activo: true
-    };
-
-    const itemGuardado = await jsonDbHandler.guardar(FOLDER, FILE, nuevoItem);
-
-    // ELIMINADO INVENTARIOSERVICE
-
-    return itemGuardado;
+        control:       data.control,
+        stock_actual:  data.stock_actual ?? 0,
+        stock_minimo:  data.stock_minimo,
+        activo:        true
+    });
+ 
+    const guardado = await repo.save(nuevo);
+    return [guardado, null];
 };
 
-// ######### LEER #########
-export const getAll = async () => await leerTodos();
-
-export const getAllActivos = async () => {
-    const lista = await leerTodos();
-    return lista.filter(i => i.activo === true);
+// ######### ITEMS LEER #########
+export const obtenerTodos = async () => {
+    return await itemRepo().find({ order: { nombre: 'ASC' } });
+};
+ 
+export const obtenerActivos = async () => {
+    return await itemRepo().find({
+        where: { activo: true },
+        order: { nombre: 'ASC' }
+    });
+};
+ 
+export const obtenerPorId = async (id) => {
+    const item = await itemRepo().findOne({ where: { id_item: id } });
+    if (!item) return [null, 'Item no encontrado.'];
+    return [item, null];
+};
+ 
+export const obtenerPorTipo = async (tipo) => {
+    return await itemRepo().find({
+        where: { tipo, activo: true },
+        order: { nombre: 'ASC' }
+    });
+};
+ 
+// alerta de stock para items con el stock_actual igual o menor al stock_minimo
+export const obtenerBajoStock = async () => {
+    return await AppDataSource
+        .getRepository('Item')
+        .createQueryBuilder('item')
+        .where('item.activo = true')
+        .andWhere('item.stock_actual <= item.stock_minimo')
+        .orderBy('item.stock_actual', 'ASC')
+        .getMany();
 };
 
-export const getItemById = async (id) => {
-    const lista = await leerTodos();
-    return lista.find(i => i.id === id);
+
+// ######### ITEMS UPDATE #########
+export const actualizarItem = async (id, data) => {
+    const repo = itemRepo();
+ 
+    const item = await repo.findOne({ where: { id_item: id } });
+    if (!item) return [null, 'Item no encontrado.'];
+ 
+    // Si cambia el nombre verificar que no este en uso
+    if (data.nombre && data.nombre !== item.nombre) {
+        const existe = await repo.findOne({ where: { nombre: data.nombre } });
+        if (existe) return [null, 'El nuevo nombre ya esta en uso.'];
+        item.nombre = data.nombre;
+    }
+ 
+    if (data.descripcion   !== undefined) item.descripcion   = data.descripcion;
+    if (data.tipo          !== undefined) item.tipo          = data.tipo;
+    if (data.unidad_medida !== undefined) item.unidad_medida = data.unidad_medida;
+    if (data.control       !== undefined) item.control       = data.control;
+    if (data.stock_minimo  !== undefined) item.stock_minimo  = data.stock_minimo;
+ 
+    const actualizado = await repo.save(item);
+    return [actualizado, null];
 };
 
-export const getItemsByTipo = async (id_tipo) => {
-    const lista = await leerTodos();
-    return lista.filter(i => i.id_tipo === id_tipo && i.activo === true);
+// ######### ITEMS ELIMINAR #########
+export const desactivarItem = async (id) => {
+    const item = await itemRepo().findOne({ where: { id_item: id } });
+    if (!item) return [null, 'Item no encontrado.'];
+    if (!item.activo) return [null, 'El item ya estaba desactivado.'];
+ 
+    await itemRepo().update(id, { activo: false });
+    return [{ message: 'Item eliminado (soft delete)' }, null];
 };
-
-
-// ######### UPDATE #########
-export const updateItem = async (id, data) => {
-    const lista = await leerTodos();
-    const index = lista.findIndex(i => i.id === id);
-    if (index === -1) lanzarError("Item no encontrado", 404);
-
-    if (data.stock_minimo != null && data.stock_minimo < 0)
-        lanzarError("El stock mínimo debe ser un valor no negativo", 400);
-
-    lista[index] = {
-        ...lista[index],
-        nombre:        data.nombre        || lista[index].nombre,
-        id_tipo:       data.id_tipo       || lista[index].id_tipo,
-        stock_minimo:  data.stock_minimo  != null ? data.stock_minimo : lista[index].stock_minimo,
-        unidad_medida: data.unidad_medida || lista[index].unidad_medida
-    };
-
-    await jsonDbHandler.escribir(FOLDER, FILE, lista);
-    return lista[index];
+ 
+// ################# MOVIMIENTOS  REGISTRAR #################
+ 
+export const registrarMovimiento = async (data) => {
+    const repoItem = itemRepo();
+    const repoMov  = movRepo();
+ 
+    const item = await repoItem.findOne({ where: { id_item: data.id_item, activo: true } });
+    if (!item) return [null, 'Item no encontrado o inactivo.'];
+ 
+    // Validar stock suficiente antes de descontar
+    if (TIPOS_QUE_RESTAN.includes(data.tipo_movimiento)) {
+        if (item.stock_actual < data.cantidad)
+            return [null, `Stock insuficiente. Disponible: ${item.stock_actual} ${item.unidad_medida}.`];
+    }
+ 
+    const movimiento = repoMov.create({
+        item,
+        id_proyecto:      data.id_proyecto,
+        id_emisor:        data.id_emisor,
+        id_receptor:      data.id_receptor || null,
+        tipo_movimiento:  data.tipo_movimiento,
+        cantidad:         data.cantidad,
+        descripcion:      data.descripcion || '',
+        estado_solicitud: data.tipo_movimiento === 'SOLICITUD' ? 'PENDIENTE' : null
+    });
+ 
+    const guardado = await repoMov.save(movimiento);
+ 
+    // Actualizar stock inmediatamente (SOLICITUD espera aprobacion)
+    if (TIPOS_QUE_SUMAN.includes(data.tipo_movimiento)) {
+        await repoItem.update(item.id_item, { stock_actual: item.stock_actual + data.cantidad });
+    } else if (TIPOS_QUE_RESTAN.includes(data.tipo_movimiento)) {
+        await repoItem.update(item.id_item, { stock_actual: item.stock_actual - data.cantidad });
+    }
+ 
+    return [guardado, null];
 };
-
-// ######### ELIMINAR #########
-export const deleteItem = async (id) => {
-    const lista = await leerTodos();
-    const index = lista.findIndex(i => i.id === id);
-    if (index === -1) lanzarError("Item no encontrado", 404);
-
-    lista[index].activo = false;
-    await jsonDbHandler.escribir(FOLDER, FILE, lista);
-    return { message: "Item eliminado (soft delete)" };
+// ################# MOVIMIENTOS  LEER #################
+ 
+export const obtenerMovimientos = async () => {
+    return await movRepo().find({ order: { fecha: 'DESC' } });
 };
-
-export const deleteItemHard = async (id) => {
-    const lista = await leerTodos();
-    const index = lista.findIndex(i => i.id === id);
-    if (index === -1) lanzarError("Item no encontrado", 404);
-
-    lista.splice(index, 1);
-    await jsonDbHandler.escribir(FOLDER, FILE, lista);
-    return { message: "Item eliminado definitivamente" };
+ 
+export const obtenerMovimientoPorId = async (id) => {
+    const mov = await movRepo().findOne({ where: { id_mov: id } });
+    if (!mov) return [null, 'Movimiento no encontrado.'];
+    return [mov, null];
+};
+ 
+export const obtenerMovimientosPorItem = async (id_item) => {
+    return await movRepo().find({
+        where: { item: { id_item } },
+        order: { fecha: 'DESC' }
+    });
+};
+ 
+export const obtenerSolicitudesPendientes = async () => {
+    return await movRepo().find({
+        where: { tipo_movimiento: 'SOLICITUD', estado_solicitud: 'PENDIENTE' },
+        order: { fecha: 'ASC' }
+    });
+};
+ 
+// ################# MOVIMIENTOS RESOLVER SOLICITUD #################
+ 
+export const resolverSolicitud = async (id_mov, decision) => {
+    const repoMov  = movRepo();
+    const repoItem = itemRepo();
+ 
+    const mov = await repoMov.findOne({ where: { id_mov } });
+    if (!mov) return [null, 'Movimiento no encontrado.'];
+    if (mov.tipo_movimiento !== 'SOLICITUD') return [null, 'Este movimiento no es una solicitud.'];
+    if (mov.estado_solicitud !== 'PENDIENTE') return [null, 'La solicitud ya fue resuelta.'];
+ 
+    // Si se aprueba descontar el stock
+    if (decision === 'APROBADO') {
+        const item = await repoItem.findOne({ where: { id_item: mov.item.id_item } });
+        if (!item) return [null, 'Item asociado no encontrado.'];
+        if (item.stock_actual < mov.cantidad)
+            return [null, `Stock insuficiente para aprobar. Disponible: ${item.stock_actual} ${item.unidad_medida}.`];
+ 
+        await repoItem.update(item.id_item, { stock_actual: item.stock_actual - mov.cantidad });
+    }
+ 
+    mov.estado_solicitud = decision;
+    const actualizado = await repoMov.save(mov);
+    return [actualizado, null];
 };
