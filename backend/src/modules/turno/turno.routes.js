@@ -1,65 +1,35 @@
 import { Router } from 'express';
-import * as TurnoController from './turno.controller.js';
-import * as TurnoSchema from './turno.schema.js';
+import * as TurnoCtrl from './turno.controller.js';
+import { authenticateJwt } from '../../middlewares/auth.middleware.js';
+import { checkRole } from '../../middlewares/role.middleware.js';
 
 const router = Router();
 
-/**
- * RUTAS DE TURNOS
- * Prefijo sugerido en el entry point: /turnos
- */
+const rolesGestion    = ["ROOT", "ADMIN", "SUPERVISOR", "ENCARGADO"];
+const rolesLectura    = ["ROOT", "ADMIN", "SUPERVISOR", "ENCARGADO", "EMPLEADO"];
 
-// --- LECTURA ---
+// ==================== TURNO ====================
 
-/**
- * Obtener todos los turnos activos de un proyecto
- * Accesible para: ROOT, ADMIN, SUPERVISOR, ENCARGADO, EMPLEADO
- */
-router.get('/proyecto/:idProyecto', 
-    TurnoSchema.validarIdsParams, 
-    TurnoController.obtenerTurnosPorProyecto
-);
+// ----- Rutas de lectura -----
+router.get('/proyecto/:id_proyecto', authenticateJwt, checkRole(rolesLectura),  TurnoCtrl.listarTurnosPorProyecto); // Todos los turnos activos de un proyecto
+router.get('/:id',                   authenticateJwt, checkRole(rolesLectura),  TurnoCtrl.obtenerTurno);            // Turno por ID
 
+// ----- Rutas de escritura -----
+router.post('/',    authenticateJwt, checkRole(rolesGestion), TurnoCtrl.crearTurno);       // Crear turno con empleados iniciales
+router.put('/:id',  authenticateJwt, checkRole(rolesGestion), TurnoCtrl.actualizarTurno);  // Editar descripción / estado activo
 
-// --- GESTIÓN DE ESTRUCTURA (ENCARGADO / SUPERVISOR) ---
+// ----- Rutas de eliminación -----
+router.delete('/:id', authenticateJwt, checkRole(rolesGestion), TurnoCtrl.eliminarTurno);  // Soft delete (requiere turno vacío)
 
-/**
- * Crear un nuevo turno
- * Requiere que el ejecutor sea SUPERVISOR o ENCARGADO del proyecto
- */
-router.post('/', 
-    TurnoSchema.validarCreacionTurno, 
-    TurnoController.crearTurno
-);
+// ==================== TURNO_EMPLEADO ====================
 
-/**
- * Eliminar un turno (Solo si no tiene empleados vinculados)
- */
-router.delete('/:idTurno', 
-    TurnoSchema.validarIdsParams, 
-    TurnoController.eliminarTurno
-);
+// ----- Rutas de escritura -----
+router.post('/:id/empleados',    authenticateJwt, checkRole(rolesGestion), TurnoCtrl.agregarEmpleadoATurno);          // Agregar empleado al turno
+router.put('/:id/empleados/:id_empleado/colacion',  authenticateJwt, checkRole(rolesGestion), TurnoCtrl.configurarColacion);             // Configurar horario de colación
+router.put('/:id/empleados/:id_empleado/feriados',  authenticateJwt, checkRole(rolesGestion), TurnoCtrl.configurarTrabajadorFeriado);    // Configurar obligación en feriados
 
-
-// --- GESTIÓN DE PERSONAL EN TURNO ---
-
-/**
- * Asignar empleados a un turno existente
- * Recibe un array de empleados en el body
- */
-router.post('/:idTurno/empleados', 
-    TurnoSchema.validarIdsParams, 
-    TurnoSchema.validarAsignacionEmpleados, 
-    TurnoController.asignarEmpleadosATurno
-);
-
-/**
- * Desvincular a un empleado de un turno
- * Restricción: No se puede eliminar si el turno está en curso
- */
-router.delete('/:idTurno/empleados/:idEmpleado', 
-    TurnoSchema.validarIdsParams, 
-    TurnoController.eliminarEmpleadoDeTurno
-);
+// ----- Rutas de eliminación -----
+router.delete('/:id/empleados/:id_empleado',                   authenticateJwt, checkRole(rolesGestion), TurnoCtrl.eliminarEmpleadoDeTurno);           // Desvincular empleado (puede retornar requiere_confirmacion)
+router.delete('/:id/empleados/:id_empleado/confirmar',         authenticateJwt, checkRole(rolesGestion), TurnoCtrl.confirmarEliminacionConAsistencia); // Confirmar desvinculación + baja asistencia del día
 
 export default router;
