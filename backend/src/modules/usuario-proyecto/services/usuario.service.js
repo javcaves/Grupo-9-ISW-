@@ -92,11 +92,7 @@ export const crearUsuario = async(data, ejecutor)=>{
     };
 
 //actualizar ****************+
-<<<<<<< Updated upstream
-    const actualizarUsuarioService = async(id, data, ejecutor) =>{
-=======
     export const actualizarUsuario = async(id, data, ejecutor) =>{
->>>>>>> Stashed changes
         try{
             const usuario = AppDataSource.usuarioRepository.findOne({
                 where: {id: parseInt(id_usuario)}

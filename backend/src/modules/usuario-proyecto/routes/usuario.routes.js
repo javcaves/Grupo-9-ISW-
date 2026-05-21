@@ -1,13 +1,8 @@
 import { Router } from 'express';
-<<<<<<< Updated upstream
 import * as UsuarioController from '../controllers/usuario.controller.js';
-import { validarUsuario } from '../schemas_prov/usuario.schema.js';
-=======
-import * as UsuarioController from './usuario.controller.js';
 import { authenticateJwt } from '../../middlewares/auth.middleware.js';
 //AGREGAR CHECKROLE EN MIDDLEWARE
 import { checkRole } from '../../middlewares/role.middleware.js';
->>>>>>> Stashed changes
 
 const router = Router();
 
