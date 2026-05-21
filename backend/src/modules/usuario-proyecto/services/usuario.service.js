@@ -13,11 +13,10 @@
  */
 import { AppDataSource } from '../../../config/ConfigDB.js';
 import { ILike } from 'typeorm';
-import { usuario } from "../entity/usuario.entity.js";
 import { obtenerPorID } from '../../actividades/actividades.service.js';
 
 //obtener usuario por query (id o rut)
-const usuarioRepository = AppDataSource.getRepository(Usuario);
+const usuarioRepository = AppDataSource.getRepository("Usuario");
 /*
 export async function getUsuarioService(query) {
     try{
@@ -72,14 +71,14 @@ export const crearUsuario = async(data, ejecutor)=>{
     }
 
 //busqueda**************
-    export const obtenerTodosActivos = async () => {
+    const obtenerTodosActivos = async () => {
         const userRepo = AppDataSource.getRepository("Usuario");
         return await userRepo.find({ 
             where: { activo: true }
         });
     };
 
-    export const obtenerUsuarioPorID = async(id) => {
+    const obtenerUsuarioPorID = async(id) => {
         try{
             const userRepo = AppDataSource.usuarioRepository.findOne({
                 where: {id: parseInt(id)}
@@ -93,7 +92,7 @@ export const crearUsuario = async(data, ejecutor)=>{
     };
 
 //actualizar ****************+
-    export const actualizarUsuarioService = async(id, data, ejecutor) =>{
+    const actualizarUsuarioService = async(id, data, ejecutor) =>{
         try{
             const usuario = AppDataSource.usuarioRepository.findOne({
                 where: {id: parseInt(id_usuario)}
@@ -117,7 +116,7 @@ export const crearUsuario = async(data, ejecutor)=>{
     };
 
 //softdelete********
-    export const eliminarUsuarioService = async(id, ejecutor) =>{
+    const eliminarUsuarioService = async(id, ejecutor) =>{
         try{
             const usuario = AppDataSource.usuarioRepository.findOne({
                 where: {id: parseInt(id_usuario)}

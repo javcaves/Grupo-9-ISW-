@@ -1,4 +1,4 @@
-import * as UsuarioService from '../usuario/usuario.service.js';
+import * as UsuarioService from '../services/usuario.service.js';
 import * as PowerService from '../services/power.service.js';
 
 import{
@@ -6,10 +6,10 @@ import{
     usuarioCreateValidation,
     usuarioUpdateValidation,
     usuarioIdValidation
-} from '/usuario.validations.js';
+} from '../validations/usuario.validations.js';
 
 //importar handlers (no existen estos archivos aun)
-import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
+import * as responseHandlers from "../../../handlers/responseHandlers.js";
 
 // Helper para respuestas uniformes
 const sendResponse = (res, status, payload) => {
