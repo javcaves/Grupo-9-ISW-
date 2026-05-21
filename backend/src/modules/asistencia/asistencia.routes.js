@@ -3,7 +3,6 @@ import { Router } from "express";
 import * as AsistenciaCtrl from "./asistencia.controller.js";
 import { authenticateJwt } from "../../middlewares/auth.middleware.js";
 import { checkRole } from "../../middlewares/role.middleware.js";
-import "./asistencia.cron.js"; //para registrar en memoria node-cron y ejecutar el job de cierre automático
 
 const router = Router();
 

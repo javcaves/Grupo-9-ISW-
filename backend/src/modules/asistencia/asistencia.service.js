@@ -103,14 +103,35 @@ export const crearAsistenciaService = async (id_turno, id_encargado) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // RF-ASISTENCIA-2: Mostrar asistencia actual
 // ─────────────────────────────────────────────────────────────────────────────
+// /src/module/asistencia/asistencia.service.js
+
 export const mostrarAsistenciaActualService = async (id_turno) => {
     const hoy = new Date().toISOString().split("T")[0];
 
+    // 1. Obtener la asistencia de hoy
     const asistencia = await asistenciaRepo.findOne({
-        where: { turno: { id_turno }, fecha: hoy, activo: true }
+        where: { turno: { id_turno }, fecha: hoy, activo: true },
+        relations: ["turno"]
     });
     if (!asistencia) return [null, "No se ha inicializado la asistencia para este turno hoy."];
 
+    // =====================================================================
+    // LAZY CLOSURE: Simulación del RF-ASISTENCIA-7 On-Demand
+    // =====================================================================
+    const ahora = new Date();
+    const horaActualMin = ahora.getHours() * 60 + ahora.getMinutes();
+    const minSalidaTurno = convertirAMinutos(asistencia.turno.hora_salida);
+
+    // Si el turno ya terminó, pasamos los rezagados a FALTA_INJUSTIFICADA en caliente
+    if (horaActualMin >= minSalidaTurno) {
+        await asistenciaEmpleadoRepo.update(
+            { id_asistencia: asistencia.id_asistencia, estado: "EN_ESPERA", activo: true },
+            { estado: "FALTA_INJUSTIFICADA" }
+        );
+    }
+    // =====================================================================
+
+    // 2. Traer los empleados actualizados
     const empleadosInscritos = await asistenciaEmpleadoRepo.find({
         where: { id_asistencia: asistencia.id_asistencia, activo: true },
         relations: ["empleado"]
