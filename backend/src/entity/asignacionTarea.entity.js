@@ -1,33 +1,39 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column
-} from "typeorm";
+import { EntitySchema } from "typeorm";
 
-@Entity()
-export class AsignacionTarea {
-
-    @PrimaryGeneratedColumn()
-    id_asignacion;
-
-    @Column()
-    id_tarea;
-
-    @Column()
-    id_empleado;
-
-    @Column()
-    id_asignador;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "PROGRAMADA",
-            "REASIGNADA"
-        ]
-    })
-    tipo_asignacion;
-
-    @Column()
-    hora_asignacion;
-}
+export const AsignacionTarea =new EntitySchema({
+    name: "AsignacionTarea",
+    tableName: "asignacion_tarea",
+    columns: {
+        id_asignacion: {
+            type: "int",
+            primary: true,
+            generated: true,
+        },
+        tipo_asignacion: {
+            type: "enum",
+            enum: ["PROGRAMADA", "REASIGNADA"],
+            default: "PROGRAMADA",
+        },
+        hora_asignacion: {
+            type: "timestamp",
+            default: () => "CURRENT_TIMESTAMP",
+        },
+    },
+    relations: {
+        tarea: {
+            target: "ProgramarTarea",
+            type: "many-to-one",
+            joinColumn: { name: "id_tarea" },
+        },
+        empleado: {
+            target: "Usuario",
+            type: "many-to-one",
+            joinColumn: { name: "id_empleado" },
+        },
+        asignador: {
+            target: "Usuario",
+        type: "many-to-one",
+        joinColumn: { name: "id_asignador" },
+        },
+    },
+});

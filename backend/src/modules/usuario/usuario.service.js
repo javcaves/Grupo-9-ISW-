@@ -11,9 +11,9 @@
  * @property {number} numero - Número de contacto
  * @property {boolean} activo - Estado de la cuenta (Soft Delete)
  */
-import { AppDataSource } from '../../../config/ConfigDB.js';
+import { AppDataSource } from '../../config/ConfigDB.js';
 import { ILike } from 'typeorm';
-import { obtenerPorID } from '../../actividades/actividades.service.js';
+import { obtenerPorID } from '../actividades/actividades.service.js';
 
 //obtener usuario por query (id o rut)
 const usuarioRepository = AppDataSource.getRepository("Usuario");
@@ -69,16 +69,16 @@ export const crearUsuario = async(data, ejecutor)=>{
         console.log("error en crearUsuarioService", error);
         return[null, "error interno del servidor"];
     }
-
+}
 //busqueda**************
-    const obtenerTodosActivos = async () => {
+const obtenerTodosActivos = async () => {
         const userRepo = AppDataSource.getRepository("Usuario");
         return await userRepo.find({ 
             where: { activo: true }
         });
     };
 
-    const obtenerUsuarioPorID = async(id) => {
+const obtenerUsuarioPorID = async(id) => {
         try{
             const userRepo = AppDataSource.usuarioRepository.findOne({
                 where: {id: parseInt(id)}
@@ -92,7 +92,7 @@ export const crearUsuario = async(data, ejecutor)=>{
     };
 
 //actualizar ****************+
-    export const actualizarUsuario = async(id, data, ejecutor) =>{
+export const actualizarUsuario = async(id, data, ejecutor) =>{
         try{
             const usuario = AppDataSource.usuarioRepository.findOne({
                 where: {id: parseInt(id_usuario)}
@@ -116,7 +116,7 @@ export const crearUsuario = async(data, ejecutor)=>{
     };
 
 //softdelete********
-    const eliminarUsuarioService = async(id, ejecutor) =>{
+const eliminarUsuarioService = async(id, ejecutor) =>{
         try{
             const usuario = AppDataSource.usuarioRepository.findOne({
                 where: {id: parseInt(id_usuario)}
@@ -146,6 +146,6 @@ export const crearUsuario = async(data, ejecutor)=>{
 
 
 
-}
+
 
 

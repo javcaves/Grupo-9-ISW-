@@ -1,4 +1,4 @@
-import validators from '../../../shared/validators.js';
+import validators from '../../shared/validators.js';
 
 /**
  * ROLES permitidos según el sistema de RRHH
