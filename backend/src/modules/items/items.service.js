@@ -261,6 +261,10 @@ export const eliminarMovimiento = async (id_mov) => {
         const itemProj = await repoItemProj.findOne({ where: { id_proyecto: mov.id_proyecto, id_item: mov.item.id_item } });
         if (itemProj) {
             if (TIPOS_QUE_SUMAN.includes(mov.tipo_movimiento)) {
+                // prevenir que la resta de una entrada deje el stock en negativo
+                if (itemProj.cantidad - mov.cantidad < 0) {
+                    return [null, 'No se puede eliminar este movimiento porque dejaría el inventario del proyecto en negativo.'];
+                }
                 itemProj.cantidad -= mov.cantidad;
             } else {
                 itemProj.cantidad += mov.cantidad;
@@ -292,6 +296,7 @@ export const obtenerBajoStockPorProyecto = async (id_proyecto) => {
         .innerJoinAndSelect('ip.item', 'item')
         .where('ip.id_proyecto = :id_proyecto', { id_proyecto })
         .andWhere('ip.activo = true')
+        .andWhere('item.activo = true')
         .andWhere('ip.cantidad <= ip.stock_minimo')
         .getMany();
 };
