@@ -20,14 +20,7 @@
  * @property {boolean} activo - Define si la vinculación está vigente actualmente
  */
 
-import jsonDbHandler from '../../../shared/jsonDbHandler.js';
-
-const dbProyecto = jsonDbHandler('recursos_humanos', 'proyecto.json');
-const dbProyectoUsuario = jsonDbHandler('recursos_humanos', 'proyecto_usuario.json');
-const dbUsuario = jsonDbHandler('recursos_humanos', 'usuario.json');
-
-// --- HELPERS ---
-
+import { AppDataSource } from '../../../config/ConfigDB.js';
 /**
  * Valida si un empleado ya está en otro proyecto activo
  */
