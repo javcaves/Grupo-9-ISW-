@@ -187,12 +187,17 @@ export const resolverSolicitud = async (id_mov, dataResolucion) => {
             itemProj = repoItemProj.create({ id_proyecto: mov.id_proyecto, id_item: itemFinal.id_item, cantidad: 0, stock_minimo: 0, activo: true });
         }
 
-        if (itemProj.cantidad < mov.cantidad) {
-            return [null, `Stock insuficiente en el proyecto para autorizar la solicitud. Disponible: ${itemProj.cantidad}.`];
+        if (mov.item) { // Si el ítem ya existía físicamente antes de la solicitud
+            if (itemProj.cantidad < mov.cantidad) {
+                return [null, `Stock insuficiente en el proyecto para autorizar la solicitud. Disponible: ${itemProj.cantidad}.`];
+            }
+            itemProj.cantidad -= mov.cantidad;
+            await repoItemProj.save(itemProj);
+        } else {
+            // Si el ítem es recién creado por el supervisor solo guardamos la relación en itemProj 
+            // pero NO restamos stock porque debe ingresar mediante un movimiento de ABASTECIMIENTO primero
+            await repoItemProj.save(itemProj);
         }
-
-        itemProj.cantidad -= mov.cantidad;
-        await repoItemProj.save(itemProj);
     }
 
     mov.estado_solicitud = dataResolucion.decision;
@@ -216,8 +221,9 @@ export const actualizarInventarioAuditoria = async (id_proyecto, id_emisor, item
 
         if (diferencia !== 0) {
             const tipoMov = diferencia > 0 ? 'ENTRADA' : 'SALIDA';
+            const itemReal = await itemRepo().findOne({ where: { id_item: audit.id_item } });
             const movAjuste = repoMov.create({
-                item: { id_item: audit.id_item },
+                item: itemReal, // Pasa la instancia completa
                 id_proyecto,
                 id_emisor,
                 tipo_movimiento: tipoMov,
@@ -255,6 +261,10 @@ export const eliminarMovimiento = async (id_mov) => {
         const itemProj = await repoItemProj.findOne({ where: { id_proyecto: mov.id_proyecto, id_item: mov.item.id_item } });
         if (itemProj) {
             if (TIPOS_QUE_SUMAN.includes(mov.tipo_movimiento)) {
+                // prevenir que la resta de una entrada deje el stock en negativo
+                if (itemProj.cantidad - mov.cantidad < 0) {
+                    return [null, 'No se puede eliminar este movimiento porque dejaría el inventario del proyecto en negativo.'];
+                }
                 itemProj.cantidad -= mov.cantidad;
             } else {
                 itemProj.cantidad += mov.cantidad;
@@ -286,6 +296,7 @@ export const obtenerBajoStockPorProyecto = async (id_proyecto) => {
         .innerJoinAndSelect('ip.item', 'item')
         .where('ip.id_proyecto = :id_proyecto', { id_proyecto })
         .andWhere('ip.activo = true')
+        .andWhere('item.activo = true')
         .andWhere('ip.cantidad <= ip.stock_minimo')
         .getMany();
 };
