@@ -14,10 +14,7 @@ import * as responseHandlers from "../../handlers/responseHandlers.js";
 
 // ################# LISTAR Y BUSCAR #################
 
-/**
- * Obtener usuarios con filtros dinámicos (ID, RUT, Nombre, Cargo, Poder)
- * Cumple con requerimiento de visualización para Admins y Supervisores
- */
+/*
 export const buscarUsuarios = async (req, res) => {
     try {
         // req.query puede contener: id, rut, nombre, cargo, poder, activo
@@ -26,24 +23,44 @@ export const buscarUsuarios = async (req, res) => {
     } catch (error) {
         return sendResponse(res, 500, error.message);
     }
-};
+};*/
 
 /**
  * Obtener un único usuario por ID detallando sus poderes actuales
  */
+
+
 export const obtenerUsuarioPorId = async (req, res) => {
     try {
-        const { id } = req.params;
-        const usuario = await UsuarioService.obtenerPorId(id);
-        if (!usuario) return sendResponse(res, 404, "Usuario no encontrado");
+        //validacion de id es para params siempre!!
+        const { error, value } = usuarioIdValidation.validate(req.params);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
+        }
 
-        // Adjuntamos los poderes activos para la vista de edición
-        const poderes = await PowerService.obtenerPoderesDeUsuario(id);
-        return sendResponse(res, 200, { ...usuario, powers: poderes });
+        const [usuario, err] = await UsuarioService.obtenerUsuarioPorId(value.id);
+        if (err) return handleErrorClient(res, 400, 'usuario no encontrado', error.message);
+
+        const [poderes, errPow]= await PowerService.obtenerPoderesDeUsuario(value.id);
+        const usuarioConPowers = {...usuario, powers: poderes};
+
+        return handleSuccess(res, 200, 'usuario obtenido de forma exitosa', usuarioConPowers);
     } catch (error) {
-        return sendResponse(res, 500, error.message);
-    }
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    } 
 };
+
+export const obtenerTodosUsuarios = async(req, res) =>{
+    try{
+        const [usuarios, err] = await UsuarioService.obtenerTodosUsuarios();
+        if (err) return handleErrorClient(res, 500, 'usuario no encontrado', error.message);
+
+        return handleSuccess(res, 200, 'usuarios obtenidos de forma exitosa', usuarios);
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    }   
+};
+
 
 // ################# REGISTRO (CREAR) #################
 
@@ -71,8 +88,8 @@ export const registrarUsuario = async (req, res) => {
 
         return handleSuccess(res, 201, 'usuario creado de forma exitosa', nuevoUsuario);
     } catch (error) {
-        return handleErrorServer(res, 500, 'error de servidor, error.message');
-    }
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    } 
 };
 
 // ################# ACTUALIZACIÓN (EDITAR) #################
@@ -107,7 +124,7 @@ export const actualizarUsuario = async (req, res) => {
         
         return handleSuccess(res, 200, 'usuario actualizado de forma exitosa', actualizado);
     } catch (error) {
-        return handleErrorServer(res, 500, 'error de servidor, error.message');
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
 };
 
@@ -131,6 +148,6 @@ export const eliminarUsuario = async (req, res) => {
 
         return handleSuccess(res, 200, 'usuario eliminado de forma exitosa', actualizado);
     } catch (error) {
-        return handleErrorServer(res, 500, 'error de servidor, error.message');
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
 };
