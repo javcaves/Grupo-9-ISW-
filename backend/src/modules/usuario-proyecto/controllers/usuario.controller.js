@@ -1,6 +1,16 @@
 import * as UsuarioService from '../usuario/usuario.service.js';
 import * as PowerService from '../services/power.service.js';
 
+import{
+    usuarioQueryValidation,
+    usuarioCreateValidation,
+    usuarioUpdateValidation,
+    usuarioIdValidation
+} from '/usuario.validations.js';
+
+//importar handlers (no existen estos archivos aun)
+import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
+
 // Helper para respuestas uniformes
 const sendResponse = (res, status, payload) => {
     const isError = status >= 400;
@@ -51,25 +61,22 @@ export const registrarUsuario = async (req, res) => {
         // req.user viene del middleware de autenticación { id, cargo, ... }
         // req.body debe cumplir con usuario.schema.js
 
-        const ejecutor = req.user;
-        //valido que tenga el permiso de crear
-        const tienePoder = await PowerService.tienePermiso(ejecutor.id, 'USER:CREATE');
-
-        if(ejecutor.cargo !== 'ROOT' && !tienePoder){
-            return sendResponse(res, 403, {
-                success: false,
-                error: "no tienes permiso para registrar este usuario"
-            });
+        const { error, value } = usuarioCreateValidation.validate(req.body);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
 
-        const nuevoUsuario = await UsuarioService.crearUsuario(req.body, ejecutor);
-        
-        return sendResponse(res, 201, {
-            message: "Usuario creado exitosamente",
-            usuario: nuevoUsuario
-        });
+        const [nuevoUsuario, err] = await UsuarioService.crearUsuario(value, req.user);
+        if (err) return handleErrorClient(res, 400, 'error de validacion', error.message);
+
+        //asignaiicon de poderes por si vienne en la creacion
+        if(value.powers && value.powers.length > 0){
+            await PowerService.asignarPoderes(nuevoUsuario.id, value.powers, req.user);
+        }
+
+        return handleSuccess(res, 201, 'usuario creado de forma exitosa', nuevoUsuario);
     } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
+        return handleErrorServer(res, 500, 'error de servidor, error.message');
     }
 };
 
