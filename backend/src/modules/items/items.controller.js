@@ -184,7 +184,7 @@ export const verEstadisticasConsumo = async (req, res) => {
         const stats = await ItemsService.obtenerEstadisticasConsumo();
         return sendResponse(res, 200, stats);
     } catch (error) {
-        return sendResponse(res, 500, "Error al compilar las estadísticas");
+        return sendResponse(res, 500, "Error al compilar las estadIsticas");
     }
 };
  
