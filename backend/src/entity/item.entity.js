@@ -1,62 +1,54 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    OneToMany
-} from "typeorm";
-import { MovimientoInventario } from "./movimientoInventario.entity.js";
-import { ItemProyecto } from "./item_proyecto.entity.js"; 
+import { EntitySchema } from "typeorm";
 
-@Entity()
-export class Item {
-    @PrimaryGeneratedColumn()
-    id_item;
-
-    @Column({ unique: true })
-    nombre;
-
-    @Column("text")
-    descripcion;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "MAQUINARIA",
-            "HERRAMIENTA",
-            "UTENSILIO",
-            "PRODUCTO"
-        ]
-    })
-    tipo;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "LITROS",
-            "UNIDADES",
-            "KILOS",
-            "SACOS",
-            "BOLSAS",
-            "METROS"
-        ]
-    })
-    unidad_medida;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "CONSUMO",
-            "PRESTAMO"
-        ]
-    })
-    control;
-
-    @Column({ default: true })
-    activo;
-
-    @OneToMany(() => MovimientoInventario, (mov) => mov.item)
-    movimientos;
-
-    @OneToMany(() => ItemProyecto, (ip) => ip.item)
-    proyectos;
-}
+export const Item = new EntitySchema({
+    name: "Item",
+    tableName: "item",
+    columns: {
+        id_item: {
+            type: "int",
+            primary: true,
+            generated: true,
+        },
+        nombre: {
+            type: "varchar",
+            length: 255, // Agregado longitud estándar para evitar fallos en BD
+            unique: true,
+            nullable: false,
+        },
+        descripcion: {
+            type: "text",
+            nullable: true,
+        },
+        tipo: {
+            type: "enum",
+            enum: ["MAQUINARIA", "HERRAMIENTA", "UTENSILIO", "PRODUCTO"],
+            nullable: false,
+        },
+        unidad_medida: {
+            type: "enum",
+            enum: ["LITROS", "UNIDADES", "KILOS", "SACOS", "BOLSAS", "METROS"],
+            nullable: false,
+        },
+        control: {
+            type: "enum",
+            enum: ["CONSUMO", "PRESTAMO"],
+            nullable: false,
+        },
+        activo: {
+            type: "boolean",
+            default: true,
+        },
+    },
+    relations: {
+        movimientos: {
+            type: "one-to-many",
+            target: "MovimientoInventario", // El string mapea con el 'name' del otro esquema
+            inverseSide: "item",
+        },
+        proyectos: {
+            type: "one-to-many",
+            target: "ItemProyecto", // El string mapea con el 'name' del otro esquema
+            inverseSide: "item",
+        },
+    },
+});

@@ -1,15 +1,15 @@
-import * as UsuarioService from '../services/usuario.service.js';
-import * as PowerService from '../services/power.service.js';
+import * as UsuarioService from './usuario.service.js';
+import * as PowerService from '../power/power.service.js';
 
 import{
     usuarioQueryValidation,
     usuarioCreateValidation,
     usuarioUpdateValidation,
     usuarioIdValidation
-} from '../validations/usuario.validations.js';
+} from './usuario.validations.js';
 
 //importar handlers (no existen estos archivos aun)
-import * as responseHandlers from "../../../handlers/responseHandlers.js";
+import * as responseHandlers from "../../handlers/responseHandlers.js";
 
 
 // ################# LISTAR Y BUSCAR #################

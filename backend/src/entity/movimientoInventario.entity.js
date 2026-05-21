@@ -1,65 +1,64 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    ManyToOne,
-    JoinColumn,
-    CreateDateColumn
-} from "typeorm";
-import { Item } from "./item.entity.js";
+import { EntitySchema } from "typeorm";
 
-@Entity()
-export class MovimientoInventario {
-
-    @PrimaryGeneratedColumn()
-    id_mov;
-
-    @ManyToOne(() => Item, (item) => item.movimientos, { eager: true, nullable: true })
-    @JoinColumn({ name: "id_item" })
-    item;
-
-    @Column({ type: "varchar", length: 100, nullable: true })
-    item_sugerido; 
-
-    @Column()
-    id_proyecto;
-
-    @Column()
-    id_emisor;
-
-    @Column({ nullable: true })
-    id_receptor;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "ENTRADA",
-            "SALIDA",
-            "SOLICITUD",
-            "ABASTECIMIENTO",
-            "COMPRA"
-        ]
-    })
-    tipo_movimiento;
-
-    @Column({ type: "int" })
-    cantidad;
-
-    @CreateDateColumn()
-    fecha;
-
-    @Column("text", { nullable: true })
-    descripcion;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "PENDIENTE",
-            "APROBADO",
-            "RECHAZADO"
-        ],
-        nullable: true
-    })
-    estado_solicitud;
-}
-
+export const MovimientoInventario = new EntitySchema({
+    name: "MovimientoInventario",
+    tableName: "movimiento_inventario",
+    columns: {
+        id_mov: {
+            type: "int",
+            primary: true,
+            generated: true,
+        },
+        item_sugerido: {
+            type: "varchar",
+            length: 100,
+            nullable: true,
+        },
+        id_proyecto: {
+            type: "int",
+            nullable: false,
+        },
+        id_emisor: {
+            type: "int",
+            nullable: false,
+        },
+        id_receptor: {
+            type: "int",
+            nullable: true,
+        },
+        tipo_movimiento: {
+            type: "enum",
+            enum: ["ENTRADA", "SALIDA", "SOLICITUD", "ABASTECIMIENTO", "COMPRA"],
+            nullable: false,
+        },
+        cantidad: {
+            type: "int",
+            nullable: false,
+        },
+        fecha: {
+            type: "timestamp",
+            createDate: true, // Reemplaza a @CreateDateColumn()
+        },
+        descripcion: {
+            type: "text",
+            nullable: true,
+        },
+        estado_solicitud: {
+            type: "enum",
+            enum: ["PENDIENTE", "APROBADO", "RECHAZADO"],
+            nullable: true,
+        },
+    },
+    relations: {
+        item: {
+            type: "many-to-one",
+            target: "Item", // Coincide con el 'name' del esquema Item
+            inverseSide: "movimientos",
+            eager: true,
+            nullable: true,
+            joinColumn: {
+                name: "id_item",
+            },
+        },
+    },
+});

@@ -1,39 +1,43 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column
-} from "typeorm";
+import { EntitySchema } from "typeorm";
 
-@Entity()
-export class ProgramarTarea {
-
-    @PrimaryGeneratedColumn()
-    id_tarea;
-
-    @Column()
-    id_act;
-
-    @Column()
-    id_programador;
-
-    @Column()
-    fecha;
-
-    @Column()
-    hora;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "PLANIFICADA",
-            "EN_PROCESO",
-            "FINALIZADA",
-            "INCOMPLETA",
-            "CANCELADA"
-        ]
-    })
-    estado;
-
-    @Column("text", { nullable: true })
-    comentario;
-}
+export const ProgramarTarea = new EntitySchema({
+    name: "ProgramarTarea",
+    tableName: "programar_tarea",
+    columns: {
+        id_tarea: {
+            type: "int",
+            primary: true,
+            generated: true,
+        },
+        fecha: {
+            type: "date",
+            nullable: false,
+        },
+        hora: {
+            type: "time",
+            nullable: false,
+        },
+        estado: {
+            type: "enum",
+            enum: ["PLANIFICADA", "EN_PROCESO", "FINALIZADA", "INCOMPLETA", "CANCELADA"],
+            default: "PLANIFICADA",
+        },
+        comentario: {
+            type: "varchar",
+            length: 255,
+            nullable: true,
+        },
+    },
+    relations: {
+        actividad: {
+            target: "Actividad",
+            type: "many-to-one",
+            joinColumn: {name: "id_act"},
+        },
+        programador: {
+            target: "Usuario",
+            type: "many-to-one",
+            joinColumn: {name: "id_programador"},
+        },
+    },
+});

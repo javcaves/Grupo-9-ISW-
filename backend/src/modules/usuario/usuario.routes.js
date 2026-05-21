@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import * as UsuarioController from '../controllers/usuario.controller.js';
+import * as UsuarioController from './usuario.controller.js';
 import { authenticateJwt } from '../../middlewares/auth.middleware.js';
 //AGREGAR CHECKROLE EN MIDDLEWARE
 import { checkRole } from '../../middlewares/role.middleware.js';

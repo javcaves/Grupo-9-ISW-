@@ -20,7 +20,7 @@
  * @property {boolean} activo - Define si la vinculación está vigente actualmente
  */
 
-import { AppDataSource } from '../../../config/ConfigDB.js';
+import { AppDataSource } from '../../config/ConfigDB.js';
 /**
  * Valida si un empleado ya está en otro proyecto activo
  */

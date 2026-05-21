@@ -1,4 +1,4 @@
-import { AppDataSource } from '../../../config/ConfigDB.js';
+import { AppDataSource } from '../../config/ConfigDB.js';
 
 const powerRepository = AppDataSource.getRepository('Power');
 const PowerUsuarioRepository = AppDataSource.getRepository('PowerUsuario');
@@ -30,7 +30,7 @@ export const obtenerPoderesDeUsuario = async (idUsuario) => {
 
         const poderesFormat = poderes.map(p =>({
             id_asignacion: p.id_asignacion,
-            id_power= p.id_power,
+            id_power: p.id_power,
             nombre: p.power?.nombre,
             descripcion: p.power?.descripcion,
             otorgado_por_id: p.otorgado_por_id,
