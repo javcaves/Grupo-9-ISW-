@@ -14,7 +14,7 @@ export class MovimientoInventario {
     @PrimaryGeneratedColumn()
     id_mov;
 
-    @ManyToOne(() => Item)
+    @ManyToOne(() => Item, (item) => item.movimientos, { eager: true })
     @JoinColumn({ name: "id_item" })
     item;
 
@@ -39,7 +39,7 @@ export class MovimientoInventario {
     })
     tipo_movimiento;
 
-    @Column()
+    @Column({ type: "int" })
     cantidad;
 
     @CreateDateColumn()

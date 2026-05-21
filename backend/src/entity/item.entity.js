@@ -1,8 +1,10 @@
 import {
     Entity,
     PrimaryGeneratedColumn,
-    Column
+    Column,
+    OneToMany
 } from "typeorm";
+import { MovimientoInventario } from "./movimientoInventario.entity.js";
 
 @Entity()
 export class Item {
@@ -57,4 +59,6 @@ export class Item {
 
     @Column({ default: true })
     activo;
+
+    @OneToMany(() => MovimientoInventario, (mov) => mov.item)movimientos;
 }

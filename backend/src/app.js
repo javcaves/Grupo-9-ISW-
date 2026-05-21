@@ -4,7 +4,7 @@ import morgan from 'morgan';
 
 import routes from './routes/index.routes.js';
 import passport from 'passport';
-import { passportJwtSetup } from './auth/passport.config.js';
+import { passportJwtSetup } from './config/passport.config.js';
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -36,13 +36,14 @@ app.get('/api/health', (req, res) => {
 
 
 // =============================
-// INICIALIZAR JWT
+// INICIALIZAR JWT / COOKIES
 // =============================
 app.use(cookieParser());
 
 passportJwtSetup();
 
 app.use(passport.initialize());
+
 
 // =============================
 // RUTAS
@@ -51,9 +52,13 @@ app.use(passport.initialize());
 app.use('/api', routes);
 
 
+
+
 // =============================
-// 404
+// ERRORS
 // =============================
+
+
 
 app.use((req, res) => {
 
@@ -64,10 +69,6 @@ app.use((req, res) => {
 
 });
 
-
-// =============================
-// ERROR GLOBAL
-// =============================
 
 app.use((err, req, res, next) => {
 
