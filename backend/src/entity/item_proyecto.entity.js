@@ -40,5 +40,16 @@ export const ItemProyecto = new EntitySchema({
                 name: "id_item",
             },
         },
+
+        proyecto: {
+            type: "many-to-one",
+            target: "Proyecto", 
+            onDelete: "CASCADE",
+            joinColumn: {
+                name: "id_proyecto",
+            },
+        },
+
+        
     },
 });
