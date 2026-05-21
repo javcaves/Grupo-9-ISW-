@@ -187,12 +187,17 @@ export const resolverSolicitud = async (id_mov, dataResolucion) => {
             itemProj = repoItemProj.create({ id_proyecto: mov.id_proyecto, id_item: itemFinal.id_item, cantidad: 0, stock_minimo: 0, activo: true });
         }
 
-        if (itemProj.cantidad < mov.cantidad) {
-            return [null, `Stock insuficiente en el proyecto para autorizar la solicitud. Disponible: ${itemProj.cantidad}.`];
+        if (mov.item) { // Si el ítem ya existía físicamente antes de la solicitud
+            if (itemProj.cantidad < mov.cantidad) {
+                return [null, `Stock insuficiente en el proyecto para autorizar la solicitud. Disponible: ${itemProj.cantidad}.`];
+            }
+            itemProj.cantidad -= mov.cantidad;
+            await repoItemProj.save(itemProj);
+        } else {
+            // Si el ítem es recién creado por el supervisor solo guardamos la relación en itemProj 
+            // pero NO restamos stock porque debe ingresar mediante un movimiento de ABASTECIMIENTO primero
+            await repoItemProj.save(itemProj);
         }
-
-        itemProj.cantidad -= mov.cantidad;
-        await repoItemProj.save(itemProj);
     }
 
     mov.estado_solicitud = dataResolucion.decision;
