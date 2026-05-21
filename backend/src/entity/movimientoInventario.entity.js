@@ -14,9 +14,12 @@ export class MovimientoInventario {
     @PrimaryGeneratedColumn()
     id_mov;
 
-    @ManyToOne(() => Item, (item) => item.movimientos, { eager: true })
+    @ManyToOne(() => Item, (item) => item.movimientos, { eager: true, nullable: true })
     @JoinColumn({ name: "id_item" })
     item;
+
+    @Column({ type: "varchar", length: 100, nullable: true })
+    item_sugerido; 
 
     @Column()
     id_proyecto;
@@ -45,7 +48,7 @@ export class MovimientoInventario {
     @CreateDateColumn()
     fecha;
 
-    @Column("text")
+    @Column("text", { nullable: true })
     descripcion;
 
     @Column({
