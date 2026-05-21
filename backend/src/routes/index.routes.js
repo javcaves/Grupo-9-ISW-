@@ -14,13 +14,13 @@ import CategoriasRoutes from '../modules/categoria/categoria.routes.js';
 import ItemsRoutes from '../modules/items/items.routes.js';
 
 // MÓDULO DE PROYECTOS
-import ProyectoRoutes from '../modules/proyecto/proyecto.routes.js';
+import ProyectoRoutes from '../modules/usuario-proyecto/routes/proyecto.routes.js';
 
 // MÓDULO DE RECURSOS HUMANOS (RRHH)
-import UsuarioRoutes from '../modules/usuario/usuario.routes.js';
+import UsuarioRoutes from '../modules/usuario-proyecto/routes/usuario.routes.js';
 import AsistenciaRoutes from '../modules/asistencia/asistencia.routes.js';
 import TurnoRoutes from '../modules/turno/turno.routes.js';
-import PowerRoutes from '../modules/power/power.routes.js';
+import PowerRoutes from '../modules/usuario-proyecto/routes/power.routes.js';
 
 const router = Router();
 

@@ -18,7 +18,7 @@ export const registroIndividualUpdateValidation = Joi.object({
 
 // Validar el marcaje por token o QR del empleado (RF-ASISTENCIA-6)
 export const empleadoRegistrarValidation = Joi.object({
-    token: Joi.string().length(64).required(),
+    token: Joi.string().length(4).uppercase().required(),
     latitud_emp: Joi.number().required(),
     longitud_emp: Joi.number().required()
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });

@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import * as PowerController from './power.controller.js';
-import { validarAsignacionPower } from '../entity/power.schema.js';
+import * as PowerController from '../controllers/power.controller.js';
+import { validarAsignacionPower } from '../schemas_prov/power.schema.js';
 
 const router = Router();
 

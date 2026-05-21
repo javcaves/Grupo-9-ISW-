@@ -15,7 +15,7 @@ export const Asistencia = new EntitySchema({
         },
         token: {
             type: "varchar",
-            length: 64,
+            length: 4,
             unique: true,
             nullable: false,
         },

@@ -4,7 +4,7 @@ import {
     turnoEmpleadoAddValidation,
     turnoColacionValidation,
     turnoFeriadoValidation,
-} from "./turno.validation.js";
+} from "./turno.validations.js";
 import * as TurnoService from "./turno.service.js";
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 

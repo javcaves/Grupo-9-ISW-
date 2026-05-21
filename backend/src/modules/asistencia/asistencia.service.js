@@ -1,6 +1,5 @@
 // /src/module/asistencia/asistencia.service.js
 import { AppDataSource } from "../../config/ConfigDB.js";
-import { crypto } from "crypto"; // Para generar tokens alfanuméricos seguros
 import { LessThanOrEqual, MoreThanOrEqual } from "typeorm";
 
 const asistenciaRepo = AppDataSource.getRepository("Asistencia");
@@ -46,8 +45,12 @@ export const crearAsistenciaService = async (id_turno, id_encargado) => {
     const asistenciaExistente = await asistenciaRepo.findOne({ where: { turno: { id_turno }, fecha: hoy, activo: true } });
     if (asistenciaExistente) return [null, "Ya se generó la asistencia para este turno el día de hoy."];
 
-    // 3. Generar token alfanumérico de 64 caracteres único
-    const token = crypto.randomBytes(32).toString("hex");
+    // 3. Generar un token PIN corto de 4 caracteres (Alfanumérico en mayúsculas)
+    const caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Se quitan 'O', 'I', '1', '0' para evitar confusiones visuales
+    let token = "";
+    for (let i = 0; i < 4; i++) {
+        token += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+    }
 
     // Definir expiración basada en la hora de salida del turno
     const ahoraTimestamp = new Date();
