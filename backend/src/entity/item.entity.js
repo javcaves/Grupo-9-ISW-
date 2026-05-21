@@ -5,10 +5,10 @@ import {
     OneToMany
 } from "typeorm";
 import { MovimientoInventario } from "./movimientoInventario.entity.js";
+import { ItemProyecto } from "./item_proyecto.entity.js"; 
 
 @Entity()
 export class Item {
-
     @PrimaryGeneratedColumn()
     id_item;
 
@@ -51,14 +51,12 @@ export class Item {
     })
     control;
 
-    @Column({ type: "int", default: 0 })
-    stock_actual;
-
-    @Column({ type: "int", default: 0 })
-    stock_minimo;
-
     @Column({ default: true })
     activo;
 
-    @OneToMany(() => MovimientoInventario, (mov) => mov.item)movimientos;
+    @OneToMany(() => MovimientoInventario, (mov) => mov.item)
+    movimientos;
+
+    @OneToMany(() => ItemProyecto, (ip) => ip.item)
+    proyectos;
 }
