@@ -11,11 +11,6 @@ import{
 //importar handlers (no existen estos archivos aun)
 import * as responseHandlers from "../../../handlers/responseHandlers.js";
 
-// Helper para respuestas uniformes
-const sendResponse = (res, status, payload) => {
-    const isError = status >= 400;
-    return res.status(status).json({ [isError ? 'error' : 'data']: payload });
-};
 
 // ################# LISTAR Y BUSCAR #################
 
@@ -88,28 +83,31 @@ export const registrarUsuario = async (req, res) => {
  */
 export const actualizarUsuario = async (req, res) => {
     try {
-        const { id } = req.params;
-        const ejecutor = req.user;
+        const {
+            error: idError,
+            value: idValue
+        } = usuarioIdValidation.validate(req.params);
 
-        //hago la misma validacion que registro
-        const tienePoder = await PowerService.tienePermiso(ejecutor.id, 'USER:CREATE');
+        if(idError) return handleErrorClient(res, 400, 'error, id invalido', error.message);
 
-        if(ejecutor.cargo !== 'ROOT' && !tienePoder){
-            return sendResponse(res, 403, {
-                success: false,
-                error: "no tienes permiso para editar este usuario"
-            });
+        const { error, value } = usuarioUpdateValidation.validate(req.body);
+
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
+
+        //si hay poderes se actualizan
+        if(value.powers && value.powers.length > 0){
+            await PowerService.asignarPoderes(idValue.id, value, req.user);
+            delete value.powers;
+        }
+
+        const [actualizado, err] = await UsuarioService.actualizarUsuario(idValue.id, value, req.user);
+        if (err) return handleErrorClient(res, 400, 'error de validacion', error.message);
         
-        // El service se encarga de verificar si req.user es ancestro o tiene permiso
-        const actualizado = await UsuarioService.actualizar(id, req.body, ejecutor);
-        
-        return sendResponse(res, 200, {
-            message: "Usuario actualizado correctamente",
-            data: actualizado
-        });
+        return handleSuccess(res, 200, 'usuario actualizado de forma exitosa', actualizado);
     } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
+        return handleErrorServer(res, 500, 'error de servidor, error.message');
     }
 };
 
@@ -121,54 +119,18 @@ export const actualizarUsuario = async (req, res) => {
  */
 export const eliminarUsuario = async (req, res) => {
     try {
-        const { id } = req.params;
-
-        const ejecutor = req.user;
-
-        //hago la misma validacion que registro y actualizar
-        const tienePoder = await PowerService.tienePermiso(ejecutor.id, 'USER:CREATE');
-
-        if(ejecutor.cargo !== 'ROOT' && !tienePoder){
-            return sendResponse(res, 403, {
-                success: false,
-                error: "no tienes permiso para eliminar este usuario"
-            });
+        const { error, value } = usuarioIdValidation.validate(req.params);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
-        
-        // Aplica lógica: ADMIN (solo ancestros), OTROS (cualquier admin con poder)
-        const resultado = await UsuarioService.eliminar(id, ejecutor);
-        
-        return sendResponse(res, 200, resultado);
-    } catch (error) {
-        return sendResponse(res, error.status || 500, error.message);
-    }
-};
 
-// ################# GESTIÓN DE PODERES (ESPECÍFICO) #################
+        const [resultado, err] = await UsuarioService.eliminarUsuario(value.id, req.user);
+        if (err) return handleErrorClient(res, 403, 'error al eliminar', error.message);
 
-/**
- * Permite a un Admin ver los poderes que él mismo posee para poder asignar.
- * Útil para renderizar el checklist de "Powers menores o iguales"
- */
-export const obtenerMisPoderesPropios = async (req, res) => {
-    try {
-        const poderes = await PowerService.obtenerPoderesDeUsuario(req.user.id);
-        // Retornamos solo los IDs para el checklist
-        const listaIds = poderes.map(p => p.id_power);
-        return sendResponse(res, 200, listaIds);
-    } catch (error) {
-        return sendResponse(res, 500, error.message);
-    }
-};
+        await PowerService.revocarPoderesPorEliminacion(value.id);
 
-/**
- * Endpoint para obtener el diccionario maestro de poderes (Solo lectura)
- */
-export const obtenerCatalogoPoderes = async (req, res) => {
-    try {
-        const catalogo = await PowerService.obtenerCatalogo();
-        return sendResponse(res, 200, catalogo);
+        return handleSuccess(res, 200, 'usuario eliminado de forma exitosa', actualizado);
     } catch (error) {
-        return sendResponse(res, 500, error.message);
+        return handleErrorServer(res, 500, 'error de servidor, error.message');
     }
 };

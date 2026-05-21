@@ -1,25 +1,46 @@
-import jsonDbHandler from '../../../shared/jsonDbHandler.js';
+import { AppDataSource } from '../../../config/ConfigDB.js';
 
-const FOLDER = 'recursos_humanos';
-const FILE_DICCIONARIO = 'powers.json'; // Estático
-const FILE_ASIGNACIONES = 'usuario_power.json'; // Dinámico
+const powerRepository = AppDataSource.getRepository('Power');
+const PowerUsuarioRepository = AppDataSource.getRepository('PowerUsuario');
+const usuarioRepository = AppDataSource.getRepository('Usuario');
 
-// ################# LECTURA (Todos pueden ver) #################
 
-/**
- * Obtiene el catálogo de poderes disponibles (El diccionario)
- * Nadie puede crear/editar/eliminar aquí.
- */
 export const obtenerCatalogo = async () => {
-    return await jsonDbHandler.leer(FOLDER, FILE_DICCIONARIO) || [];
+    try{
+        const catalogo = await powerRepository.find({
+            where: {activo: true},
+            order: {id_power: 'ASC'}
+        });
+        return [catalogo, null];
+    }catch(error){
+        return[null, error.message];
+    }
 };
 
 /**
  * Obtiene los poderes activos de un usuario
  */
 export const obtenerPoderesDeUsuario = async (idUsuario) => {
-    const asignaciones = await jsonDbHandler.leer(FOLDER, FILE_ASIGNACIONES) || [];
-    return asignaciones.filter(asig => asig.id_usuario === parseInt(idUsuario) && asig.activo === true);
+    try{
+        const poderes = PowerUsuarioRepository.find({
+            where: { id_usuario: parseInt(idUsuario), activo: true},
+            relations: ['power']
+        });
+
+
+        const poderesFormat = poderes.map(p =>({
+            id_asignacion: p.id_asignacion,
+            id_power= p.id_power,
+            nombre: p.power?.nombre,
+            descripcion: p.power?.descripcion,
+            otorgado_por_id: p.otorgado_por_id,
+            fecha_asignacion: p.fecha_asignacion
+        }));
+
+        return [poderesFormat, null];
+    }catch(error){
+        return[null, error.message];
+    }
 };
 
 // ################# VALIDACIÓN (La "Policía" del sistema) #################
@@ -29,8 +50,15 @@ export const obtenerPoderesDeUsuario = async (idUsuario) => {
  * Se usa en los Middlewares de las rutas.
  */
 export const tienePermiso = async (idUsuario, codPower) => {
-    const misPowers = await obtenerPoderesDeUsuario(idUsuario);
-    return misPowers.some(p => p.id_power === codPower);
+    try{
+        const permiso = await PowerUsuarioRepository.findOne({
+            where:{ id_usuario: parseInt(idUsuario), id_power: codpower, activo: true}
+        });
+
+        return [!!permiso, null];
+    }catch(error){
+        return[null, error.message];
+    }
 };
 
 // ################# ESCRITURA (Gestión de Linaje) #################
@@ -40,64 +68,48 @@ export const tienePermiso = async (idUsuario, codPower) => {
  * Regla: Se registra quién otorgó y en qué fecha.
  */
 export const asignarPoderes = async (idDestino, listaCodigosPower, ejecutor) => {
-    const asignaciones = await jsonDbHandler.leer(FOLDER, FILE_ASIGNACIONES) || [];
-    const catalogo = await obtenerCatalogo();
-
-    // 1. REGLA DE HERENCIA: Si no es ROOT, validamos que el ejecutor tenga esos poderes
-    if (ejecutor.cargo !== 'ROOT') {
-        const misPowers = await obtenerPoderesDeUsuario(ejecutor.id);
-        const misCodigos = misPowers.map(p => p.id_power);
-
-        const esValido = listaCodigosPower.every(cod => misCodigos.includes(cod));
-        if (!esValido) {
-            throw Object.assign(new Error("No puedes otorgar poderes que no posees."), { status: 403 });
+    try{
+        if(ejecutor.cargo !== 'ROOT'){
+            for(const cod of listaCodigosPower){
+                const [tiene, err] = await tienePermiso(ejecutor.id, cod);
+                if(err || !tiene){
+                    throw new Error(`no puedes otorgar el poder ${cod} porque no lo posees`);
+                }
+            }
         }
+
+        await PowerUsuarioRepository.update(
+            {id_usuario: parseInt(idUsuario), activo: true},
+            {activo: false}
+        );
+
+        const nuevas_asignaciones = listaCodigosPower.map(cod =>({
+            id_usuario: parseInt(idDestino),
+            id_power: cod,
+            otorgado_por_id: ejecutor.id,
+            fecha_asignacion: new Date(),
+            activo: true
+        }));
+
+        const guardados = await PowerUsuarioRepository.save(nuevas_asignaciones);
+        return[{message: 'poderes asignados de forma exitosa', data: guardados}, null];
+    }catch(error){
+        return[null, error.message];
     }
-
-    // 2. VALIDACIÓN DE EXISTENCIA: ¿Esos códigos existen en el powers.json?
-    const existenEnCatalogo = listaCodigosPower.every(cod => 
-        catalogo.some(c => c.id_power === cod)
-    );
-    if (!existenEnCatalogo) {
-        throw Object.assign(new Error("Uno o más poderes no existen en el catálogo maestro."), { status: 400 });
-    }
-
-    // 3. LIMPIEZA PREVIA: Desactivamos poderes anteriores del usuario destino
-    // (Para cumplir con la edición de poderes del punto 3 de tus reglas)
-    const listaLimpia = asignaciones.map(asig => {
-        if (asig.id_usuario === parseInt(idDestino)) {
-            return { ...asig, activo: false };
-        }
-        return asig;
-    });
-
-    // 4. CREACIÓN: Insertamos los nuevos registros con el ID del ejecutor como padre
-    const nuevasAsignaciones = listaCodigosPower.map(cod => ({
-        id_asignacion: Date.now() + Math.floor(Math.random() * 1000),
-        id_usuario: parseInt(idDestino),
-        id_power: cod,
-        otorgado_por_id: ejecutor.id, // LINAJE
-        fecha_asignacion: new Date().toISOString(),
-        activo: true
-    }));
-
-    await jsonDbHandler.escribir(FOLDER, FILE_ASIGNACIONES, [...listaLimpia, ...nuevasAsignaciones]);
-    
-    return { success: true, mensaje: "Poderes actualizados correctamente" };
 };
 
 /**
  * REGLA 2: Cuando un admin es eliminado, sus poderes pasan a SIN_ASIGNAR (Activo: False)
  */
 export const revocarPoderesPorEliminacion = async (idUsuario) => {
-    const asignaciones = await jsonDbHandler.leer(FOLDER, FILE_ASIGNACIONES) || [];
-    
-    const actualizados = asignaciones.map(asig => {
-        if (asig.id_usuario === parseInt(idUsuario)) {
-            return { ...asig, activo: false };
-        }
-        return asig;
-    });
+    try{
+        await PowerUsuarioRepository.update(
+            {id_usuario: parseInt(idUsuario), activo: true},
+            {activo: false}
+        );
 
-    await jsonDbHandler.escribir(FOLDER, FILE_ASIGNACIONES, actualizados);
+        return[true, null];
+    }catch(error){
+        return[null, error.message];
+    }
 };
