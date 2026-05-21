@@ -221,8 +221,9 @@ export const actualizarInventarioAuditoria = async (id_proyecto, id_emisor, item
 
         if (diferencia !== 0) {
             const tipoMov = diferencia > 0 ? 'ENTRADA' : 'SALIDA';
+            const itemReal = await itemRepo().findOne({ where: { id_item: audit.id_item } });
             const movAjuste = repoMov.create({
-                item: { id_item: audit.id_item },
+                item: itemReal, // Pasa la instancia completa
                 id_proyecto,
                 id_emisor,
                 tipo_movimiento: tipoMov,
