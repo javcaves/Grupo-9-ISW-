@@ -17,12 +17,12 @@ router.post('/', UsuarioController.registrarUsuario);
 // --- BÚSQUEDA Y LISTADO ---
 // Soporta queries: ?nombre=...&rol=...&poder=...&rut=...
 router.get('/', authenticateJwt, UsuarioController.buscarUsuarios);
-router.get('/:id', authenticateJwt, UsuarioController.obtenerUsuarioPorId);
+router.get('/:id_usuario', authenticateJwt, UsuarioController.obtenerUsuarioPorId);
 
 // --- ACTUALIZACIÓN ---
-router.put('/:id', authenticateJwt, UsuarioController.actualizarUsuario);
+router.put('/:id_usuario', authenticateJwt, UsuarioController.actualizarUsuario);
 
 // --- ELIMINACIÓN (Soft Delete) ---
-router.delete('/:id', authenticateJwt, checkRole(['ROOT', 'ADMIN']), UsuarioController.eliminarUsuario);
+router.delete('/:id_usuario', authenticateJwt, checkRole(['ROOT', 'ADMIN']), UsuarioController.eliminarUsuario);
 
 export default router;

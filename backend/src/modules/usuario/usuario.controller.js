@@ -1,7 +1,7 @@
 import * as UsuarioService from './usuario.service.js';
 import * as PowerService from '../power/power.service.js';
 
-import{
+import {
     usuarioQueryValidation,
     usuarioCreateValidation,
     usuarioUpdateValidation,
@@ -32,11 +32,11 @@ export const buscarUsuarios = async (req, res) => {
  */
 export const obtenerUsuarioPorId = async (req, res) => {
     try {
-        const { id } = req.params;
-        const [usuario, err] = await UsuarioService.obtenerUsuarioPorID(id);
+        const { id_usuario } = req.params;
+        const [usuario, err] = await UsuarioService.obtenerUsuarioPorID(id_usuario);
         if (err || !usuario) return responseHandlers.handleErrorClient(res, 404, "Usuario no encontrado");
 
-        const poderes = await PowerService.obtenerPoderesDeUsuario(id);
+        const poderes = await PowerService.obtenerPoderesDeUsuario(id_usuario);
         return res.status(200).json({ ...usuario, powers: poderes });
     } catch (error) {
         return responseHandlers.handleErrorServer(res, 500, "Error en el servidor", error.message);
@@ -60,7 +60,7 @@ export const registrarUsuario = async (req, res) => {
         if (err) return responseHandlers.handleErrorClient(res, 400, 'error de validacion', err);
 
         if(value.powers && value.powers.length > 0){
-            await PowerService.asignarPoderes(nuevoUsuario.id, value.powers, req.user);
+            await PowerService.asignarPoderes(nuevoUsuario.id_usuario, value.powers, req.user);
         }
 
         return responseHandlers.handleSuccess(res, 201, 'usuario creado de forma exitosa', nuevoUsuario);
@@ -91,11 +91,11 @@ export const actualizarUsuario = async (req, res) => {
         }
 
         if(value.powers && value.powers.length > 0){
-            await PowerService.asignarPoderes(idValue.id, value, req.user);
+            await PowerService.asignarPoderes(idValue.id_usuario, value.powers, req.user);
             delete value.powers;
         }
 
-        const [actualizado, err] = await UsuarioService.actualizarUsuario(idValue.id, value, req.user);
+        const [actualizado, err] = await UsuarioService.actualizarUsuario(idValue.id_usuario, value, req.user);
         if (err) return responseHandlers.handleErrorClient(res, 400, 'error de validacion', err);
         
         return responseHandlers.handleSuccess(res, 200, 'usuario actualizado de forma exitosa', actualizado);
@@ -117,10 +117,10 @@ export const eliminarUsuario = async (req, res) => {
             return responseHandlers.handleErrorClient(res, 400, 'error de validacion', error.message);
         }
 
-        const [resultado, err] = await UsuarioService.eliminarUsuarioService(value.id, req.user);
+        const [resultado, err] = await UsuarioService.eliminarUsuarioService(value.id_usuario, req.user);
         if (err) return responseHandlers.handleErrorClient(res, 403, 'error al eliminar', err);
 
-        await PowerService.revocarPoderesPorEliminacion(value.id);
+        await PowerService.revocarPoderesPorEliminacion(value.id_usuario);
 
         return responseHandlers.handleSuccess(res, 200, 'usuario eliminado de forma exitosa', resultado);
     } catch (error) {

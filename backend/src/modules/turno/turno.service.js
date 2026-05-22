@@ -29,6 +29,7 @@ export const crearTurno = async (data) => {
     // Crear el turno
     const nuevoTurno = turnoRepo.create({
         proyecto: data.id_proyecto,
+        nombre: data.nombre,
         hora_ingreso: data.hora_ingreso,
         hora_salida: data.hora_salida,
         descripcion: data.descripcion ?? null,
@@ -82,16 +83,29 @@ export const crearTurno = async (data) => {
 export const obtenerTodosActivosPorProyecto = async (id_proyecto) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
     return await turnoRepo.find({
-        where: { proyecto: { id_proyecto }, activo: true },
-        relations: ["proyecto", "turnoEmpleados", "turnoEmpleados.empleado"]
+        where: { 
+            proyecto: { id_proyecto: parseInt(id_proyecto) } 
+        },
+        // 🌟 Mapeo de objetos anidados impecable
+        relations: {
+            proyecto: true,
+            turnoEmpleados: {
+                empleado: true
+            }
+        }
     });
 };
 
 export const obtenerTurnoPorID = async (id) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
     const turno = await turnoRepo.findOne({
-        where: { id_turno: id },
-        relations: ["proyecto", "turnoEmpleados", "turnoEmpleados.empleado"]
+        where: { id_turno: parseInt(id) },
+        relations: {
+            proyecto: true,
+            turnoEmpleados: {
+                empleado: true
+            }
+        }
     });
 
     if (!turno) return [null, "Turno no encontrado."];
@@ -100,14 +114,17 @@ export const obtenerTurnoPorID = async (id) => {
 
 // ----- Actualizar -----
 
+// src/modules/turno/turno.service.js
+
 export const actualizarTurno = async (id, data) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
 
-    const turno = await turnoRepo.findOne({ where: { id_turno: id, activo: true } });
-    if (!turno) return [null, "No se encontró el turno o se encuentra inactivo."];
+    // 🌟 Quitamos 'activo: true' para que permita encontrarlo e interactuar con él
+    const turno = await turnoRepo.findOne({ where: { id_turno: parseInt(id) } }); 
+    if (!turno) return [null, "No se encontró el turno en el sistema."];
 
     if (data.descripcion !== undefined) turno.descripcion = data.descripcion;
-    if (data.activo !== undefined) turno.activo = data.activo;
+    if (data.activo !== undefined) turno.activo = data.activo; // 👈 Esto te permitirá volver a pasarlo a true
 
     const turnoActualizado = await turnoRepo.save(turno);
     return [turnoActualizado, null];

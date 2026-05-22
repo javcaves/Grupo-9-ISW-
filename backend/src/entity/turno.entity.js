@@ -1,3 +1,4 @@
+// src/modules/turno/turno.entity.js (o donde tengas tu EntitySchema de Turno)
 import { EntitySchema } from "typeorm";
 
 export const Turno = new EntitySchema({
@@ -38,5 +39,10 @@ export const Turno = new EntitySchema({
             joinColumn: { name: "id_proyecto" },
             nullable: false,
         },
+        turnoEmpleados: {
+            target: "TurnoEmpleado",
+            type: "one-to-many",
+            inverseSide: "turno"
+        }
     },
 });
