@@ -15,7 +15,7 @@ const router = Router();
 router.post('/', UsuarioController.registrarUsuario);
 
 // --- BÚSQUEDA Y LISTADO ---
-// Soporta queries: ?nombre=...&cargo=...&poder=...&rut=...
+// Soporta queries: ?nombre=...&rol=...&poder=...&rut=...
 router.get('/', authenticateJwt, UsuarioController.buscarUsuarios);
 router.get('/:id', authenticateJwt, UsuarioController.obtenerUsuarioPorId);
 

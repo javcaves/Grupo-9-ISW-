@@ -41,7 +41,7 @@ const Usuario = new EntitySchema({
             unique: true,
 
         },
-        cargo:{
+        rol:{
             type: "varchar",
             length: 100,
             nullable: false,

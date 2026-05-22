@@ -13,7 +13,7 @@ export const power_usuarioAsignarValidation = Joi.object({
     powers: Joi.array()
     .items(Joi.string()
         .pattern(/^[A-Z0-9_]+:[A-Z0-9_]+$/)
-        .message({
+        .messages({ // 👈 Corregido a plural
             "string.pattern.base":"el poder debe tener formato CODIGO:ACCION"
         })
     )
@@ -31,7 +31,7 @@ export const revocarPowerValidation = Joi.object({
     id_power: Joi.string()
     .pattern(/^[A-Z0-9_]+:[A-Z0-9_]+$/)
     .required()
-    .message({
+    .messages({ // 👈 Corregido a plural
         "string.pattern.base":"el poder debe tener formato CODIGO:ACCION",
         "any.required": "id_power es un campo obligatorio"
     })

@@ -6,14 +6,13 @@
  * @property {string} apellido - Apellidos del empleado
  * @property {string} observacion - Observacion sobre el empleado
  * @property {string} correo - Email vinculado
- * @property {string} cargo - Rol en la empresa
+ * @property {string} rol - Rol en la empresa
  * @property {date} fecha_ingreso - Fecha de ingreso a la empresa
  * @property {number} numero - Número de contacto
  * @property {boolean} activo - Estado de la cuenta (Soft Delete)
  */
 import { AppDataSource } from '../../config/ConfigDB.js';
 import { ILike } from 'typeorm';
-import { obtenerPorID } from '../actividades/actividades.service.js';
 
 //obtener usuario por query (id o rut)
 /*
@@ -107,7 +106,7 @@ export const actualizarUsuario = async(id, data, ejecutor) =>{
             });
             if(!usuario) throw new Error('usuario no encontrado');
 
-            if(data.rol === 'ROOT' && ejecutor.cargo !== 'ROOT'){
+            if(data.rol === 'ROOT' && ejecutor.rol !== 'ROOT'){
                 throw new Error('solo ROOT puede asignar el rol ROOT');
             }
 
@@ -132,14 +131,14 @@ export const eliminarUsuarioService = async(id, ejecutor) =>{
             });
             if(!usuario) throw new Error('usuario no encontrado');
 
-            if (usuario.cargo === 'ROOT') throw new Error('ROOT es intocable');
+            if (usuario.rol === 'ROOT') throw new Error('ROOT es intocable');
 
-            if(ejecutor.cargo === 'ADMIN' && usuario.creado_por !== ejecutor.id_usuario){
+            if(ejecutor.rol === 'ADMIN' && usuario.creado_por !== ejecutor.id_usuario){
                 throw new Error('solo puedes eliminar usuarios que tu mismo creaste');
             }
 
             usuario.activo = false;
-            usuario.cargo = "SIN_ASIGNAR";
+            usuario.rol = "SIN_ASIGNAR";
             usuario.fecha_actualizacion = new Date();
 
             await usuarioRepository.save(usuario);

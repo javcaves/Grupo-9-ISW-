@@ -9,7 +9,7 @@ const router = Router();
 //obtener catalogo
 router.get('/catalogo', authenticateJwt, PowerController.obtenerCatalogo);
 //obtener usuario
-router.get('/usuario/:idUsuario', authenticateJwt, PowerController.obtenerPoderesDeUsuario);
+router.get('/usuario/:id_usuario', authenticateJwt, PowerController.obtenerPoderesDeUsuario);
 
 //
 /**
