@@ -1,44 +1,41 @@
-import {EntitySchema} from "typeorm";
-import Usuario from "./usuario.entity.js";
-import Power from "./power.entity.js";
+import { EntitySchema } from "typeorm";
 
 const PowerUsuario = new EntitySchema({
     name: "PowerUsuario",
     tableName: "power_usuario",
 
-    columns:{
-        id_asignacion:{
+    columns: {
+        id_asignacion: {
             type: "int",
             primary: true,
             generated: true,
         },
-        id_usuario:{
-            type: "int",
-            primary: true,
-            generated: true,
-        },
-        id_power:{
-           type: "varchar",
-            length: 50,
-            primary: true,
-        },
-        otorgado_por_id:{
+        id_usuario: {
             type: "int",
             nullable: false,
         },
-        fecha_asignacion:{
+        id_power: {
+            type: "varchar",
+            length: 50,
+            nullable: false,
+        },
+        otorgado_por_id: {
+            type: "int",
+            nullable: false,
+        },
+        fecha_asignacion: {
             type: "timestamp",
             nullable: false,
             default: () => "CURRENT_TIMESTAMP",
         },
-        activo:{
+        activo: {
             type: "boolean",
             nullable: false,
             default: true,
         }
     },
 
-    indices:[
+    indices: [
         {
             name: "IDX_POWER_USUARIO_USER",
             columns: ["id_usuario"], 
@@ -49,22 +46,21 @@ const PowerUsuario = new EntitySchema({
         }
     ],
 
-    //como es relacion mucho a muchos
-    relations:{
-        usuario:{
+    relations: {
+        usuario: {
             type: "many-to-one",
             target: "Usuario",
-            joinColumn: {name: "id_usuario"},
+            joinColumn: { name: "id_usuario" },
         },
-        power:{
+        power: {
             type: "many-to-one",
             target: "Power",
-            joinColumn: {name: "id_power"},
+            joinColumn: { name: "id_power" },
         },
-        otorgadoPor:{
+        otorgadoPor: {
             type: "many-to-one",
             target: "Usuario",
-            joinColumn: {name: "otorgado_por_id"},
+            joinColumn: { name: "otorgado_por_id" },
         }
     }
 });
