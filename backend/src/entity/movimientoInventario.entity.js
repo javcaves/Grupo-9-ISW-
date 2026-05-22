@@ -37,7 +37,7 @@ export const MovimientoInventario = new EntitySchema({
         },
         fecha: {
             type: "timestamp",
-            createDate: true, // Reemplaza a @CreateDateColumn()
+            createDate: true, 
         },
         descripcion: {
             type: "text",
@@ -51,14 +51,31 @@ export const MovimientoInventario = new EntitySchema({
     },
     relations: {
         item: {
+            target: "Item", 
             type: "many-to-one",
-            target: "Item", // Coincide con el 'name' del esquema Item
             inverseSide: "movimientos",
             eager: true,
             nullable: true,
-            joinColumn: {
-                name: "id_item",
-            },
+            joinColumn: { name: "id_item" },
+        },
+        proyecto: {
+            target: "Proyecto",
+            type: "many-to-one",
+            onDelete: "CASCADE", 
+            joinColumn: { name: "id_proyecto" },
+        },
+        emisor: {
+            target: "Usuario",
+            type: "many-to-one",
+            onDelete: "RESTRICT", 
+            joinColumn: { name: "id_emisor" },
+        },
+        receptor: {
+            target: "Usuario",
+            type: "many-to-one",
+            nullable: true,
+            onDelete: "SET NULL", 
+            joinColumn: { name: "id_receptor" },
         },
     },
 });

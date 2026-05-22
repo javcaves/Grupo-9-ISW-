@@ -23,7 +23,7 @@ export const AsistenciaEmpleado = new EntitySchema({
         },
         estado: {
             type: "enum",
-            enum: ["EN_ESPERA", "PRESENTE", "RETIRADO", "ATRASO", "FALTA JUSTIFICADA", "FALTA_INJUSTIFICADA"],
+            enum: ["EN_ESPERA", "PRESENTE", "RETIRADO", "ATRASO", "FALTA_JUSTIFICADA", "FALTA_INJUSTIFICADA"],
             default: "EN_ESPERA",
         },
         descripcion: {

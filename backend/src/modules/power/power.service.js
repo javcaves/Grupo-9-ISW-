@@ -99,7 +99,7 @@ export const asignarPoderes = async (idDestino, listaCodigosPower, ejecutor) => 
 };
 
 /**
- * REGLA 2: Cuando un admin es eliminado, sus poderes pasan a SIN_ASIGNAR (Activo: False)
+ * REGLA 2: Cuando un admin es eliminado (Activo: False)
  */
 export const revocarPoderesPorEliminacion = async (idUsuario) => {
     try{

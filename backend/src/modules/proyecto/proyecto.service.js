@@ -24,125 +24,145 @@ import { AppDataSource } from '../../config/ConfigDB.js';
 /**
  * Valida si un empleado ya está en otro proyecto activo
  */
-const validarDisponibilidadEmpleados = async (idsEmpleados) => {
-    const vinculaciones = await dbProyectoUsuario.leer() || [];
-    const proyectos = await dbProyecto.leer() || [];
-    
-    // Proyectos que están bloqueando personal
-    const proyectosActivosIds = proyectos
-        .filter(p => p.estado === "EN_CURSO" || p.estado === "EN_PREPARACION")
-        .map(p => p.id_proyecto);
 
-    for (const idEmp of idsEmpleados) {
-        const estaOcupado = vinculaciones.some(v => 
-            v.id_usuario === idEmp && 
-            v.activo === true && 
-            proyectosActivosIds.includes(v.id_proyecto)
-        );
-        if (estaOcupado) {
-            throw { status: 400, message: `El usuario ID ${idEmp} ya está asignado a otro proyecto activo.` };
-        }
-    }
-};
+const proyectoRepository = AppDataSource.getRepository('Proyecto');
+const usuarioProyectoRepository = AppDataSource.getRepository('UsuarioProyecto');
+
 
 // --- MÉTODOS ---
 
 /**
  * Crear Proyecto (Solo ADMIN/ROOT)
  */
-export const crearProyecto = async (datos, ejecutor) => {
-    if (!['ROOT', 'ADMIN'].includes(ejecutor.rol)) {
-        throw { status: 403, message: "Solo administradores pueden crear proyectos." };
+export const crearProyecto = async (data, ejecutor) => {
+    try{
+        if (!['ROOT', 'ADMIN'].includes(ejecutor.rol)) {
+            throw new Error("solo administradores pueden crear proyectos");
+        }
+
+        const nuevoProyecto = proyectoRepository.create({
+            nombre: data.nombre,
+            min_emp: data.min_emp,
+            max_emp: data.max_emp,
+            ubicacion: data.ubicacion,
+            fecha_inicio: data.fecha_inicio,
+            fecha_termino: data.fecha_termino,
+            estado: data.estado || "EN_PREPARACION",
+            activo: true
+        });
+
+        const guardado = await proyectoRepository.save(nuevoProyecto);
+        return [guardado, null];
+    }catch(error){
+        return[null, error.message];
     }
-
-    const { nombre, min_emp, max_emp, ubicacion, fecha_inicio, fecha_termino, encargados, empleados } = datos;
-
-    // 1. Validar topes de personal
-    const totalPersonal = encargados.length + empleados.length;
-    if (totalPersonal > max_emp) throw { status: 400, message: "La cantidad de personal supera el máximo permitido." };
-    if (totalPersonal < min_emp) throw { status: 400, message: "No cumple con el mínimo de empleados requerido." };
-
-    // 2. Validar que no estén en otros proyectos
-    await validarDisponibilidadEmpleados([...encargados, ...empleados]);
-
-    const proyectos = await dbProyecto.leer() || [];
-    const nuevoProyecto = {
-        id_proyecto: proyectos.length > 0 ? Math.max(...proyectos.map(p => p.id_proyecto)) + 1 : 1,
-        nombre,
-        min_emp,
-        max_emp,
-        ubicacion,
-        fecha_inicio,
-        fecha_termino,
-        estado: "EN_PREPARACION",
-        activo: true
-    };
-
-    // 3. Guardar Proyecto y Vinculaciones
-    await dbProyecto.escribir([...proyectos, nuevoProyecto]);
-    
-    const vinculaciones = await dbProyectoUsuario.leer() || [];
-    const nuevasVinculaciones = [...encargados, ...empleados].map(id => ({
-        id_proyecto: nuevoProyecto.id_proyecto,
-        id_usuario: id,
-        fecha_asignacion: new Date().toISOString(),
-        fecha_termino: fecha_termino || null,
-        activo: true
-    }));
-
-    await dbProyectoUsuario.escribir([...vinculaciones, ...nuevasVinculaciones]);
-    return nuevoProyecto;
 };
 
+
+const obtenerTodosProyectos = async() =>{
+    try{
+        const proyectos = await proyectoRepository.find({
+            order: {id_proyecto: 'ASC'}
+        });
+
+        return[proyectos, null];
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    } 
+};
 /**
  * Obtener proyectos según rol
  * Si es ADMIN ve todos. Si es ENCARGADO/SUPERVISOR solo los suyos.
  */
-export const obtenerProyectosVinculados = async (usuario) => {
-    const proyectos = await dbProyecto.leer() || [];
-    
-    if (['ROOT', 'ADMIN'].includes(usuario.rol)) {
-        return proyectos.filter(p => p.activo);
+export const obtenerProyectosPorUsuario = async() =>{
+    try{
+        if (['ROOT', 'ADMIN'].includes(usuario.rol)) {
+            return await obtenerTodosProyectos();
+        }
+
+        const misProyectos = await usuarioProyectoRepository.find({
+            where:{id_usuario: usuario.id, activo: true}
+        });
+
+        const misIds = misProyectos.map(p =>
+            p.id_proyecto
+        );
+
+        const proyectos = await proyectoRepository.find({
+            where: {id_proyecto: In(misIds), activo: true},
+            order: {id_proyecto: 'ASC'}
+        })
+
+        return[proyectos, null];
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
+};
 
-    const vinculaciones = await dbProyectoUsuario.leer() || [];
-    const misProyectosIds = vinculaciones
-        .filter(v => v.id_usuario === usuario.id && v.activo)
-        .map(v => v.id_proyecto);
+export const obtenerProyectosPorId = async(id, usuario) =>{
+    try{
+        const proyecto = await proyectoRepository.find({
+            where: {id_proyecto: parseInt(id)}
+        });
 
-    return proyectos.filter(p => misProyectosIds.includes(p.id_proyecto) && p.activo);
+        if(!proyecto) throw new Error('proyecto no econtrado');
+
+        if ([!'ROOT', 'ADMIN'].includes(usuario.rol)) {
+            const pertenece = await usuarioProyectoRepository.findOne({
+                where: {id_proyecto: parseInt(id), id_usuario: usuario.id, activo: true}
+            });
+            if(!pertenece) throw new Error('no tienes acceso a este proyecto');
+        };
+        
+        return[proyecto, null];
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    }
 };
 
 /**
  * Editar Proyecto (Admin)
  */
-export const editarProyecto = async (id_proyecto, datos, ejecutor) => {
-    if (!['ROOT', 'ADMIN'].includes(ejecutor.rol)) {
-        throw { status: 403, message: "Permiso denegado para editar proyectos." };
+export const editarProyecto = async (id_proyecto, data, ejecutor) => {
+    try{
+        if (!['ROOT', 'ADMIN'].includes(ejecutor.rol)) {
+        throw new Error("solo administradores pueden crear proyectos");
+        };
+
+        const proyecto = await proyectoRepository.find({
+            where: {id_proyecto: parseInt(id)}
+        });
+
+        if(!proyecto) throw new Error('proyecto no econtrado');
+
+        Object.assign(proyecto, data);
+
+        const actualizado = await proyectoRepository.save(proyecto);
+        return[actualizado, null];
+
+    }catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
-
-    const proyectos = await dbProyecto.leer() || [];
-    const index = proyectos.findIndex(p => p.id_proyecto === parseInt(id_proyecto));
-    if (index === -1) throw { status: 404, message: "Proyecto no encontrado." };
-
-    proyectos[index] = { ...proyectos[index], ...datos };
-    await dbProyecto.escribir(proyectos);
-    
-    return proyectos[index];
 };
 
-/**
- * Obtener lista de personal de un proyecto (Para el Encargado)
- */
-export const obtenerPersonalProyecto = async (id_proyecto) => {
-    const vinculaciones = await dbProyectoUsuario.leer() || [];
-    const usuarios = await dbUsuario.leer() || [];
+export const eliminarProyecto = async(id, ejecutor) =>{
+    try{
+        if (!['ROOT', 'ADMIN'].includes(ejecutor.rol)) {
+            throw new Error("solo administradores pueden crear proyectos");
+        };
 
-    const idsPersonal = vinculaciones
-        .filter(v => v.id_proyecto === parseInt(id_proyecto) && v.activo)
-        .map(v => v.id_usuario);
+        const proyecto = await proyectoRepository.find({
+            where: {id_proyecto: parseInt(id)}
+        });
 
-    return usuarios
-        .filter(u => idsPersonal.includes(u.id_usuario))
-        .map(({ password, ...u }) => u); // Quitamos password por seguridad
+        if(!proyecto) throw new Error('proyecto no econtrado');
+
+        proyecto.activo = false;
+        await proyectoRepository.save(proyecto);
+
+        return[{message:'proyecto eliminado de forma exitosa'}, null];
+
+    }catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    }
 };

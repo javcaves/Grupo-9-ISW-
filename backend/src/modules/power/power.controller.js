@@ -1,19 +1,31 @@
 import * as PowerService from './power.service.js';
 
+import{
+    powerQueryValidation,
+    powerCreateValidation,
+    powerUpdateValidation,
+    powerIdValidation,
+    usuarioIdValidation,
+    asignarPowerValidation
+} from './power.validations.js';
+
+import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
+
 /**
  * Obtener el catálogo maestro de poderes (Diccionario estático)
  * GET /
  */
 export const obtenerCatalogo = async (req, res) => {
     try {
-        const catalogo = await PowerService.obtenerCatalogo();
+        const [catalogo, err] = await PowerService.obtenerCatalogo();
         return res.status(200).json({
             success: true,
             data: catalogo
         });
+        return handleSuccess(res, 200, 'catalogo de poderes', catalogo);
     } catch (error) {
-        return res.status(500).json({ error: "Error al obtener el catálogo maestro." });
-    }
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    } 
 };
 
 /**
@@ -22,16 +34,19 @@ export const obtenerCatalogo = async (req, res) => {
  */
 export const obtenerPoderesDeUsuario = async (req, res) => {
     try {
-        const { idUsuario } = req.params;
-        const poderes = await PowerService.obtenerPoderesDeUsuario(idUsuario);
+        const { error, value } = usuarioIdValidation.validate(req.params);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
+        }
         
-        return res.status(200).json({
-            success: true,
-            data: poderes
-        });
+        const [poderes, errPow]= await PowerService.obtenerPoderesDeUsuario(value.idUsuario);
+        if (errPow){
+            return handleErrorClient(res, 404, 'error al obtener poderes de usuario', error.message);
+        }
+        return handleSuccess(res, 200, 'poderes del usuario', poderes);
     } catch (error) {
-        return res.status(500).json({ error: error.message });
-    }
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    } 
 };
 
 /**
@@ -43,27 +58,33 @@ export const obtenerPoderesDeUsuario = async (req, res) => {
 export const gestionarAsignacion = async (req, res) => {
     try {
         const { idDestino } = req.params;
-        const { powers } = req.body;
+        const { error, value } = asignarPowerValidation.validate(req.body);
         const ejecutor = req.user; // Inyectado por middleware de Auth
 
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
+        }
+
         // Delegamos la lógica de Linaje y Herencia al Service
-        const resultado = await PowerService.asignarPoderes(idDestino, powers, ejecutor);
+        const [resultado, err] = await PowerService.asignarPoderes(idDestino, value.powers, ejecutor);
+
+        if (err){
+            return handleErrorClient(res, 403, 'error al asignar poderes', error.message);
+        }
         
-        return res.status(200).json(resultado);
+        return handleSuccess(res, 200, 'poderes asignados de forma exitosa', poderes);
     } catch (error) {
-        // Capturamos errores de jerarquía (403) o de catálogo (400) lanzados por el Service
-        const statusCode = error.status || 500;
-        return res.status(statusCode).json({
-            success: false,
-            error: error.message
-        });
-    }
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    } 
 };
 
+//FUNCNION PARA MIDDLEWARE VA EN EL MIDDLEWARE, NO ACÁ
 /**
  * Middleware de Autorización por Poder
  * Se usa en las rutas para proteger endpoints específicos.
  */
+
+/*
 export const verificarPermiso = (codPower) => {
     return async (req, res, next) => {
         try {
@@ -73,9 +94,9 @@ export const verificarPermiso = (codPower) => {
             if (usuario.cargo === 'ROOT') return next();
 
             // 2. Verificamos si el usuario tiene el código en sus asignaciones activas
-            const tienePoder = await PowerService.tienePermiso(usuario.id, codPower);
+            const [tienePoder, err] = await PowerService.tienePermiso(usuario.id, codPower);
             
-            if (!tienePoder) {
+            if (err || !tienePoder) {
                 return res.status(403).json({ 
                     error: `Privilegios insuficientes. Requiere el poder: [${codPower}]` 
                 });
@@ -86,4 +107,4 @@ export const verificarPermiso = (codPower) => {
             return res.status(500).json({ error: "Error interno al verificar privilegios." });
         }
     };
-};
+};*/
