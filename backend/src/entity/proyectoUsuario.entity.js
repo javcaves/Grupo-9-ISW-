@@ -1,6 +1,6 @@
 import {EntitySchema} from "typeorm";
-import Usuario from "../modules/usuario-proyecto/entity/usuario.entity";
-import Proyecto from "./proyecto.entity";
+import Usuario from "./usuario.entity.js";
+import Proyecto from "./proyecto.entity.js";
 
 const ProyectoUsuario = new EntitySchema({
     name: "ProyectoUsuario",

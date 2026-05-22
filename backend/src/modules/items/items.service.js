@@ -15,7 +15,7 @@
 
 import { AppDataSource } from '../../config/ConfigDB.js';
 import { Item } from '../../entity/item.entity.js';
-import { ItemProyecto } from '../../entity/item_proyecto.entity.js';
+import { ItemProyecto } from '../../entity/itemProyecto.entity.js';
 import { MovimientoInventario } from '../../entity/movimientoInventario.entity.js';
 
 const itemRepo = () => AppDataSource.getRepository(Item);
