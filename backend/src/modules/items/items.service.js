@@ -3,12 +3,24 @@
  * @description Lógica para el módulo de items de bodega y movimientos de inventario
  */
 
-import { AppDataSource } from '../../config/ConfigDB.js';
+/**
+ * @typedef {Object} Item
+ * @property {number} id -identificador
+ * @property {string} nombre -Nombre de item 
+ * @property {number} id_tipo 
+ * @property {number} stock_minimo -alerta si falta stock
+ * @property {string} unidad_medida - bidon, caja etc
+ * @property {boolean} activo -Soft delete
+ */
 
-// Usamos los nombres en String para mantener la misma plantilla de actividades.service
-const itemRepo = () => AppDataSource.getRepository("Item");
-const itemProyectoRepo = () => AppDataSource.getRepository("ItemProyecto");
-const movRepo  = () => AppDataSource.getRepository("MovimientoInventario");
+import { AppDataSource } from '../../config/ConfigDB.js';
+import { Item } from '../../entity/item.entity.js';
+import { ItemProyecto } from '../../entity/itemProyecto.entity.js';
+import { MovimientoInventario } from '../../entity/movimientoInventario.entity.js';
+
+const itemRepo = () => AppDataSource.getRepository(Item);
+const itemProyectoRepo = () => AppDataSource.getRepository(ItemProyecto);
+const movRepo  = () => AppDataSource.getRepository(MovimientoInventario);
 
 const TIPOS_QUE_SUMAN  = ['ENTRADA', 'ABASTECIMIENTO', 'COMPRA'];
 const TIPOS_QUE_RESTAN = ['SALIDA'];
@@ -143,18 +155,16 @@ export const resolverSolicitud = async (id_mov, dataResolucion) => {
     const repoItem = itemRepo();
     const repoItemProj = itemProyectoRepo();
 
-    const mov = await repoMov.findOne({ where: { id_mov }, relations: ["item"] });
+    const mov = await repoMov.findOne({ where: { id_mov } });
     if (!mov) return [null, 'Movimiento no encontrado.'];
     if (mov.tipo_movimiento !== 'SOLICITUD') return [null, 'Este movimiento no es una solicitud.'];
     if (mov.estado_solicitud !== 'PENDIENTE') return [null, 'La solicitud ya fue resuelta.'];
 
     if (dataResolucion.decision === 'APROBADO') {
         let itemFinal = mov.item;
-        let esItemNuevo = false;
 
         // Si la solicitud era de un ítem no registrado, el Supervisor lo crea aquí
         if (!itemFinal) {
-            esItemNuevo = true;
             if (!dataResolucion.nombre || !dataResolucion.tipo || !dataResolucion.unidad_medida || !dataResolucion.control) {
                 return [null, 'Para aprobar un item no registrado debe proveer los datos de creación completos.'];
             }
@@ -169,7 +179,7 @@ export const resolverSolicitud = async (id_mov, dataResolucion) => {
                 activo: true
             });
             itemFinal = await repoItem.save(nuevoItem);
-            mov.item = itemFinal; // Asignamos el nuevo ítem al movimiento
+            mov.item = itemFinal;
         }
 
         let itemProj = await repoItemProj.findOne({ where: { id_proyecto: mov.id_proyecto, id_item: itemFinal.id_item } });
@@ -177,14 +187,11 @@ export const resolverSolicitud = async (id_mov, dataResolucion) => {
             itemProj = repoItemProj.create({ id_proyecto: mov.id_proyecto, id_item: itemFinal.id_item, cantidad: 0, stock_minimo: 0, activo: true });
         }
 
-        // SOLO se resta stock si el ítem ya existía en bodega. Si es nuevo nace en 0 y requiere abastecimiento posterior
-        if (!esItemNuevo) {
-            if (itemProj.cantidad < mov.cantidad) {
-                return [null, `Stock insuficiente en el proyecto para autorizar la solicitud. Disponible: ${itemProj.cantidad}.`];
-            }
-            itemProj.cantidad -= mov.cantidad;
+        if (itemProj.cantidad < mov.cantidad) {
+            return [null, `Stock insuficiente en el proyecto para autorizar la solicitud. Disponible: ${itemProj.cantidad}.`];
         }
-        
+
+        itemProj.cantidad -= mov.cantidad;
         await repoItemProj.save(itemProj);
     }
 
@@ -200,10 +207,6 @@ export const actualizarInventarioAuditoria = async (id_proyecto, id_emisor, item
     const ahora = new Date();
 
     for (const audit of itemsAuditados) {
-        // Se busca el item real completo para mantener la integridad de TypeORM
-        const itemReal = await itemRepo().findOne({ where: { id_item: audit.id_item } });
-        if (!itemReal) continue;
-
         let itemProj = await repoItemProj.findOne({ where: { id_proyecto, id_item: audit.id_item } });
         if (!itemProj) {
             itemProj = repoItemProj.create({ id_proyecto, id_item: audit.id_item, cantidad: 0, stock_minimo: audit.stock_minimo, activo: true });
@@ -214,7 +217,7 @@ export const actualizarInventarioAuditoria = async (id_proyecto, id_emisor, item
         if (diferencia !== 0) {
             const tipoMov = diferencia > 0 ? 'ENTRADA' : 'SALIDA';
             const movAjuste = repoMov.create({
-                item: itemReal,
+                item: { id_item: audit.id_item },
                 id_proyecto,
                 id_emisor,
                 tipo_movimiento: tipoMov,
@@ -252,9 +255,6 @@ export const eliminarMovimiento = async (id_mov) => {
         const itemProj = await repoItemProj.findOne({ where: { id_proyecto: mov.id_proyecto, id_item: mov.item.id_item } });
         if (itemProj) {
             if (TIPOS_QUE_SUMAN.includes(mov.tipo_movimiento)) {
-                if (itemProj.cantidad - mov.cantidad < 0) {
-                    return [null, 'No se puede eliminar este movimiento porque dejaría el inventario del proyecto en negativo.'];
-                }
                 itemProj.cantidad -= mov.cantidad;
             } else {
                 itemProj.cantidad += mov.cantidad;
@@ -269,15 +269,15 @@ export const eliminarMovimiento = async (id_mov) => {
 
 // ================= LECTURAS ADICIONALES =================
 export const obtenerMovimientos = async () => {
-    return await movRepo().find({ relations: ["item"], order: { fecha: 'DESC' } });
+    return await movRepo().find({ order: { fecha: 'DESC' } });
 };
 
 export const obtenerSolicitudesPendientes = async () => {
-    return await movRepo().find({ relations: ["item"], where: { tipo_movimiento: 'SOLICITUD', estado_solicitud: 'PENDIENTE' }, order: { fecha: 'ASC' } });
+    return await movRepo().find({ where: { tipo_movimiento: 'SOLICITUD', estado_solicitud: 'PENDIENTE' }, order: { fecha: 'ASC' } });
 };
 
 export const obtenerMovimientosPorItem = async (id_item) => {
-    return await movRepo().find({ relations: ["item"], where: { item: { id_item } }, order: { fecha: 'DESC' } });
+    return await movRepo().find({ where: { item: { id_item } }, order: { fecha: 'DESC' } });
 };
 
 export const obtenerBajoStockPorProyecto = async (id_proyecto) => {
@@ -286,12 +286,11 @@ export const obtenerBajoStockPorProyecto = async (id_proyecto) => {
         .innerJoinAndSelect('ip.item', 'item')
         .where('ip.id_proyecto = :id_proyecto', { id_proyecto })
         .andWhere('ip.activo = true')
-        .andWhere('item.activo = true') // Ignora ítems que tienen Soft Delete
         .andWhere('ip.cantidad <= ip.stock_minimo')
         .getMany();
 };
 
-// ================= ESTADISTICAS =================
+// ================= ESTADISTICAS ((VER)) =================
 export const obtenerEstadisticasConsumo = async () => {
     return await movRepo()
         .createQueryBuilder('mov')

@@ -1,4 +1,4 @@
-6/**
+/**
  * @typedef {Object} Empleado
  * @property {number} id - Identificador único autoincremental
  * @property {string} rut - RUT normalizado (sin puntos, con guion y Mayúscula)
@@ -15,12 +15,11 @@ import { AppDataSource } from '../../config/ConfigDB.js';
 import { ILike } from 'typeorm';
 import { obtenerPorID } from '../actividades/actividades.service.js';
 
-const usuarioRepository = AppDataSource.getRepository("Usuario");
-
-//buscar usuario por query (id o rut)
-export async function getUsuario(query) {
+//obtener usuario por query (id o rut)
+/*
+export async function getUsuarioService(query) {
     try{
-        const usuarioRepository = AppDataSource.getRepository(Usuario);
+        const usuarioRepository = AppDataSource.getRepository("Usuario");
         const {id_usuario, rut} = query;
 
         const queryBuilder = usuarioRepository.createQueryBuilder("usuario");
@@ -43,12 +42,14 @@ export async function getUsuario(query) {
     } catch(error){
         console.log("error en getUsuarioService", error);
         return[null, "error interno del servidor"];
-    } 
-};
+    }
+    
+};*/
 
 //crear**************
 export const crearUsuario = async(data, ejecutor)=>{
     try{
+        const usuarioRepository = AppDataSource.getRepository("Usuario");
         const existe = await usuarioRepository.findOne({
             where: { rut: data.rut }
         });
@@ -69,88 +70,83 @@ export const crearUsuario = async(data, ejecutor)=>{
         return[null, "error interno del servidor"];
     }
 }
-
 //busqueda**************
-const obtenerTodosActivos = async () => {
-    const userRepo = AppDataSource.getRepository("Usuario");
-    return await userRepo.find({ 
-        where: { activo: true }
-    });
-};
-
-const obtenerTodosUsuarios = async() =>{
-    try{
-        const usuarios = await usuarioRepository.find({
-            order: {id_usuario: 'ASC'}
+export const obtenerTodosActivos = async () => {
+    try {
+        const userRepo = AppDataSource.getRepository("Usuario");
+        const usuarios = await userRepo.find({ 
+            where: { activo: true }
         });
-
-        return[usuarios, null];
+        return [usuarios, null];
     } catch (error) {
-        return handleErrorServer(res, 500, 'error de servidor', error.message);
-    } 
+        console.log("error en obtenerTodosActivos", error);
+        return [null, "error interno del servidor"];
+    }
 };
 
-
-//obtener usuario por URL
-const obtenerUsuarioPorID = async(id) => {
-    try{
-        const userRepo = AppDataSource.usuarioRepository.findOne({
-            where: {id: parseInt(id)}
-        });
-        if(!usuario) throw new Error('usuario no encontrado');
-        return[userRepo, null];
-    }catch(error){
-        console.log("error en obtenerUsuarioPorID", error);
-        return[null, "error interno del servidor"];
+export const obtenerUsuarioPorID = async(id) => {
+        try{
+            const userRepo = AppDataSource.getRepository("Usuario");
+            const usuario = await userRepo.findOne({
+                where: { id_usuario: parseInt(id) }
+            });
+            if(!usuario) throw new Error('usuario no encontrado');
+            return[usuario, null];
+        }catch(error){
+            console.log("error en obtenerUsuarioPorID", error);
+            return[null, "error interno del servidor"];
+        }
     };
-};
 
 //actualizar ****************+
 export const actualizarUsuario = async(id, data, ejecutor) =>{
-    try{
-        const usuario = AppDataSource.usuarioRepository.findOne({
-            where: {id: parseInt(id_usuario)}
-        });
-        if(!usuario) throw new Error('usuario no encontrado');
-        if(data.rol === 'ROOT' && ejecutor.cargo !== 'ROOT'){
-            throw new Error('solo ROOT puede asignar el rol ROOT');
-        };
-        Object.assign(usuario, data);
-        usuario.fecha_actualizacion = new Date();
-      const actualizado = await usuarioRepository.save(usuario);
-      return [actualizado, null];
-    }catch(error){
-        console.log("error en obtenerUsuarioPorID", error);
-        return[null, "error interno del servidor"];
+        try{
+            const usuarioRepository = AppDataSource.getRepository("Usuario");
+            const usuario = await usuarioRepository.findOne({
+                where: { id_usuario: parseInt(id) }
+            });
+            if(!usuario) throw new Error('usuario no encontrado');
+
+            if(data.rol === 'ROOT' && ejecutor.cargo !== 'ROOT'){
+                throw new Error('solo ROOT puede asignar el rol ROOT');
+            }
+
+            Object.assign(usuario, data);
+            usuario.fecha_actualizacion = new Date();
+
+            const actualizado = await usuarioRepository.save(usuario);
+            return [actualizado, null];
+
+        }catch(error){
+            console.log("error en actualizarUsuario", error);
+            return[null, "error interno del servidor"];
+        }
     };
-};
 
 //softdelete********
-const eliminarUsuarioService = async(id, ejecutor) =>{
-    try{
-        const usuario = AppDataSource.usuarioRepository.findOne({
-            where: {id: parseInt(id_usuario)}
-        });
-        if(!usuario) throw new Error('usuario no encontrado');
-        if (usuario.rol === 'ROOT') throw new Error('ROOT es intocable');
-        if(ejecutor.rol === 'ADMIN' && usuario.creado_por !== ejecutor.id){
-            throw new Error('solo puedes eliminar usuarios que tu mismo creaste');
-        };
-        usuario.activo = false;
-        usuario.rol = SIN_ASIGNAR;
-        usuario.fecha_actualizacion = new Date();
-        await usuarioRepository.save(usuario);
-        return [{message: 'usuario eliminado con exito'}, null];
-    }catch(error){
-        console.log("error en eliminarUsuarioService", error);
-        return[null, "error interno del servidor"];
+export const eliminarUsuarioService = async(id, ejecutor) =>{
+        try{
+            const usuarioRepository = AppDataSource.getRepository("Usuario");
+            const usuario = await usuarioRepository.findOne({
+                where: { id_usuario: parseInt(id) }
+            });
+            if(!usuario) throw new Error('usuario no encontrado');
+
+            if (usuario.cargo === 'ROOT') throw new Error('ROOT es intocable');
+
+            if(ejecutor.cargo === 'ADMIN' && usuario.creado_por !== ejecutor.id_usuario){
+                throw new Error('solo puedes eliminar usuarios que tu mismo creaste');
+            }
+
+            usuario.activo = false;
+            usuario.cargo = "SIN_ASIGNAR";
+            usuario.fecha_actualizacion = new Date();
+
+            await usuarioRepository.save(usuario);
+            return [{message: 'usuario eliminado con exito'}, null];
+
+        }catch(error){
+            console.log("error en eliminarUsuarioService", error);
+            return[null, "error interno del servidor"];
+        }
     };
-};
-
-
-
-
-
-
-
-

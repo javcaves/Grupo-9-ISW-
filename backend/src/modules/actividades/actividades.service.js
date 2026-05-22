@@ -16,7 +16,8 @@ export const crearActividad = async(data) => {
         proyecto: data.id_proyecto
     });
 
-    return [await actRepo.save(nuevaActividad), null];
+    const guardada = await actRepo.save(nuevaActividad);
+    return [guardada, null];
 };
 
 // ----- Busqueda -----
@@ -25,15 +26,21 @@ export const obtenerTodosActivos = async () => {
     const actRepo = AppDataSource.getRepository("Actividad");
     return await actRepo.find({ 
         where: { activo: true },
-        relations: ["categoria", "proyecto"] 
+        relations: {
+            categoria: true,
+            proyecto: true
+        }
     });
 };
 
 export const obtenerPorID = async (id) => {
     const actRepo = AppDataSource.getRepository("Actividad");
     const actividad = await actRepo.findOne({ 
-        where: { id_act: id },
-        relations: ["categoria", "proyecto"]
+        where: { id_act: parseInt(id) },
+        relations: {
+            categoria: true,
+            proyecto: true
+        }
     });
 
     if (!actividad) return [null, "Registro de actividad no encontrado"];
@@ -44,7 +51,9 @@ export const buscarDinamico = async (termino) => {
     const actRepo = AppDataSource.getRepository("Actividad");
     return await actRepo.find({
         where: { descripcion_esp: ILike(`%${termino}%`), activo: true },
-        relations: ["categoria"]
+        relations: {
+            categoria: true
+        }
     });
 };
 
@@ -54,7 +63,7 @@ export const actualizarActividad = async (id, data) => {
     const actRepo = AppDataSource.getRepository("Actividad");
     const catRepo = AppDataSource.getRepository("Categoria");
 
-    const actividad = await actRepo.findOne({ where: { id_act: id } });
+    const actividad = await actRepo.findOne({ where: { id_act: parseInt(id) } });
 
     if (!actividad) {
         return [null, "No se encontró la actividad para actualizar"];
@@ -79,22 +88,23 @@ export const eliminarDelCatalogo = async (id) => {
     const actRepo = AppDataSource.getRepository("Actividad");
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
 
-    const actividad = await actRepo.findOne({ where: { id_act: id } });
+    const actividad = await actRepo.findOne({ where: { id_act: parseInt(id) } });
     if (!actividad) return [null, "Actividad no encontrada."];
 
-    //cuenta las tareas en proceso
+    // cuenta las tareas en proceso
     const tareasEnProceso = await tareaRepo.count({ 
-        where: { actividad: { id_act: id }, estado: "EN_PROCESO" } 
+        where: { actividad: { id_act: parseInt(id) }, estado: "EN_PROCESO" } 
     });
 
     if (tareasEnProceso > 0) {
         return [null, "No se puede eliminar: hay tareas ejecutándose actualmente (EN_PROCESO)."];
     }
 
-    await actRepo.update(id, { activo: false });
-    //cambia el estado a cancelada
+    await actRepo.update(parseInt(id), { activo: false });
+    
+    // cambia el estado a cancelada
     await tareaRepo.update(
-        { actividad: { id_act: id }, estado: "PLANIFICADA" }, 
+        { actividad: { id_act: parseInt(id) }, estado: "PLANIFICADA" }, 
         { estado: "CANCELADA", comentario: "Actividad base eliminada del catálogo." }
     );
 

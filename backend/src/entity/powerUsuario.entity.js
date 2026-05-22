@@ -1,6 +1,6 @@
 import {EntitySchema} from "typeorm";
-import Usuario from "./usuario.entity";
-import Power from "./power.entity";
+import Usuario from "./usuario.entity.js";
+import Power from "./power.entity.js";
 
 const PowerUsuario = new EntitySchema({
     name: "PowerUsuario",
