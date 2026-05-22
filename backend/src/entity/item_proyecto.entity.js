@@ -31,25 +31,18 @@ export const ItemProyecto = new EntitySchema({
     },
     relations: {
         item: {
+            target: "Item",
             type: "many-to-one",
-            target: "Item", // Mapea con el name del esquema Item
             inverseSide: "proyectos",
             eager: true,
             onDelete: "CASCADE",
-            joinColumn: {
-                name: "id_item",
-            },
+            joinColumn: {name: "id_item"},
         },
-
         proyecto: {
+            target: "Proyecto",
             type: "many-to-one",
-            target: "Proyecto", 
             onDelete: "CASCADE",
-            joinColumn: {
-                name: "id_proyecto",
-            },
+            joinColumn: {name: "id_proyecto"},
         },
-
-        
     },
 });
