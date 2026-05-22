@@ -1,0 +1,33 @@
+// Proyecto
+// POST: api/proyecto
+{
+  "nombre": "Construcción de Planta de Paneles Solares",
+  "min_emp": 5,
+  "max_emp": 25,
+  "ubicacion": "Desierto de Atacama, Sector KM 45, Antofagasta",
+  "fecha_inicio": "2026-06-01T08:00:00.000Z",
+  "fecha_termino": "2026-12-31T18:00:00.000Z",
+  "estado": "EN_PREPARACION"
+},
+
+// PUT: api/proyecto/2
+{
+  "nombre": "Construcción de Planta de Paneles Solares Fase Ampliación",
+  "min_emp": 8,
+  "max_emp": 30,
+  "ubicacion": "Desierto de Atacama, Sector KM 48, Antofagasta",
+  "fecha_termino": "2027-03-15T20:00:00.000Z",
+  "estado": "EN_CURSO"
+}
+
+
+// Power
+// POST /api/asignar/2
+{
+  "powers": [
+    "USUARIO:CREATE",
+    "USUARIO:READ",
+    "PROYECTO:READ",
+    "ASISTENCIA:CREATE"
+  ]
+}

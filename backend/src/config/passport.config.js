@@ -13,7 +13,6 @@ const cookieExtractor = (req) => {
 
 // Esta es la función que tu app.js quiere ejecutar para inicializar la estrategia
 export const passportJwtSetup = () => {
-    // Definimos las opciones adentro para asegurar que tome las configuraciones limpias al arrancar
     const options = {
         jwtFromRequest: cookieExtractor,
         secretOrKey: JWT_SECRET,
@@ -22,13 +21,13 @@ export const passportJwtSetup = () => {
     passport.use(
         new JwtStrategy(options, async (jwtPayload, done) => {
             try {
-                // Al ejecutarse de forma interna cuando entra una petición HTTP, 
-                // garantizamos que la BD y sus metadatos ya están listos hace rato
                 const userRepository = AppDataSource.getRepository("Usuario");
-                const user = await userRepository.findOne({ where: { id_usuario: jwtPayload.id } });
+                
+                // 🌟 CORREGIDO: Ahora lee 'id_usuario' desde el payload del JWT
+                const user = await userRepository.findOne({ where: { id_usuario: jwtPayload.id_usuario } });
 
                 if (user) {
-                    return done(null, user); // Inyecta el usuario en req.user
+                    return done(null, user); // Inyecta el usuario completo de la BD (con su id_usuario) en req.user
                 }
                 
                 return done(null, false, { message: "Usuario no encontrado en el sistema o dado de baja." });

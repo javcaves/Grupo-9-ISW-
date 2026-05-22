@@ -19,7 +19,7 @@ router.get('/usuario/:id_usuario', authenticateJwt, PowerController.obtenerPoder
  * 2. Pasar la validación de estructura (Schema)
  * 3. Cumplir la regla de linaje (en el Controller/Service)
  */
-router.post('/asignar/:idDestino', 
+router.post('/asignar/:id_usuario', 
     authenticateJwt, 
     checkRole(['ROOT', 'ADMIN']), 
     PowerController.gestionarAsignacion

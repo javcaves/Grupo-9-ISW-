@@ -88,7 +88,7 @@ export const proyectoUpdateValidation = Joi.object({
     .pattern(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/)
     .optional(),
     min_emp: Joi.number().integer().min(1).optional(),
-    max_emp: Joi.number().integer().min(Joi.ref('min.ref')).optional(),
+    max_emp: Joi.number().integer().min(Joi.ref('min_emp')).optional(),
     ubicacion: Joi.string().min(5).max(200).optional(),
     fecha_inicio: Joi.date().iso().optional(),
     fecha_termino: Joi.date().iso().optional(),

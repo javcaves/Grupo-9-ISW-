@@ -59,6 +59,7 @@ export const obtenerPoderesDeUsuario = async (req, res) => {
  */
 export const gestionarAsignacion = async (req, res) => {
     try {
+        const { id_usuario } = req.params;
         const { idDestino } = req.params;
         const { error, value } = asignarPowerValidation.validate(req.body);
         const ejecutor = req.user; 
@@ -68,7 +69,7 @@ export const gestionarAsignacion = async (req, res) => {
         }
 
         // Delegamos la lógica al Service
-        const [resultado, err] = await PowerService.asignarPoderes(idDestino, value.powers, ejecutor);
+        const [resultado, err] = await PowerService.asignarPoderes(id_usuario, value.powers, ejecutor);
 
         // CORREGIDO: Usamos la variable 'err' que viene del servicio en vez de error.message
         if (err){
@@ -99,7 +100,7 @@ export const verificarPermiso = (codPower) => {
             if (usuario.rol === 'ROOT') return next();
 
             // 2. Verificamos si el usuario tiene el código en sus asignaciones activas
-            const [tienePoder, err] = await PowerService.tienePermiso(usuario.id, codPower);
+            const [tienePoder, err] = await PowerService.tienePermiso(usuario.id_usuario, codPower);
             
             if (err || !tienePoder) {
                 return res.status(403).json({ 
