@@ -1,47 +1,67 @@
 // src/seed.js
 import jwt from "jsonwebtoken";
-import { AppDataSource } from "./config/ConfigDB.js";
+import { AppDataSource, connectDB } from "./config/ConfigDB.js";
 import { JWT_SECRET } from "./config/ConfigEnv.js";
+import { poderesIniciales } from "./config/powers.data.js";
 
 async function seed() {
     try {
-        console.log("🔄 Conectando a la base de datos...");
-        await AppDataSource.initialize();
-        console.log("✅ Conexión establecida.");
-
-        const usuarioRepository = AppDataSource.getRepository("Usuario");
-
-        const rootRut = "11111111-1";
+        console.log("🔄 Iniciando carga dinámica de entidades y conexión a BD...");
         
+        // 🌟 Reutilizamos tu lógica exacta de ConfigDB que lee la carpeta /entity e inicializa el DataSource
+        await connectDB(); 
+
+        // Ahora que sabemos con certeza que todos los modelos están montados en memoria:
+        const usuarioRepository = AppDataSource.getRepository("Usuario");
+        const powerRepository = AppDataSource.getRepository("Power");
+
+        // ==========================================
+        // 1. POBLAR EL CATÁLOGO MAESTRO DE PODERES
+        // ==========================================
+        console.log("\n⚡ Verificando catálogo de poderes...");
+        
+        // El upsert guardará o actualizará basándose en la clave primaria [id_power]
+        await powerRepository.upsert(poderesIniciales, ["id_power"]);
+        console.log(`✅ Catálogo de poderes sincronizado (${poderesIniciales.length} poderes listos).`);
+
+        // ==========================================
+        // 2. CREACIÓN / VERIFICACIÓN DEL USUARIO ROOT
+        // ==========================================
+        const rootRut = "11111111-1";
         let rootUser = await usuarioRepository.findOne({ where: { rut: rootRut } });
 
         if (!rootUser) {
-            console.log("👤 Creando usuario ROOT inicial...");
+            console.log("\n👤 Creando usuario ROOT inicial...");
             
-            // Ajustado estrictamente a las columnas reales detectadas en tu tabla PostgreSQL
             rootUser = usuarioRepository.create({
                 rut: rootRut,
                 nombre: "Zak",
                 apellido: "Admin",
                 observacion: "Usuario administrador inicial generado por el sistema",
-                email: "admin@cleanadmin.com", // <-- Cambiado de 'correo' a 'email'
+                email: "admin@cleanadmin.com",
                 rol: "ROOT",
                 activo: true,
                 numero: 912345678
-                // 'fecha_ingreso' se omitió aquí porque la BD le pone el DEFAULT (Date actual) automáticamente
             });
 
             rootUser = await usuarioRepository.save(rootUser);
             console.log("✅ Usuario ROOT guardado exitosamente con ID:", rootUser.id_usuario);
         } else {
-            console.log("ℹ️ El usuario ROOT ya existe en la base de datos.");
+            console.log("\nℹ️ El usuario ROOT ya existe en la base de datos.");
         }
 
-        // Generamos el Token usando el id_usuario que devolvió la inserción
+        // ==========================================
+        // 3. GENERACIÓN DEL TOKEN DE ACCESO JWT
+        // ==========================================
         const userId = rootUser.id_usuario;
         
+        // Se inyecta tanto 'id' como 'id_usuario' para dar compatibilidad total a tus middlewares
         const token = jwt.sign(
-            { id: userId, rol: rootUser.rol, rol: rootUser.rol }, // Usamos rol como rol para asegurar compatibilidad
+            { 
+                id: userId, 
+                id_usuario: userId, 
+                rol: rootUser.rol 
+            },
             JWT_SECRET,
             { expiresIn: "30d" }
         );
@@ -53,11 +73,11 @@ async function seed() {
         console.log("=========================================================================================");
 
     } catch (error) {
-        console.error("❌ Error ejecutando el seed:", error);
+        console.error("\n❌ Error ejecutando el seed:", error);
     } finally {
         if (AppDataSource.isInitialized) {
             await AppDataSource.destroy();
-            console.log("🔌 Conexión a la base de datos cerrada.");
+            console.log("🔌 Conexión a la base de datos cerrada de forma limpia.");
         } else {
             console.log("🚫 No se cerró la conexión porque no logró establecerse.");
         }

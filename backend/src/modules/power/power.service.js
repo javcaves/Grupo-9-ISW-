@@ -91,7 +91,7 @@ export const asignarPoderes = async (idDestino, listaCodigosPower, ejecutor) => 
         const nuevas_asignaciones = listaCodigosPower.map(cod => ({
             id_usuario: parseInt(idDestino),
             id_power: cod,
-            otorgado_por_id: ejecutor.id_usuario,
+            otorgado_por_id: (ejecutor.id_usuario || ejecutor.id),
             fecha_asignacion: new Date(),
             activo: true
         }));
