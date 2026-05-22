@@ -8,6 +8,8 @@ const horaPattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export const turnoCreateValidation = Joi.object({
     id_proyecto:  Joi.number().integer().positive().required(),
+    nombre:       Joi.string().min(3).max(100).required() // 🌟 Agregado
+        .messages({ "string.empty": "El nombre del turno no puede estar vacío" }),
     hora_ingreso: Joi.string().pattern(horaPattern).required()
         .messages({ "string.pattern.base": "hora_ingreso debe tener formato HH:MM" }),
     hora_salida:  Joi.string().pattern(horaPattern).required()

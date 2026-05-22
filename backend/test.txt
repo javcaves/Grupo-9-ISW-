@@ -31,3 +31,29 @@
     "ASISTENCIA:CREATE"
   ]
 }
+
+
+
+
+// TURNO
+//POST /api/turno/ 
+{
+  "id_proyecto": 3,
+  "nombre": "Turno Mañana",
+  "hora_ingreso": "08:00",
+  "hora_salida": "16:30",
+  "descripcion": "Soporte Técnico",
+  "empleados": [
+    { "id_empleado": 12, "trabaja_feriados": true }
+  ]
+}
+//PUT /api/turno/2
+{
+  "nombre": "Turno Noche",
+  "hora_ingreso": "08:00",
+  "hora_salida": "16:30",
+  "descripcion": "Soporte Técnico",
+  "empleados": [
+    { "id_empleado": 12, "trabaja_feriados": true }
+  ]
+}

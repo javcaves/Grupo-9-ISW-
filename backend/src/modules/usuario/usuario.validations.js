@@ -83,17 +83,6 @@ export const usuarioCreateValidation = Joi.object({
         "string.email": "el email no es valido",
         "any.required": "el email es un campo obligatorio"
     }),
-    username: Joi.string()
-    .min(4)
-    .max(30)
-    .pattern(/^[a-zA-Z0-9._-]+$/)
-    .required()
-    .messages({
-        "string.min": "el username debe tener al menos 4 caracteres",
-        "string.max": "el username no debe pasar los 30 caracteres",
-        "string.pattern.base": "el username solo puede contener letras, numeros, puntos o guiones",
-        "any.required": "el username es un campo obligatorio"
-    }),
     password: Joi.string()
     .min(6)
     .max(8)
@@ -101,7 +90,6 @@ export const usuarioCreateValidation = Joi.object({
     .required()
     .messages({
         "string.min": "la contraseña debe tener al menos 6 caracteres",
-        "string.max": "el username no debe pasar los 8 caracteres",
         //"string.pattern.base": "el la contraseña solo puede contener letras, numeros, puntos o guiones",
         "any.required": "el la contraseña es un campo obligatorio"
     }),
@@ -143,11 +131,6 @@ export const usuarioUpdateValidation = Joi.object({
     .optional(),
     email: Joi.string()
     .email()
-    .optional(),
-    username: Joi.string()
-    .min(4)
-    .max(30)
-    .pattern(/^[a-zA-Z0-9._-]+$/)
     .optional(),
     password: Joi.string()
     .min(6)
