@@ -75,7 +75,7 @@ export const asignarPoderes = async (idDestino, listaCodigosPower, ejecutor) => 
     try {
         if (ejecutor.rol !== 'ROOT') {
             for (const cod of listaCodigosPower) {
-                const [tiene, err] = await tienePermiso(ejecutor.id_usuario || ejecutor.id, cod);
+                const [tiene, err] = await tienePermiso(ejecutor.id_usuario, cod);
                 if (err || !tiene) {
                     throw new Error(`no puedes otorgar el poder ${cod} porque no lo posees`);
                 }
@@ -91,7 +91,7 @@ export const asignarPoderes = async (idDestino, listaCodigosPower, ejecutor) => 
         const nuevas_asignaciones = listaCodigosPower.map(cod => ({
             id_usuario: parseInt(idDestino),
             id_power: cod,
-            otorgado_por_id: (ejecutor.id_usuario || ejecutor.id),
+            otorgado_por_id: (ejecutor.id_usuario),
             fecha_asignacion: new Date(),
             activo: true
         }));

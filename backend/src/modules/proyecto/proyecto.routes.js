@@ -15,7 +15,7 @@ router.post('/',
 /**
  * 2. Modificar datos del proyecto, estados o límites de personal
  */
-router.put('/:id', 
+router.put('/:id_proyecto', 
     authenticateJwt,
     checkRole(['ROOT', 'ADMIN']), 
     ProyectoController.editarProyecto
@@ -38,14 +38,14 @@ router.get('/',
  * Útil para que el Encargado gestione su equipo
  */
 router.get('/todos', 
-    authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.obtenerMisProyectos
+    authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.obtenerTodosProyectos
 );
 
-router.get('/:id', 
+router.get('/:id_proyecto', 
     authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.obtenerProyectosPorId
 );
 
-router.delete('/:id', 
+router.delete('/:id_proyecto', 
     authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.eliminarProyecto
 );
 

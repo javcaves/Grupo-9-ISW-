@@ -9,7 +9,6 @@ export const login = async (req, res) => {
 
     try {
         const userRepository = AppDataSource.getRepository("Usuario");
-        // Buscamos al usuario incluyendo explícitamente el estado activo
         const user = await userRepository.findOne({ where: { email } });
 
         // 1. Validar que exista y esté activo
@@ -33,28 +32,29 @@ export const login = async (req, res) => {
             );
         }
 
-        // 3. Crear el Payload del JWT con el ID que Passport buscará después
-        const payload = { id: user.id_usuario };
+        const payload = { 
+            id_usuario: user.id_usuario,
+            rol: user.rol
+        };
 
         // 4. Firmar el token JWT
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "1d" });
 
         // 5. Guardar el token en la cookie 'jwt'
         res.cookie("jwt", token, {
-            httpOnly: true,                          // Bloquea acceso desde scripts del frontend (Mitiga XSS)
-            secure: process.env.NODE_ENV === "production", // Solo viaja por HTTPS en producción
-            sameSite: "strict",                      // Mitiga ataques CSRF
-            maxAge: 24 * 60 * 60 * 1000              // Duración de 1 día en milisegundos
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 24 * 60 * 60 * 1000
         });
 
-        // 6. Responder al cliente con éxito y los datos públicos indispensables
+        // 6. 🌟 CORREGIDO: Eliminado el 'rol' duplicado y adaptado a 'id_usuario'
         return res.json({
             success: true,
             message: "Inicio de sesión exitoso",
             user: {
-                id: user.id_usuario,
+                id_usuario: user.id_usuario, 
                 nombre: user.nombre,
-                rol: user.rol,
                 rol: user.rol
             }
         });

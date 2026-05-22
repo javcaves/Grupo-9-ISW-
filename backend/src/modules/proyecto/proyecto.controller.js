@@ -59,7 +59,7 @@ export const obtenerProyectosPorId = async (req, res) => {
         if (error){
             return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
-        const [proyecto, err] = await ProyectoService.obtenerProyectosPorId(value.id, req.user);
+        const [proyecto, err] = await ProyectoService.obtenerProyectosPorId(value.id_proyecto, req.user);
         if (err) return handleErrorClient(res, 404, 'proyecto no encontrado', err);
 
         return handleSuccess(res, 200, 'proyecto obtenido de forma exitosa', proyecto);
@@ -83,7 +83,7 @@ export const editarProyecto = async (req, res) => {
             return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
 
-        const [actualizado, err] = await ProyectoService.editarProyecto(idValue.id, value, req.user);
+        const [actualizado, err] = await ProyectoService.editarProyecto(idValue.id_proyecto, value, req.user);
         // CORREGIDO: Se cambió error.message por err
         if (err) return handleErrorClient(res, 400, 'error al editar proyecto', err);
 
@@ -104,7 +104,7 @@ export const eliminarProyecto = async (req, res) => {
         if (error){
             return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
-        const [resultado, err] = await ProyectoService.eliminarProyecto(value.id, req.user);
+        const [resultado, err] = await ProyectoService.eliminarProyecto(value.id_proyecto, req.user);
         if (err) return handleErrorClient(res, 404, 'error al eliminar', err);
 
         // CORREGIDO: Se cambió la variable fantasma 'proyecto' por 'resultado'
