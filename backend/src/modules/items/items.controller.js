@@ -8,7 +8,8 @@ import {
     itemCreateValidation,
     itemUpdateValidation,
     movimientoCreateValidation,
-    solicitudResolucionValidation
+    solicitudResolucionValidation,
+    actualizarInventarioValidation
 } from './items.validation.js';
 
 //2. HELPER FUNCTIONS
@@ -52,24 +53,6 @@ export const listarItemsActivos = async (req, res) => {
     }
 };
  
-export const listarItemsPorTipo = async (req, res) => {
-    try {
-        const items = await ItemsService.obtenerPorTipo(req.params.tipo);
-        return sendResponse(res, 200, items);
-    } catch (error) {
-        return sendResponse(res, 500, "Error al obtener items por tipo");
-    }
-};
- 
-export const listarBajoStock = async (req, res) => {
-    try {
-        const items = await ItemsService.obtenerBajoStock();
-        return sendResponse(res, 200, items);
-    } catch (error) {
-        return sendResponse(res, 500, "Error al obtener items con bajo stock");
-    }
-};
- 
 export const getItem = async (req, res) => {
     try {
         const [item, err] = await ItemsService.obtenerPorId(parseInt(req.params.id));
@@ -80,25 +63,20 @@ export const getItem = async (req, res) => {
     }
 };
 
-//################# ITEMS ACTUALIZAR  #################
 export const updateItem = async (req, res) => {
     try {
         const { error, value } = itemUpdateValidation.validate(req.body);
         if (error) return sendResponse(res, 400, error.message);
- 
-        if (Object.keys(value).length === 0)
-            return sendResponse(res, 400, "Debe enviar al menos un campo para actualizar");
- 
+
         const [itemActualizado, err] = await ItemsService.actualizarItem(parseInt(req.params.id), value);
         if (err) return sendResponse(res, 400, err);
- 
+
         return sendResponse(res, 200, itemActualizado);
     } catch (error) {
         return sendResponse(res, 500, error.message);
     }
 };
 
-//################# ITEMS ELIMINAR  #################
 export const deleteItem = async (req, res) => {
     try {
         const [resultado, err] = await ItemsService.desactivarItem(parseInt(req.params.id));
@@ -109,7 +87,62 @@ export const deleteItem = async (req, res) => {
     }
 };
 
-//################# MOVIMIENTOS LEER  #################
+export const registrarMovimiento = async (req, res) => {
+    try {
+        const { error, value } = movimientoCreateValidation.validate(req.body);
+        if (error) return sendResponse(res, 400, error.message);
+
+        const [nuevoMovimiento, err] = await ItemsService.registrarMovimiento(value);
+        if (err) return sendResponse(res, 400, err);
+
+        return sendResponse(res, 201, nuevoMovimiento);
+    } catch (error) {
+        return sendResponse(res, 500, error.message);
+    }
+};
+
+export const resolverSolicitud = async (req, res) => {
+    try {
+        const { error, value } = solicitudResolucionValidation.validate(req.body);
+        if (error) return sendResponse(res, 400, error.message);
+
+        const [resultado, err] = await ItemsService.resolverSolicitud(parseInt(req.params.id_mov), value);
+        if (err) return sendResponse(res, 400, err);
+
+        return sendResponse(res, 200, resultado);
+    } catch (error) {
+        return sendResponse(res, 500, error.message);
+    }
+};
+
+export const auditarInventarioProyecto = async (req, res) => {
+    try {
+        const { error, value } = actualizarInventarioValidation.validate(req.body);
+        if (error) return sendResponse(res, 400, error.message);
+
+        const [resultado, err] = await ItemsService.actualizarInventarioAuditoria(
+            parseInt(req.params.id_proyecto),
+            value.id_emisor,
+            value.items
+        );
+        if (err) return sendResponse(res, 400, err);
+
+        return sendResponse(res, 200, resultado);
+    } catch (error) {
+        return sendResponse(res, 500, error.message);
+    }
+};
+
+export const removeMovimiento = async (req, res) => {
+    try {
+        const [resultado, err] = await ItemsService.eliminarMovimiento(parseInt(req.params.id_mov));
+        if (err) return sendResponse(res, 400, err);
+        return sendResponse(res, 200, resultado.message);
+    } catch (error) {
+        return sendResponse(res, 500, error.message);
+    }
+};
+
 export const listarMovimientos = async (req, res) => {
     try {
         const movimientos = await ItemsService.obtenerMovimientos();
@@ -118,7 +151,7 @@ export const listarMovimientos = async (req, res) => {
         return sendResponse(res, 500, "Error al obtener movimientos");
     }
 };
- 
+
 export const listarSolicitudesPendientes = async (req, res) => {
     try {
         const solicitudes = await ItemsService.obtenerSolicitudesPendientes();
@@ -128,29 +161,6 @@ export const listarSolicitudesPendientes = async (req, res) => {
     }
 };
 
-export const registrarMovimiento = async (req, res) => {
-    try {
-        const { error, value } = movimientoCreateValidation.validate(req.body);
-        if (error) return sendResponse(res, 400, error.message);
- 
-        const [nuevoMovimiento, err] = await ItemsService.registrarMovimiento(value);
-        if (err) return sendResponse(res, 400, err);
- 
-        return sendResponse(res, 201, nuevoMovimiento);
-    } catch (error) {
-        return sendResponse(res, 500, error.message);
-    }
-};
-export const obtenerMovimiento = async (req, res) => {
-    try {
-        const [mov, err] = await ItemsService.obtenerMovimientoPorId(parseInt(req.params.id_mov));
-        if (err) return sendResponse(res, 404, err);
-        return sendResponse(res, 200, mov);
-    } catch (error) {
-        return sendResponse(res, 500, "Error al obtener el movimiento");
-    }
-};
- 
 export const listarMovimientosPorItem = async (req, res) => {
     try {
         const movimientos = await ItemsService.obtenerMovimientosPorItem(parseInt(req.params.id));
@@ -159,23 +169,22 @@ export const listarMovimientosPorItem = async (req, res) => {
         return sendResponse(res, 500, "Error al obtener movimientos del item");
     }
 };
- 
-// ################# MOVIMIENTOS - RESOLVER SOLICITUD #################
- 
-export const resolverSolicitud = async (req, res) => {
+
+export const listarBajoStockProyecto = async (req, res) => {
     try {
-        const { error, value } = solicitudResolucionValidation.validate(req.body);
-        if (error) return sendResponse(res, 400, error.message);
- 
-        const [resultado, err] = await ItemsService.resolverSolicitud(
-            parseInt(req.params.id_mov),
-            value.decision
-        );
-        if (err) return sendResponse(res, 400, err);
- 
-        return sendResponse(res, 200, resultado);
+        const alertas = await ItemsService.obtenerBajoStockPorProyecto(parseInt(req.params.id_proyecto));
+        return sendResponse(res, 200, alertas);
     } catch (error) {
-        return sendResponse(res, 500, error.message);
+        return sendResponse(res, 500, "Error al obtener alertas de bajo stock");
     }
 };
 
+export const verEstadisticasConsumo = async (req, res) => {
+    try {
+        const stats = await ItemsService.obtenerEstadisticasConsumo();
+        return sendResponse(res, 200, stats);
+    } catch (error) {
+        return sendResponse(res, 500, "Error al compilar las estadIsticas");
+    }
+};
+ 

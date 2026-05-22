@@ -1,33 +1,44 @@
 import { Router } from "express";
 import * as ItemsCtrl from "./items.controller.js";
+import { isAuth } from "../../middlewares/auth.middleware.js";
+import { isRole } from "../../middlewares/role.middleware.js";
 
 const router = Router();
 
-// ################# RUTAS DE ITEMS - LECTURA #################
-router.get('/activos', ItemsCtrl.listarItemsActivos);                // Solo activos
-router.get('/bajo-stock', ItemsCtrl.listarBajoStock);                // Alertas de stock
-router.get('/tipo/:tipo', ItemsCtrl.listarItemsPorTipo);             // Filtrar por tipo
+// ================= RUTAS DE ESTADÍSTICAS =================
+router.get('/stats/consumo', isAuth, ItemsCtrl.verEstadisticasConsumo);
 
-// ################# RUTAS DE MOVIMIENTOS - LECTURA #################
-router.get('/movimientos', ItemsCtrl.listarMovimientos);             // Todos los movimientos
-router.get('/movimientos/solicitudes', ItemsCtrl.listarSolicitudesPendientes); // Solicitudes pendientes
-router.get('/movimientos/:id_mov', ItemsCtrl.obtenerMovimiento);     // Movimiento por ID
+// ================= RUTAS DE ITEMS - LECTURA =================
+router.get('/activos', isAuth, ItemsCtrl.listarItemsActivos);
+router.get('/proyecto/:id_proyecto/bajo-stock', isAuth, ItemsCtrl.listarBajoStockProyecto);
 
-// ################# RUTAS DE ITEMS CON PARAMETRO #################
-router.get('/:id/movimientos', ItemsCtrl.listarMovimientosPorItem);  // Historial de un item
-router.get('/:id', ItemsCtrl.getItem);                               // Item por ID
-router.get('/', ItemsCtrl.listarItems);                              // Todos los items
+// ================= RUTAS DE MOVIMIENTOS - LECTURA =================
+router.get('/movimientos', isAuth, ItemsCtrl.listarMovimientos);
+router.get('/movimientos/solicitudes', isAuth, ItemsCtrl.listarSolicitudesPendientes);
 
-// ################# RUTAS DE ITEMS - ESCRITURA #################
-router.post('/', ItemsCtrl.createItem);                              // Crear item
-router.put('/:id', ItemsCtrl.updateItem);                            // Actualizar item
- 
-// ################# RUTAS DE ITEMS - ELIMINACIÓN #################
-router.delete('/:id', ItemsCtrl.deleteItem);                         // Soft delete
+// ================= RUTAS DE ITEMS CON PARÁMETRO =================
+router.get('/:id/movimientos', isAuth, ItemsCtrl.listarMovimientosPorItem);
+router.get('/:id', isAuth, ItemsCtrl.getItem);
+router.get('/', isAuth, ItemsCtrl.listarItems);
 
- 
-// ################# RUTAS DE MOVIMIENTOS - ESCRITURA #################
-router.post('/movimientos', ItemsCtrl.registrarMovimiento);          // Registrar movimiento
-router.patch('/movimientos/:id_mov/resolver', ItemsCtrl.resolverSolicitud); // Aprobar/rechazar
+// ================= RUTAS DE CONFIGURACIÓN Y AUDITORÍA DE STOCK =================
+// Tanto el Supervisor como el Encargado pueden registrar la auditoría física del inventario
+router.put('/proyecto/:id_proyecto/auditar', isAuth, isRole(['SUPERVISOR', 'ENCARGADO']), ItemsCtrl.auditarInventarioProyecto);
+
+// ================= RUTAS DE ITEMS - ESCRITURA =================
+// Operaciones de catálogo exclusivas del Supervisor (definición de la naturaleza del ítem)
+router.post('/', isAuth, isRole(['SUPERVISOR']), ItemsCtrl.createItem);
+router.put('/:id', isAuth, isRole(['SUPERVISOR']), ItemsCtrl.updateItem);
+router.delete('/:id', isAuth, isRole(['SUPERVISOR']), ItemsCtrl.deleteItem);
+
+// ================= RUTAS DE MOVIMIENTOS - ESCRITURA =================
+// Ambos roles pueden registrar flujos de inventario regulares (Entradas, Salidas, Solicitudes)
+router.post('/movimientos', isAuth, isRole(['SUPERVISOR', 'ENCARGADO']), ItemsCtrl.registrarMovimiento);
+
+// Solo el Supervisor tiene la facultad de evaluar, aprobar o rechazar solicitudes entrantes
+router.patch('/movimientos/:id_mov/resolver', isAuth, isRole(['SUPERVISOR']), ItemsCtrl.resolverSolicitud);
+
+// Eliminación de movimientos permitida para ambos roles (restringida a 7 días en el servicio)
+router.delete('/movimientos/:id_mov', isAuth, isRole(['SUPERVISOR', 'ENCARGADO']), ItemsCtrl.removeMovimiento);
 
 export default router;

@@ -1,62 +1,89 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    ManyToOne,
-    JoinColumn,
-    CreateDateColumn
-} from "typeorm";
-import { Item } from "./item.entity.js";
+import { EntitySchema } from "typeorm";
 
-@Entity()
-export class MovimientoInventario {
-
-    @PrimaryGeneratedColumn()
-    id_mov;
-
-    @ManyToOne(() => Item, (item) => item.movimientos, { eager: true })
-    @JoinColumn({ name: "id_item" })
-    item;
-
-    @Column()
-    id_proyecto;
-
-    @Column()
-    id_emisor;
-
-    @Column({ nullable: true })
-    id_receptor;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "ENTRADA",
-            "SALIDA",
-            "SOLICITUD",
-            "ABASTECIMIENTO",
-            "COMPRA"
-        ]
-    })
-    tipo_movimiento;
-
-    @Column({ type: "int" })
-    cantidad;
-
-    @CreateDateColumn()
-    fecha;
-
-    @Column("text")
-    descripcion;
-
-    @Column({
-        type: "enum",
-        enum: [
-            "PENDIENTE",
-            "APROBADO",
-            "RECHAZADO"
-        ],
-        nullable: true
-    })
-    estado_solicitud;
-}
-
+export const MovimientoInventario = new EntitySchema({
+    name: "MovimientoInventario",
+    tableName: "movimiento_inventario",
+    columns: {
+        id_mov: {
+            type: "int",
+            primary: true,
+            generated: true,
+        },
+        item_sugerido: {
+            type: "varchar",
+            length: 100,
+            nullable: true,
+        },
+        id_proyecto: {
+            type: "int",
+            nullable: false,
+        },
+        id_emisor: {
+            type: "int",
+            nullable: false,
+        },
+        id_receptor: {
+            type: "int",
+            nullable: true,
+        },
+        tipo_movimiento: {
+            type: "enum",
+            enum: ["ENTRADA", "SALIDA", "SOLICITUD", "ABASTECIMIENTO", "COMPRA"],
+            nullable: false,
+        },
+        cantidad: {
+            type: "int",
+            nullable: false,
+        },
+        fecha: {
+            type: "timestamp",
+            createDate: true, 
+        },
+        descripcion: {
+            type: "text",
+            nullable: true,
+        },
+        estado_solicitud: {
+            type: "enum",
+            enum: ["PENDIENTE", "APROBADO", "RECHAZADO"],
+            nullable: true,
+        },
+    },
+    relations: {
+        item: {
+            type: "many-to-one",
+            target: "Item", 
+            inverseSide: "movimientos",
+            eager: true,
+            nullable: true,
+            joinColumn: {
+                name: "id_item",
+            },
+        },
+        proyecto: {
+            type: "many-to-one",
+            target: "Proyecto",
+            onDelete: "CASCADE", // Si cae el proyecto, se limpia su historial de movimientos
+            joinColumn: {
+                name: "id_proyecto",
+            },
+        },
+        emisor: {
+            type: "many-to-one",
+            target: "Usuario",
+            onDelete: "RESTRICT", // No permite eliminar al usuario si tiene movimientos firmados
+            joinColumn: {
+                name: "id_emisor",
+            },
+        },
+        receptor: {
+            type: "many-to-one",
+            target: "Usuario",
+            nullable: true,
+            onDelete: "SET NULL", // Preserva el registro del movimiento aunque el receptor ya no exista
+            joinColumn: {
+                name: "id_receptor",
+            },
+        },
+    },
+});

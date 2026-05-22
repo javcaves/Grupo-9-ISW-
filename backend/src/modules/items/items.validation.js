@@ -22,9 +22,7 @@ export const itemCreateValidation = Joi.object({
     descripcion:   Joi.string().max(500).allow(null, ''),
     tipo:          Joi.string().valid(...TIPOS_ITEM).required(),
     unidad_medida: Joi.string().valid(...UNIDADES_MEDIDA).required(),
-    control:       Joi.string().valid(...TIPOS_CONTROL).required(),
-    stock_actual:  Joi.number().integer().min(0).default(0),
-    stock_minimo:  Joi.number().integer().min(0).required()
+    control:       Joi.string().valid(...TIPOS_CONTROL).required()
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
  
 // ################# ACTUALIZAR ITEM #################
@@ -33,15 +31,15 @@ export const itemUpdateValidation = Joi.object({
     descripcion:   Joi.string().max(500).allow(null, '').optional(),
     tipo:          Joi.string().valid(...TIPOS_ITEM).optional(),
     unidad_medida: Joi.string().valid(...UNIDADES_MEDIDA).optional(),
-    control:       Joi.string().valid(...TIPOS_CONTROL).optional(),
-    stock_minimo:  Joi.number().integer().min(0).optional()
+    control:       Joi.string().valid(...TIPOS_CONTROL).optional()
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
  
 // 3. VALIDACIONES PARA LOS MOVIMIENTOS
  
 // ################# REGISTRAR MOVIMIENTO #################
 export const movimientoCreateValidation = Joi.object({
-    id_item:         Joi.number().integer().positive().required(),
+    id_item:         Joi.number().integer().positive().allow(null),
+    item_sugerido:   Joi.string().max(100).allow(null, ''),
     id_proyecto:     Joi.number().integer().positive().required(),
     id_emisor:       Joi.number().integer().positive().required(),
     id_receptor:     Joi.number().integer().positive().allow(null),
@@ -52,6 +50,21 @@ export const movimientoCreateValidation = Joi.object({
  
 // ################# RESOLVER SOLICITUD #################
 export const solicitudResolucionValidation = Joi.object({
-    decision: Joi.string().valid('APROBADO', 'RECHAZADO').required()
+    decision:      Joi.string().valid('APROBADO', 'RECHAZADO').required(),
+    nombre:        Joi.string().min(2).max(100).optional(),
+    tipo:          Joi.string().valid(...TIPOS_ITEM).optional(),
+    unidad_medida: Joi.string().valid(...UNIDADES_MEDIDA).optional(),
+    control:       Joi.string().valid(...TIPOS_CONTROL).optional()
+}).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
+
+export const actualizarInventarioValidation = Joi.object({
+    id_emisor: Joi.number().integer().positive().required(),
+    items: Joi.array().items(
+        Joi.object({
+            id_item: Joi.number().integer().positive().required(),
+            cantidad: Joi.number().integer().min(0).required(),
+            stock_minimo: Joi.number().integer().min(0).required()
+        })
+    ).required()
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
  
