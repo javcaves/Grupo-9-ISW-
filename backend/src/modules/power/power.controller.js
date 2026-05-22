@@ -5,9 +5,9 @@ import{
     powerCreateValidation,
     powerUpdateValidation,
     powerIdValidation,
-    usuarioIdValidation,
     asignarPowerValidation
 } from './power.validations.js';
+import { power_usuarioIdValidation } from './powerUsuario.validations.js';
 
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
@@ -30,21 +30,25 @@ export const obtenerCatalogo = async (req, res) => {
 
 /**
  * Obtener los poderes que tiene asignados un usuario específico
- * GET /:idUsuario
+ * GET /usuario/:id_usuario
  */
 export const obtenerPoderesDeUsuario = async (req, res) => {
     try {
-        const { error, value } = usuarioIdValidation.validate(req.params);
+        const { error, value } = power_usuarioIdValidation.validate(req.params);
         if (error){
             return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
         
-        const [poderes, errPow]= await PowerService.obtenerPoderesDeUsuario(value.idUsuario);
+        const [poderes, errPow] = await PowerService.obtenerPoderesDeUsuario(value.id_usuario);
+        
+        //  CORREGIDO: Ahora usa 'errPow' que es la variable real que devuelve el servicio
         if (errPow){
-            return handleErrorClient(res, 404, 'error al obtener poderes de usuario', error.message);
+            return handleErrorClient(res, 404, 'error al obtener poderes de usuario', errPow);
         }
+        
         return handleSuccess(res, 200, 'poderes del usuario', poderes);
     } catch (error) {
+        //  CORREGIDO: Aquí sí existe la variable 'error' del catch
         return handleErrorServer(res, 500, 'error de servidor', error.message);
     } 
 };
@@ -52,28 +56,29 @@ export const obtenerPoderesDeUsuario = async (req, res) => {
 /**
  * Gestionar la asignación de poderes (Otorgar/Revocar)
  * POST /asignar/:idDestino
- * 
- * Nota: El esquema (power.schema.js) ya validó que req.body.powers sea un array de strings.
  */
 export const gestionarAsignacion = async (req, res) => {
     try {
         const { idDestino } = req.params;
         const { error, value } = asignarPowerValidation.validate(req.body);
-        const ejecutor = req.user; // Inyectado por middleware de Auth
+        const ejecutor = req.user; 
 
         if (error){
             return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
 
-        // Delegamos la lógica de Linaje y Herencia al Service
+        // Delegamos la lógica al Service
         const [resultado, err] = await PowerService.asignarPoderes(idDestino, value.powers, ejecutor);
 
+        // CORREGIDO: Usamos la variable 'err' que viene del servicio en vez de error.message
         if (err){
-            return handleErrorClient(res, 403, 'error al asignar poderes', error.message);
+            return handleErrorClient(res, 403, 'error al asignar poderes', err);
         }
         
-        return handleSuccess(res, 200, 'poderes asignados de forma exitosa', poderes);
+        // CORREGIDO: Devolvemos 'resultado' en lugar de la variable inexistente 'poderes'
+        return handleSuccess(res, 200, 'poderes asignados de forma exitosa', resultado);
     } catch (error) {
+        // Aquí sí existe la variable 'error' nativa del catch
         return handleErrorServer(res, 500, 'error de servidor', error.message);
     } 
 };
@@ -91,7 +96,7 @@ export const verificarPermiso = (codPower) => {
             const usuario = req.user;
 
             // 1. El ROOT tiene pase libre total
-            if (usuario.cargo === 'ROOT') return next();
+            if (usuario.rol === 'ROOT') return next();
 
             // 2. Verificamos si el usuario tiene el código en sus asignaciones activas
             const [tienePoder, err] = await PowerService.tienePermiso(usuario.id, codPower);

@@ -24,7 +24,7 @@ export const asignarPowerValidation = Joi.object({
     powers: Joi.array()
     .items(Joi.string()
         .pattern(/^[A-Z0-9_]+:[A-Z0-9_]+$/)
-        .message({
+        .messages({
             "string.pattern.base":"el poder debe tener formato CODIGO:ACCION"
         })
     )
@@ -42,7 +42,7 @@ export const powerCreateValidation = Joi.object({
     id_power: Joi.string()
     .pattern(/^[A-Z0-9_]+:[A-Z0-9_]+$/)
     .required()
-    .message({
+    .messages({
         "string.pattern.base":"el poder debe tener formato CODIGO:ACCION",
         "any.required": "id_power es un campo obligatorio"
     }),
@@ -94,4 +94,3 @@ export const powerIdValidation = Joi.object({
         "any.required": "el id es un campo obligatorio"
     })
 });
-

@@ -14,7 +14,7 @@ import * as responseHandlers from "../../handlers/responseHandlers.js";
 // ################# LISTAR Y BUSCAR #################
 
 /**
- * Obtener usuarios con filtros dinámicos (ID, RUT, Nombre, Cargo, Poder)
+ * Obtener usuarios con filtros dinámicos (ID, RUT, Nombre, Rol, Poder)
  * Cumple con requerimiento de visualización para Admins y Supervisores
  */
 export const buscarUsuarios = async (req, res) => {

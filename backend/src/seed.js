@@ -25,7 +25,7 @@ async function seed() {
                 apellido: "Admin",
                 observacion: "Usuario administrador inicial generado por el sistema",
                 email: "admin@cleanadmin.com", // <-- Cambiado de 'correo' a 'email'
-                cargo: "ROOT",
+                rol: "ROOT",
                 activo: true,
                 numero: 912345678
                 // 'fecha_ingreso' se omitió aquí porque la BD le pone el DEFAULT (Date actual) automáticamente
@@ -41,7 +41,7 @@ async function seed() {
         const userId = rootUser.id_usuario;
         
         const token = jwt.sign(
-            { id: userId, cargo: rootUser.cargo, rol: rootUser.cargo }, // Usamos cargo como rol para asegurar compatibilidad
+            { id: userId, rol: rootUser.rol, rol: rootUser.rol }, // Usamos rol como rol para asegurar compatibilidad
             JWT_SECRET,
             { expiresIn: "30d" }
         );
