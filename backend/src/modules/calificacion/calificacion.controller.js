@@ -39,3 +39,16 @@ export const revocar = async (req, res) => {
         return handleSuccess(res, 200, "Éxito", resultado);
     } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
 };
+
+export const listarPorCategoria = async (req, res) => {
+    try {
+        const { id_cat } = req.params;
+        
+        const [lista, err] = await CalificacionService.obtenerEmpleadosPorCategoria(id_cat);
+        if (err) return handleErrorClient(res, 404, "No encontrado", err);
+        
+        return handleSuccess(res, 200, "Empleados calificados obtenidos con éxito", lista);
+    } catch (error) { 
+        return handleErrorServer(res, 500, "Error interno", error.message); 
+    }
+};

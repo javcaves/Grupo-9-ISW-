@@ -1,4 +1,4 @@
-import { actividadCreateValidation, actividadUpdateValidation, actividadQueryValidation } from "./actividades.validation.js";
+import { actividadCreateValidation, actividadUpdateValidation, actividadQueryValidation, actividadRecurrenciaValidation} from "./actividades.validation.js";
 import * as ActividadesService from "./actividades.service.js";
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
@@ -33,6 +33,37 @@ export const buscarActividades = async (req, res) => {
 
         const resultados = await ActividadesService.buscarDinamico(value.q);
         return handleSuccess(res, 200, "Resultados de búsqueda", resultados);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error interno", error.message);
+    }
+};
+
+// Busca por categoria
+export const filtrarPorCategoria = async (req, res) => {
+    try {
+        const { id_cat } = req.params;
+        const [lista, err] = await ActividadesService.obtenerPorCategoria(id_cat);
+        
+        if (err) return handleErrorClient(res, 404, "No encontrado", err);
+        return handleSuccess(res, 200, "Actividades filtradas por categoría", lista);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error interno", error.message);
+    }
+};
+
+// Busca por recurrencia
+export const filtrarPorRecurrencia = async (req, res) => {
+    try {
+        const { tipo } = req.params;
+        
+        // Usamos Joi para validar que el parámetro (tipo) de la URL sea válido
+        const { error, value } = actividadRecurrenciaValidation.validate({ tipo: tipo.toUpperCase() });
+        if (error) return handleErrorClient(res, 400, "Parámetro inválido", error.message);
+
+        const [lista, err] = await ActividadesService.obtenerPorRecurrencia(value.tipo);
+        
+        if (err) return handleErrorClient(res, 404, "No encontrado", err);
+        return handleSuccess(res, 200, "Actividades filtradas por periodicidad", lista);
     } catch (error) {
         return handleErrorServer(res, 500, "Error interno", error.message);
     }

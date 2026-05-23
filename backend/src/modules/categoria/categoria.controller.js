@@ -56,3 +56,16 @@ export const eliminarCategoria = async (req, res) => {
         return handleSuccess(res, 200, "Éxito", resultado);
     } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
 };
+
+// ----- Reactivar -----
+export const reactivarCategoria = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [resultado, err] = await CategoriaService.reactivarCategoria(id);
+        
+        if (err) return handleErrorClient(res, 400, "Operación denegada", err);
+        return handleSuccess(res, 200, "Éxito", resultado);
+    } catch (error) { 
+        return handleErrorServer(res, 500, "Error", error.message); 
+    }
+};

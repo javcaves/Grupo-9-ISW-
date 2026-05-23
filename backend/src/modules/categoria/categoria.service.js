@@ -4,8 +4,18 @@ import { AppDataSource } from '../../config/ConfigDB.js';
 export const crearCategoria = async (data) => {
     const catRepo = AppDataSource.getRepository("Categoria");
     const existe = await catRepo.findOne({ where: { nombre: data.nombre } });
-    if (existe) return [null, "Ya existe una categoría con este nombre."];
-
+    if (existe) {
+        // Si existe pero esta inactiva, la resucitamos y actualizamos sus datos
+        if (!existe.activo) {
+            existe.activo = true;
+            if (data.descripcion !== undefined) existe.descripcion = data.descripcion;
+            if (data.requiere_calificacion !== undefined) existe.requiere_calificacion = data.requiere_calificacion;
+            
+            return [await catRepo.save(existe), null];
+        }
+        //Si existe y esta activa se bloquea
+        return [null, "Ya existe una categoría con este nombre."];
+    }
     const nueva = catRepo.create(data);
     return [await catRepo.save(nueva), null];
 };
@@ -61,4 +71,17 @@ export const eliminarCategoria = async (id) => {
 
     await catRepo.update(id, { activo: false }); 
     return [{ message: "Categoría desactivada con éxito" }, null];
+};
+
+// ----- Ractivar -----
+export const reactivarCategoria = async (id) => {
+    const catRepo = AppDataSource.getRepository("Categoria");
+    
+    const categoria = await catRepo.findOne({ where: { id_cat: id } });
+    if (!categoria) return [null, "Categoría no encontrada."];
+    
+    if (categoria.activo) return [null, "La categoría ya se encuentra activa."];
+
+    await catRepo.update(id, { activo: true }); 
+    return [{ message: "Categoría reactivada con éxito" }, null];
 };

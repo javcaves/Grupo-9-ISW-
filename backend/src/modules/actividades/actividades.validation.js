@@ -18,3 +18,8 @@ export const actividadQueryValidation = Joi.object({
     q: Joi.string().min(2).max(100).required()
         .messages({ "any.required": "Debe enviar un término de búsqueda 'q'" })
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
+
+export const actividadRecurrenciaValidation = Joi.object({
+    tipo: Joi.string().valid("DIARIA", "SEMANAL", "MENSUAL", "UNICA").required()
+        .messages({ "any.only": "La recurrencia debe ser DIARIA, SEMANAL, MENSUAL o UNICA" })
+}).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });

@@ -31,9 +31,9 @@ export const otorgarCalificacion = async (data, id_otorga) => {
     if (existe) return [null, "El empleado ya posee esta calificación."];
 
     const nueva = califRepo.create({
-        categoria: data.id_cat,
-        empleado: data.id_empleado,
-        otorga: id_otorga,
+        categoria: {id_cat: data.id_cat},
+        empleado: {id_usuario: data.id_empleado},
+        otorga: {id_usuario: id_otorga},
         fecha_otorgamiento: new Date()
     });
 
@@ -49,4 +49,22 @@ export const revocarCalificacion = async (id) => {
 
     await califRepo.update(id, { activo: false });
     return [{ message: "Calificación revocada correctamente" }, null];
+};
+
+// Buscar por categoria
+export const obtenerEmpleadosPorCategoria = async (id_cat) => {
+    const califRepo = AppDataSource.getRepository("CalificacionEmpleado");
+    
+    const calificaciones = await califRepo.find({
+        where: { 
+            categoria: { id_cat: id_cat }, 
+            activo: true 
+        },
+        relations: { empleado: true, categoria: true } 
+    });
+
+    if (!calificaciones || calificaciones.length === 0) {
+        return [null, "No se encontraron empleados activos con esta calificación."];
+    }
+    return [calificaciones, null];
 };

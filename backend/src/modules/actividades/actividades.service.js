@@ -21,7 +21,6 @@ export const crearActividad = async(data) => {
 };
 
 // ----- Busqueda -----
-
 export const obtenerTodosActivos = async () => {
     const actRepo = AppDataSource.getRepository("Actividad");
     return await actRepo.find({ 
@@ -57,6 +56,31 @@ export const buscarDinamico = async (termino) => {
     });
 };
 
+export const obtenerPorCategoria = async (id_cat) => {
+    const actRepo = AppDataSource.getRepository("Actividad");
+    const actividades = await actRepo.find({
+        where: { categoria: { id_cat: parseInt(id_cat) }, activo: true },
+        relations: { categoria: true, proyecto: true }
+    });
+
+    if (!actividades || actividades.length === 0) {
+        return [null, "No se encontraron actividades activas para esta categoría."];
+    }
+    return [actividades, null];
+};
+
+export const obtenerPorRecurrencia = async (recurrencia) => {
+    const actRepo = AppDataSource.getRepository("Actividad");
+    const actividades = await actRepo.find({
+        where: { recurrencia: recurrencia, activo: true },
+        relations: { categoria: true, proyecto: true }
+    });
+
+    if (!actividades || actividades.length === 0) {
+        return [null, "No se encontraron actividades activas con esta periodicidad."];
+    }
+    return [actividades, null];
+};
 // ----- Actualizar -----
 
 export const actualizarActividad = async (id, data) => {

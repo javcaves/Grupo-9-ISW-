@@ -10,6 +10,8 @@ const rolesPermitidos = ["ROOT", "ADMIN", "SUPERVISOR", "ENCARGADO"];
 // ----- Rutas de lectura ------
 router.get('/', authenticateJwt, ActividadesCtrl.listarCatalogo); // Catálogo completo
 router.get('/buscar', authenticateJwt, ActividadesCtrl.buscarActividades); // Busca por nombre de tarea
+router.get('/categoria/:id_cat', authenticateJwt, ActividadesCtrl.filtrarPorCategoria); // Busca por categoria
+router.get('/recurrencia/:tipo', authenticateJwt, ActividadesCtrl.filtrarPorRecurrencia); //Busca por recurrencia
 router.get('/:id', authenticateJwt, ActividadesCtrl.obtenerActividad); // Obtener por ID
 
 // ----- Rutas de escritura -----

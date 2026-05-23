@@ -6,8 +6,9 @@ import { checkRole } from '../../middlewares/role.middleware.js';
 const router = Router();
 const rolesPermitidos = ["ROOT", "ADMIN", "SUPERVISOR", "ENCARGADO"];
 
-router.get('/', authenticateJwt, CalificacionCtrl.listarCalificaciones);
-router.get('/:id', authenticateJwt, CalificacionCtrl.obtenerCalificacion);
+router.get('/', authenticateJwt, checkRole(rolesPermitidos), CalificacionCtrl.listarCalificaciones);
+router.get('/categoria/:id_cat', authenticateJwt, checkRole(rolesPermitidos), CalificacionCtrl.listarPorCategoria);
+router.get('/:id', authenticateJwt, checkRole(rolesPermitidos), CalificacionCtrl.obtenerCalificacion);
 router.post('/', authenticateJwt, checkRole(rolesPermitidos), CalificacionCtrl.otorgar);
 router.delete('/:id', authenticateJwt, checkRole(rolesPermitidos), CalificacionCtrl.revocar);
 
