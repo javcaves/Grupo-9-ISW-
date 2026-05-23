@@ -38,7 +38,7 @@ export const crearAsistenciaService = async (id_turno, id_encargado) => {
     const hoy = new Date().toISOString().split("T")[0];
 
     // 1. Validar que el turno exista y esté activo
-    const turno = await turnoRepo.findOne({ where: { id_turno, activo: true }, relations: ["proyecto"] });
+    const turno = await turnoRepo.findOne({ where: { id_turno, activo: true }, relations: { proyecto: true } });
     if (!turno) return [null, "El turno especificado no existe o se encuentra inactivo."];
 
     // 2. Unicidad: No pueden coexistir dos asistencias con igual ID_TURNO y FECHA
@@ -76,7 +76,7 @@ export const crearAsistenciaService = async (id_turno, id_encargado) => {
             activo: true,
             fecha_ingreso: LessThanOrEqual(hoy)
         },
-        relations: ["empleado"]
+        relations: { empleado: true }
     });
 
     const registrosSnapshot = [];
@@ -111,7 +111,7 @@ export const mostrarAsistenciaActualService = async (id_turno) => {
     // 1. Obtener la asistencia de hoy
     const asistencia = await asistenciaRepo.findOne({
         where: { turno: { id_turno }, fecha: hoy, activo: true },
-        relations: ["turno"]
+        relations: { turno: true }
     });
     if (!asistencia) return [null, "No se ha inicializado la asistencia para este turno hoy."];
 
@@ -134,7 +134,7 @@ export const mostrarAsistenciaActualService = async (id_turno) => {
     // 2. Traer los empleados actualizados
     const empleadosInscritos = await asistenciaEmpleadoRepo.find({
         where: { id_asistencia: asistencia.id_asistencia, activo: true },
-        relations: ["empleado"]
+        relations: { empleado: true }
     });
 
     return [{ asistencia, empleados: empleadosInscritos }, null];
@@ -146,7 +146,11 @@ export const mostrarAsistenciaActualService = async (id_turno) => {
 export const editarRegistroIndividualService = async (id_asistencia, id_empleado, data, id_encargado) => {
     const registro = await asistenciaEmpleadoRepo.findOne({
         where: { id_asistencia, id_empleado, activo: true },
-        relations: ["asistencia", "asistencia.turno"]
+        relations: {
+        asistencia: {
+            turno: true
+        }
+    }
     });
 
     if (!registro) return [null, "El registro de asistencia para este empleado no existe."];
@@ -204,14 +208,14 @@ export const obtenerHistorialService = async (id_proyecto) => {
     return await asistenciaRepo.find({
         where: { proyecto: { id_proyecto }, activo: true },
         order: { fecha: "DESC" },
-        relations: ["turno", "encargado"]
+        relations: { turno: true, encargado: true }
     });
 };
 
 export const editarHistorialPasadoService = async (id_asistencia, id_empleado, data, id_encargado) => {
     const registro = await asistenciaEmpleadoRepo.findOne({
         where: { id_asistencia, id_empleado, activo: true },
-        relations: ["asistencia"]
+        relations: {asistencia: true}
     });
 
     if (!registro) return [null, "Registro histórico no encontrado."];
@@ -246,7 +250,7 @@ export const marcarAsistenciaEmpleadoService = async (id_empleado, data) => {
     // 1. Validar validez, existencia y expiración del token
     const asistencia = await asistenciaRepo.findOne({
         where: { token, activo: true },
-        relations: ["turno", "proyecto"]
+        relations: { turno: true, proyecto: true }
     });
     if (!asistencia) return [null, "El código token/QR escaneado no es válido."];
     if (ahora > asistencia.token_expira) return [null, "El plazo temporal para este turno ya ha finalizado."];
@@ -307,7 +311,7 @@ export const ejecutarCierreAutomaticoAsistencia = async () => {
     // Buscar todas las asistencias del día que estén activas
     const asistenciasActivas = await asistenciaRepo.find({
         where: { fecha: hoy, activo: true },
-        relations: ["turno"]
+        relations: { turno: true }
     });
 
     const ahora = new Date();
