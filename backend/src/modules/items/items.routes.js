@@ -23,22 +23,22 @@ router.get('/', authenticateJwt, ItemsCtrl.listarItems);
 
 // ================= RUTAS DE CONFIGURACIÓN DE STOCK =================
 // Tanto el Supervisor como el Encargado pueden actualizar el inventario/auditar
-router.put('/proyecto/:id_proyecto/auditar', authenticateJwt, checkRole(['SUPERVISOR', 'ENCARGADO']), ItemsCtrl.auditarInventarioProyecto);
+router.put('/proyecto/:id_proyecto/auditar', authenticateJwt, checkRole(['ROOT','SUPERVISOR', 'ENCARGADO']), ItemsCtrl.auditarInventarioProyecto);
 
 // ================= RUTAS DE ITEMS - ESCRITURA =================
 // El Supervisor es el único facultado para crear, modificar y eliminar ítems del catálogo
-router.post('/', authenticateJwt, checkRole(['SUPERVISOR']), ItemsCtrl.createItem);
-router.put('/:id', authenticateJwt, checkRole(['SUPERVISOR']), ItemsCtrl.updateItem);
-router.delete('/:id', authenticateJwt, checkRole(['SUPERVISOR']), ItemsCtrl.deleteItem);
+router.post('/', authenticateJwt, checkRole(['ROOT','SUPERVISOR']), ItemsCtrl.createItem);
+router.put('/:id', authenticateJwt, checkRole(['ROOT','SUPERVISOR']), ItemsCtrl.updateItem);
+router.delete('/:id', authenticateJwt, checkRole(['ROOT','SUPERVISOR']), ItemsCtrl.deleteItem);
 
 // ================= RUTAS DE MOVIMIENTOS - ESCRITURA =================
 // Ambos roles pueden registrar flujos regulares de movimientos
-router.post('/movimientos', authenticateJwt, checkRole(['SUPERVISOR', 'ENCARGADO']), ItemsCtrl.registrarMovimiento);
+router.post('/movimientos', authenticateJwt, checkRole(['ROOT','SUPERVISOR', 'ENCARGADO']), ItemsCtrl.registrarMovimiento);
 
 // Solo el Supervisor puede resolver (aprobar/rechazar) las solicitudes de ítems nuevos
-router.patch('/movimientos/:id_mov/resolver', authenticateJwt, checkRole(['SUPERVISOR']), ItemsCtrl.resolverSolicitud);
+router.patch('/movimientos/:id_mov/resolver', authenticateJwt, checkRole(['ROOT','SUPERVISOR']), ItemsCtrl.resolverSolicitud);
 
 // Eliminación de movimientos (la restricción de tiempo de 1 semana se controla internamente en el service)
-router.delete('/movimientos/:id_mov', authenticateJwt, checkRole(['SUPERVISOR', 'ENCARGADO']), ItemsCtrl.removeMovimiento);
+router.delete('/movimientos/:id_mov', authenticateJwt, checkRole(['ROOT','SUPERVISOR', 'ENCARGADO']), ItemsCtrl.removeMovimiento);
 
 export default router;
