@@ -242,7 +242,7 @@ export const eliminarMovimiento = async (id_mov) => {
     const repoMov = movRepo();
     const repoItemProj = itemProyectoRepo();
 
-    const mov = await repoMov.findOne({ where: { id_mov }, relations: ['item'] });
+    const mov = await repoMov.findOne({ where: { id_mov }, relations: {item: true} });
     if (!mov) return [null, 'Movimiento no encontrado.'];
 
     const unaSemanaMs = 7 * 24 * 60 * 60 * 1000;
