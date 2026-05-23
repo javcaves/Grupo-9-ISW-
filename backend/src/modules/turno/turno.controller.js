@@ -87,12 +87,17 @@ export const eliminarTurno = async (req, res) => {
 
 export const agregarEmpleadoATurno = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { error, value } = turnoEmpleadoAddValidation.validate(req.body);
-        if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
+        const { id, id_empleado } = req.params;
+        const idTurnoParseado = parseInt(id, 10);
+        const idEmpleadoParseado = parseInt(id_empleado, 10);
 
-        const [registro, err] = await TurnoService.agregarEmpleadoATurno(id, value);
+        if (isNaN(idTurnoParseado) || isNaN(idEmpleadoParseado)) {
+            return handleErrorClient(res, 400, "Datos inválidos", "El id del turno y del empleado deben ser números válidos");
+        }
+        const datosEmpleado = {id_empleado: idEmpleadoParseado};
+        const [registro, err] = await TurnoService.agregarEmpleadoATurno(idTurnoParseado, datosEmpleado);
         if (err) return handleErrorClient(res, 400, "No se pudo agregar el empleado", err);
+        
         return handleSuccess(res, 201, "Empleado agregado al turno", registro);
     } catch (error) {
         return handleErrorServer(res, 500, "Error de servidor", error.message);

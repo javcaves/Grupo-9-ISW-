@@ -24,7 +24,7 @@ router.delete('/:id', authenticateJwt, checkRole(rolesGestion), TurnoCtrl.elimin
 // ==================== TURNO_EMPLEADO ====================
 
 // ----- Rutas de escritura -----
-router.post('/:id/empleados',    authenticateJwt, checkRole(rolesGestion), TurnoCtrl.agregarEmpleadoATurno);          // Agregar empleado al turno
+router.post('/:id/empleados/:id_empleado',    authenticateJwt, checkRole(rolesGestion), TurnoCtrl.agregarEmpleadoATurno);          // Agregar empleado al turno
 router.put('/:id/empleados/:id_empleado/colacion',  authenticateJwt, checkRole(rolesGestion), TurnoCtrl.configurarColacion);             // Configurar horario de colación
 router.put('/:id/empleados/:id_empleado/feriados',  authenticateJwt, checkRole(rolesGestion), TurnoCtrl.configurarTrabajadorFeriado);    // Configurar obligación en feriados
 
