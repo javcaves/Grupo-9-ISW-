@@ -1,6 +1,6 @@
 import { asignacionCreateValidation, asignacionUpdateValidation } from "./asignacion.validation.js";
 import * as AsignacionService from "./asignacion.service.js";
-import { handleSuccess, handleErrorClient, handleErrorServer } from "../handlers/responseHandlers.js";
+import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
 // Listar ----
 export const listarAsignaciones = async (req, res) => {

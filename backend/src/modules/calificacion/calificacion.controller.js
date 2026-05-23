@@ -1,6 +1,6 @@
 import { calificacionCreateValidation } from "./calificacion.validation.js";
 import * as CalificacionService from "./calificacion.service.js";
-import { handleSuccess, handleErrorClient, handleErrorServer } from "../handlers/responseHandlers.js";
+import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
 export const listarCalificaciones = async (req, res) => {
     try {

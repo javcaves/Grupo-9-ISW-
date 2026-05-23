@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import * as TareaCtrl from '../controllers/tarea.controller.js';
-import { authenticateJwt } from '../middlewares/auth.middleware.js';
-import { checkRole } from '../middlewares/role.middleware.js';
+import * as TareaCtrl from './tarea.controller.js';
+import { authenticateJwt } from '../../middlewares/auth.middleware.js';
+import { checkRole } from '../../middlewares/role.middleware.js';
 
 const router = Router();
 const rolesPermitidos = ["ROOT", "ADMIN", "SUPERVISOR", "ENCARGADO"];

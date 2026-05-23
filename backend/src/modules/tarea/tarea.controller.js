@@ -1,6 +1,6 @@
 import { tareaCreateValidation, tareaUpdateValidation, tareaCancelValidation } from "./tarea.validation.js";
 import * as TareaService from "./tarea.service.js";
-import { handleSuccess, handleErrorClient, handleErrorServer } from "../handlers/responseHandlers.js";
+import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
 // ----- Listar -----
 export const listarTareas = async (req, res) => {
