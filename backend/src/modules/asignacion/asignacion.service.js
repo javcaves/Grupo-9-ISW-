@@ -1,4 +1,4 @@
-import { AppDataSource } from '../config/configBd.js';
+import { AppDataSource } from '../../config/ConfigDB.js';
 
 // ----- Asignar tarea -----
 export const asignarTarea = async (data, id_asignador) => {
@@ -10,7 +10,7 @@ export const asignarTarea = async (data, id_asignador) => {
     // Validar Tarea y sus anidaciones
     const tarea = await tareaRepo.findOne({ 
         where: { id_tarea: data.id_tarea },
-        relations: ["actividad", "actividad.categoria"] 
+        relations: {actividad: { categoria: true } }
     });
 
     if (!tarea || tarea.estado === "CANCELADA") return [null, "La tarea no existe o está cancelada."];
@@ -47,12 +47,12 @@ export const asignarTarea = async (data, id_asignador) => {
 // ----- Buacar -----
 export const obtenerTodas = async () => {
     const asignRepo = AppDataSource.getRepository("AsignacionTarea");
-    return await asignRepo.find({ relations: ["tarea", "empleado", "asignador"] });
+    return await asignRepo.find({ relations: { tarea: true, empleado: true, asignador: true } });
 };
 
 export const obtenerPorId = async (id) => {
     const asignRepo = AppDataSource.getRepository("AsignacionTarea");
-    const asignacion = await asignRepo.findOne({ where: { id_asignacion: id }, relations: ["tarea", "empleado"] });
+    const asignacion = await asignRepo.findOne({ where: { id_asignacion: id }, relations: { tarea: true, empleado: true } });
     if (!asignacion) return [null, "Asignación no encontrada"];
     return [asignacion, null];
 };

@@ -9,6 +9,9 @@ import { authenticateJwt } from '../middlewares/auth.middleware.js';
 // MÓDULO DE ACTIVIDADES
 import ActividadesRoutes from '../modules/actividades/actividades.routes.js';
 import CategoriasRoutes from '../modules/categoria/categoria.routes.js';
+import CalificacionRoutes from '../modules/calificacion/calificacion.routes.js';
+import TareasRoutes from '../modules/tarea/tarea.routes.js';
+import AsignacionRoutes from '../modules/asignacion/asignacion.routes.js';
 
 // MÓDULO DE INVENTARIO
 import ItemsRoutes from '../modules/items/items.routes.js';
@@ -46,6 +49,8 @@ router.use(authenticateJwt);
 router.use('/actividades', ActividadesRoutes);
 router.use('/categorias', CategoriasRoutes);
 router.use('/proyecto', ProyectoRoutes);
+router.use('/tareas', TareasRoutes);
+router.use('/asignacion', AsignacionRoutes);
 
 // INVENTARIO
 router.use('/items', ItemsRoutes); 
@@ -55,5 +60,6 @@ router.use('/usuarios', UsuarioRoutes);
 router.use('/asistencia', AsistenciaRoutes);
 router.use('/turno', TurnoRoutes);
 router.use('/power', PowerRoutes); 
+router.use('/calificaciones', CalificacionRoutes);
 
 export default router;

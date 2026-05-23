@@ -1,4 +1,4 @@
-import { AppDataSource } from '../config/configBd.js';
+import { AppDataSource } from '../../config/ConfigDB.js';
 
 // ----- Crear -----
 export const programarTarea = async (data, id_programador) => {
@@ -23,12 +23,12 @@ export const programarTarea = async (data, id_programador) => {
 // ----- Buscar -----
 export const obtenerTodas = async () => {
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
-    return await tareaRepo.find({ relations: ["actividad"] });
+    return await tareaRepo.find({ relations: {actividad: true} });
 };
 
 export const obtenerPorId = async (id) => {
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
-    const tarea = await tareaRepo.findOne({ where: { id_tarea: id }, relations: ["actividad"] });
+    const tarea = await tareaRepo.findOne({ where: { id_tarea: id }, relations: {actividad: true} });
     if (!tarea) return [null, "Tarea no encontrada"];
     return [tarea, null];
 };
