@@ -1,3 +1,4 @@
+// turno.service.js: Lógica de negocio para gestión de turnos y asignación de empleados a turnos, con validaciones robustas y manejo de casos especiales como solapamientos, pertenencia a proyectos y restricciones jerárquicas. También incluye helpers privados para cálculos de horarios y validaciones complejas. [cite: 2788, 2808, 1631]
 import { AppDataSource } from '../../config/ConfigDB.js';
 
 // ==================== TURNO ====================
@@ -7,6 +8,7 @@ export const crearTurno = async (data) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
     const proyectoRepo = AppDataSource.getRepository("Proyecto");
     const usuarioRepo = AppDataSource.getRepository("Usuario");
+    const proyectoUsuarioRepo = AppDataSource.getRepository("ProyectoUsuario");
 
     // Validar que el proyecto exista
     const proyecto = await proyectoRepo.findOne({ where: { id_proyecto: data.id_proyecto, activo: true } });
@@ -28,56 +30,64 @@ export const crearTurno = async (data) => {
         return [null, "Se requiere al menos un empleado para crear el turno."];
     }
 
-    // Crear el turno
-    const nuevoTurno = turnoRepo.create({
-        proyecto: data.id_proyecto,
-        nombre: data.nombre,
-        hora_ingreso: data.hora_ingreso,
-        hora_salida: data.hora_salida,
-        descripcion: data.descripcion ?? null,
-        activo: true
-    });
-    const turnoGuardado = await turnoRepo.save(nuevoTurno);
-
     // Crear registros en TURNO_EMPLEADO para cada empleado asignado
     const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
     const hoy = new Date().toISOString().split("T")[0];
-    const erroresEmpleados = [];
 
-    for (const emp of data.empleados) {
-        // Validar que el empleado exista y pertenezca al proyecto
-        const empleado = await usuarioRepo.findOne({ where: { id_usuario: emp.id_empleado, activo: true } });
-        if (!empleado) {
-            erroresEmpleados.push(`Empleado con ID ${emp.id_empleado} no encontrado.`);
-            continue;
+    for (const emp of data.empleados) {                          // ✅ data.empleados
+        const { id_empleado, fecha_egreso, trabaja_feriados } = emp;
+
+        // 1. Verificar pertenencia al proyecto
+        const perteneceAlProyecto = await proyectoUsuarioRepo.findOne({
+            where: { id_proyecto: data.id_proyecto, id_usuario: id_empleado, activo: true }
+        });
+        if (!perteneceAlProyecto) {
+            return [null, `El empleado con ID ${id_empleado} no pertenece formalmente a este proyecto.`];
         }
 
-        // Validar que el empleado no esté en otro turno del mismo proyecto con horario solapado
-        const solapado = await _verificarSolapamientoHorario(
-            turnoEmpleadoRepo, turnoRepo, emp.id_empleado, data.id_proyecto,
-            data.hora_ingreso, data.hora_salida, null
-        );
+        // 2. Validar solapamiento de horarios
+        const solapado = await turnoEmpleadoRepo               
+            .createQueryBuilder("te")
+            .innerJoin("te.turno", "t")
+            .where("te.id_empleado = :id_empleado", { id_empleado })
+            .andWhere("t.id_proyecto = :id_proyecto", { id_proyecto: data.id_proyecto })  
+            .andWhere("te.activo = true")
+            .andWhere("t.activo = true")
+            .andWhere(
+                "(t.hora_ingreso < :hora_salida AND t.hora_salida > :hora_ingreso)",
+                { hora_ingreso: data.hora_ingreso, hora_salida: data.hora_salida }        
+            )
+            .getOne();
         if (solapado) {
-            erroresEmpleados.push(`El empleado ${emp.id_empleado} ya está asignado a un turno con horario solapado en este proyecto.`);
-            continue;
+            return [null, `El empleado ${id_empleado} ya tiene un turno con horario solapado en este proyecto.`];
         }
 
-        const turnoEmpleado = turnoEmpleadoRepo.create({
-            id_turno: turnoGuardado.id_turno,
-            id_empleado: emp.id_empleado,
-            fecha_ingreso: hoy,
-            fecha_egreso: emp.fecha_egreso ?? null,
-            trabaja_feriados: emp.trabaja_feriados ?? false,
+         // Crear el turno
+        const nuevoTurno = turnoRepo.create({
+            proyecto: { id_proyecto: data.id_proyecto },
+            nombre: data.nombre,
+            hora_ingreso: data.hora_ingreso,
+            hora_salida: data.hora_salida,
+            descripcion: data.descripcion ?? null,
             activo: true
         });
-        await turnoEmpleadoRepo.save(turnoEmpleado);
+        const turnoGuardado = await turnoRepo.save(nuevoTurno);
+
+
+        // 3. Crear el registro en turno_empleado               
+        const nuevoRegistro = turnoEmpleadoRepo.create({
+            id_turno: turnoGuardado.id_turno,
+            id_empleado: id_empleado,
+            fecha_ingreso: hoy,
+            fecha_egreso: fecha_egreso ?? null,
+            trabaja_feriados: trabaja_feriados ?? false,
+            activo: true
+        });
+        await turnoEmpleadoRepo.save(nuevoRegistro);
     }
 
-    if (erroresEmpleados.length > 0) {
-        return [{ turno: turnoGuardado, advertencias: erroresEmpleados }, null];
-    }
+return [turnoGuardado, null];
 
-    return [turnoGuardado, null];
 };
 
 // ----- Búsqueda -----
@@ -113,6 +123,19 @@ export const obtenerTurnoPorID = async (id) => {
     return [turno, null];
 };
 
+export const listarTurnos = async () => {
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    return await turnoRepo.find({
+        where: { activo: true },
+        relations: {
+            proyecto: true,
+            turnoEmpleados: {
+                empleado: true
+            }
+        },
+        order: { id_turno: 'ASC' }
+    });
+}
 // ----- Actualizar -----
 
 export const actualizarTurno = async (id, data) => {
@@ -152,10 +175,13 @@ export const eliminarTurno = async (id) => {
 
 // ----- Agregar empleado a turno -----
 
+
 export const agregarEmpleadoATurno = async (id_turno, data) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
     const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
     const usuarioRepo = AppDataSource.getRepository("Usuario");
+    const asistenciaRepo = AppDataSource.getRepository("Asistencia");
+    const asistenciaEmpleadoRepo = AppDataSource.getRepository("AsistenciaEmpleado");
 
     const turno = await turnoRepo.findOne({
         where: { id_turno, activo: true },
@@ -183,6 +209,22 @@ export const agregarEmpleadoATurno = async (id_turno, data) => {
         return [null, "El empleado ya está asignado a otro turno con horario solapado en este proyecto."];
     }
 
+    // 1. (Validación Nueva) Verificar pertenencia al proyecto
+    const proyectoUsuarioRepository = AppDataSource.getRepository("ProyectoUsuario");
+    const perteneceAlProyecto = await proyectoUsuarioRepository.findOne({
+        where: { id_proyecto: turno.proyecto.id_proyecto, id_usuario: data.id_empleado, activo: true }
+    });
+    if (!perteneceAlProyecto) {
+        return [null, "El empleado no pertenece formalmente al proyecto de este turno."];
+    }
+
+    // 2. (Validación Nueva) Restricción de Jerarquía: Evitar que usuarios ROOT/ADMIN marquen asistencia
+    // Puedes buscar el rol directo en tu repositorio de Usuario (usuarioRepo) que ya declaraste arriba
+    if (empleado.rol === "ROOT" || empleado.rol === "ADMIN" || empleado.rol === "SUPERVISOR") {
+        return [null, `Acceso denegado: Los usuarios con rol ${empleado.rol} no registran marcas de asistencia ni pertenecen a mallas de turnos.`];
+    }
+
+    // 3. Creación del registro en el turno (Tu código existente) [cite: 2808]
     const hoy = new Date().toISOString().split("T")[0];
     const nuevoRegistro = turnoEmpleadoRepo.create({
         id_turno: id_turno,
@@ -193,7 +235,25 @@ export const agregarEmpleadoATurno = async (id_turno, data) => {
         activo: true
     });
 
-    return [await turnoEmpleadoRepo.save(nuevoRegistro), null];
+    const asignacionGuardada = await turnoEmpleadoRepo.save(nuevoRegistro);
+
+    // 4. (Lógica Nueva) SOLUCIÓN AL EMPLEADO FANTASMA: Sincronización On-Demand con la Asistencia Activa de Hoy
+    const asistenciaHoy = await asistenciaRepo.findOne({
+        where: { id_turno: id_turno, fecha: hoy, activo: true }
+    });
+
+    if (asistenciaHoy) {
+        // Si la jornada de asistencia ya fue inicializada, inyectamos de inmediato al snapshot
+        const nuevoRegistroAsistencia = asistenciaEmpleadoRepo.create({
+            id_asistencia: asistenciaHoy.id_asistencia,
+            id_empleado: data.id_empleado,
+            estado: "EN_ESPERA", // Inicia en espera para que pueda ingresar su PIN/QR [cite: 1631]
+            activo: true
+        });
+        await asistenciaEmpleadoRepo.save(nuevoRegistroAsistencia);
+    }
+
+    return [asignacionGuardada, null];
 };
 
 // ----- Eliminar empleado de turno -----

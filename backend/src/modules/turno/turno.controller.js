@@ -1,9 +1,10 @@
+//turno.controller.js: Controladores para gestión de turnos, incluyendo creación, actualización, eliminación y asignación de empleados a turnos. Implementa validaciones de entrada utilizando Joi y maneja respuestas estándar para éxito y error. [cite: 2788, 2808]
 import {
     turnoCreateValidation,
     turnoUpdateValidation,
     turnoEmpleadoAddValidation,
     turnoColacionValidation,
-    turnoFeriadoValidation,
+    turnoFeriadoValidation
 } from "./turno.validations.js";
 import * as TurnoService from "./turno.service.js";
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
@@ -33,6 +34,14 @@ export const obtenerTurno = async (req, res) => {
     }
 };
 
+export const listarTurnos = async (req, res) => {
+    try {
+        const turnos = await TurnoService.listarTurnos ();
+        return handleSuccess(res, 200, "Turnos obtenidos", turnos);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error al obtener los turnos", error.message);
+    }
+};
 // ----- Registro -----
 
 export const crearTurno = async (req, res) => {

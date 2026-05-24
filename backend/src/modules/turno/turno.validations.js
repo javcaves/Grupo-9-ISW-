@@ -1,3 +1,4 @@
+// turno.validations.js: Validaciones de entrada para endpoints relacionados con turnos, utilizando Joi para definir esquemas de validación robustos. Incluye validaciones específicas para creación y actualización de turnos, así como para asignación de empleados a turnos y configuración de horarios de colación y feriados. [cite: 2788, 2808]
 //validaciones con joi
 import Joi from "joi";
 

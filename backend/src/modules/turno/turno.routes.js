@@ -11,6 +11,7 @@ const rolesLectura    = ["ROOT", "ADMIN", "SUPERVISOR", "ENCARGADO", "EMPLEADO"]
 // ==================== TURNO ====================
 
 // ----- Rutas de lectura -----
+router.get('/', authenticateJwt, checkRole(rolesLectura),  TurnoCtrl.listarTurnos);           // Listar todos los turnos activos
 router.get('/proyecto/:id_proyecto', authenticateJwt, checkRole(rolesLectura),  TurnoCtrl.listarTurnosPorProyecto); // Todos los turnos activos de un proyecto
 router.get('/:id',                   authenticateJwt, checkRole(rolesLectura),  TurnoCtrl.obtenerTurno);            // Turno por ID
 
