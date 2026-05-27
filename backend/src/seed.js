@@ -3,12 +3,13 @@ import jwt from "jsonwebtoken";
 import { AppDataSource, connectDB } from "./config/ConfigDB.js";
 import { JWT_SECRET } from "./config/ConfigEnv.js";
 import { poderesIniciales } from "./config/powers.data.js";
+import bcrypt from "bcrypt"; // 🌟 AGREGADO: Importamos bcrypt para encriptar la clave
 
 async function seed() {
     try {
         console.log("🔄 Iniciando carga dinámica de entidades y conexión a BD...");
         
-        // 🌟 Reutilizamos tu lógica exacta de ConfigDB que lee la carpeta /entity e inicializa el DataSource
+        // Reutilizamos tu lógica exacta de ConfigDB que lee la carpeta /entity e inicializa el DataSource
         await connectDB(); 
 
         // Ahora que sabemos con certeza que todos los modelos están montados en memoria:
@@ -33,15 +34,20 @@ async function seed() {
         if (!rootUser) {
             console.log("\n👤 Creando usuario ROOT inicial...");
             
+            // 🌟 AGREGADO: Generamos el hash para la contraseña "admin123"
+            const saltRounds = 10;
+            const hashedAdminPassword = await bcrypt.hash("admin123", saltRounds);
+
             rootUser = usuarioRepository.create({
                 rut: rootRut,
                 nombre: "Zak",
                 apellido: "Admin",
+                password: hashedAdminPassword, // 🌟 CLAVE: Guarda la contraseña encriptada (admin123)
                 observacion: "Usuario administrador inicial generado por el sistema",
                 email: "admin@cleanadmin.com",
                 rol: "ROOT",
                 activo: true,
-                numero: 912345678
+                numero: "+56912345678" // 🌟 CORREGIDO: Formato string compatible con el validador chileno
             });
 
             rootUser = await usuarioRepository.save(rootUser);

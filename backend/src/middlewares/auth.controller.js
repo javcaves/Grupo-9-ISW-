@@ -5,11 +5,31 @@ import { handleErrorClient, handleErrorServer } from "../handlers/responseHandle
 import bcrypt from "bcrypt";
 
 export const login = async (req, res) => {
-    const { email, password } = req.body;
+    // Recibimos 'identifier' en lugar de 'email' para soportar RUT o Correo
+    const { identifier, password } = req.body;
 
     try {
+        if (!identifier || !password) {
+            return handleErrorClient(res, 400, "Datos incompletos", "Debe proporcionar un correo/RUT y una contraseña.");
+        }
+
         const userRepository = AppDataSource.getRepository("Usuario");
-        const user = await userRepository.findOne({ where: { email } });
+        
+        const user = await userRepository.findOne({
+            select: {
+                id_usuario: true,
+                nombre: true,
+                email: true,
+                rut: true,
+                password: true,
+                rol: true,
+                activo: true
+            },
+            where: [
+                { email: identifier },
+                { rut: identifier }
+            ]
+        });
 
         // 1. Validar que exista y esté activo
         if (!user || !user.activo) {
@@ -17,7 +37,7 @@ export const login = async (req, res) => {
                 res, 
                 401, 
                 "Credenciales incorrectas", 
-                "El correo electrónico o la contraseña son incorrectos o la cuenta está inactiva."
+                "El identificador (Correo/RUT) o la contraseña son incorrectos, o la cuenta está inactiva."
             );
         }
 
@@ -28,7 +48,7 @@ export const login = async (req, res) => {
                 res, 
                 401, 
                 "Credenciales incorrectas", 
-                "El correo electrónico o la contraseña son incorrectos."
+                "El identificador (Correo/RUT) o la contraseña son incorrectos."
             );
         }
 
@@ -44,11 +64,11 @@ export const login = async (req, res) => {
         res.cookie("jwt", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 24 * 60 * 60 * 1000
+            sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+            maxAge: 24 * 60 * 60 * 1000 
         });
 
-        // 6. 🌟 CORREGIDO: Eliminado el 'rol' duplicado y adaptado a 'id_usuario'
+        // 6. Retornar respuesta exitosa al Frontend
         return res.json({
             success: true,
             message: "Inicio de sesión exitoso",
@@ -66,11 +86,10 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
     try {
-        // Borramos la cookie expirándola de inmediato
         res.clearCookie("jwt", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict"
+            sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax"
         });
         
         return res.json({
