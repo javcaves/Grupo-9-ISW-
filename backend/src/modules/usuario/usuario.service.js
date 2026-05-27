@@ -13,6 +13,7 @@
  */
 import { AppDataSource } from '../../config/ConfigDB.js';
 import { ILike } from 'typeorm';
+import bcrypt from "bcrypt";
 
 //obtener usuario por query (id o rut)
 /*
@@ -54,14 +55,19 @@ export const crearUsuario = async(data, ejecutor)=>{
         });
         if(existe) throw new Error('el rut ingresado ya existe');
 
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+
         const nuevoUsuario = usuarioRepository.create({
             ...data,
+            password: hashedPassword,
             creado_por: ejecutor.id_usuario,
             activo: true,
             fecha_registro: new Date()
         });
 
         const guardado = await usuarioRepository.save(nuevoUsuario);
+        delete guardado.password;
         return [guardado, null];
 
     }catch(error){
@@ -76,6 +82,7 @@ export const obtenerTodosActivos = async () => {
         const usuarios = await userRepo.find({ 
             where: { activo: true }
         });
+        usuarios.forEach(u => delete u.password);
         return [usuarios, null];
     } catch (error) {
         console.log("error en obtenerTodosActivos", error);
@@ -90,6 +97,7 @@ export const obtenerUsuarioPorID = async(id) => {
                 where: { id_usuario: parseInt(id) }
             });
             if(!usuario) throw new Error('usuario no encontrado');
+            delete usuario.password;
             return[usuario, null];
         }catch(error){
             console.log("error en obtenerUsuarioPorID", error);

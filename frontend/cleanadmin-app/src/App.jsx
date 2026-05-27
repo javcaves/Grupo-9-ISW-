@@ -1,42 +1,74 @@
-import React, { useState } from 'react';
-import './App.css';
-import Header from './layouts/header.js';
-import HomeSidebar from './pages/Admin/Home/home_sidebar.js';
-import MainPersonal, { ContentPersonal } from './pages/Admin/Home/main_personal.js';
-import MainActividades, { ContentActividades } from './pages/Admin/Home/main_actividades.js';
-import MainInventario from './pages/Admin/Home/main_inventario.js';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import MainLayout from "./layouts/MainLayout";
+import Login from "./pages/Login";
 
-function App() {
-  // Estado para controlar qué pestaña está activa
-  const [tabActiva, setTabActiva] = useState('Personal');
-  return (
-    <div className="App">
-      <Header />
-      
-      <div className='main-container'>
-        <HomeSidebar />
-        <div className='main'>
-          <div className='supervisor'>
-            <h2>Nombre Supervisor</h2>
-          </div>
-          {/* Contenedor de Tabs */}
-          <div className='container-tabs'>
-            <MainPersonal activa={tabActiva} setTabActiva={setTabActiva} />
-            <MainActividades activa={tabActiva} setTabActiva={setTabActiva} />
-            <MainInventario activa={tabActiva} setTabActiva={setTabActiva} />
-          </div>
+// Guardián para rutas privadas
+function PrivateRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
 
-          {/* Contenido de la pestaña activa */}
-          <div className='tab-content'>
-            {tabActiva === 'Personal' && <ContentPersonal />}
-            {tabActiva === 'Actividades' && <ContentActividades />}
-            {tabActiva === 'Inventario' && <p>Contenido de Inventario...</p>}
-          </div>
-          
-        </div>
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-admin-bg text-admin-text-main">
+        <p className="font-medium">Verificando sesión activa...</p>
       </div>
-    </div>
+    );
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
+
+// Guardián para rutas públicas (Evita que un usuario ya logueado vuelva al Login)
+function PublicRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) return null;
+
+  return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Ruta raíz redirige dinámicamente según el estado del usuario */}
+          <Route path="/" element={<RootRedirect />} />
+
+          {/* Login protegido por el guardián público */}
+          <Route 
+            path="/login" 
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            } 
+          />
+
+          {/* Rutas del Sistema protegidas por el guardián privado */}
+          <Route 
+            path="/*" 
+            element={
+              <PrivateRoute>
+                <Routes>
+                  <Route element={<MainLayout />}>
+                    <Route path="/dashboard" element={<div className="p-4 text-admin-text-main">Bienvenido al Dashboard</div>} />
+                    <Route path="/usuarios" element={<div className="p-4 text-admin-text-main">Gestión de Usuarios</div>} />
+                  </Route>
+                </Routes>
+              </PrivateRoute>
+            } 
+          />
+
+          {/* Cualquier otra ruta rota vuelve al pivote central */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
-export default App;
+function RootRedirect() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+}

@@ -25,6 +25,12 @@ const Usuario = new EntitySchema({
             length: 100,
             nullable: false,
         },
+        password: {
+            type: "varchar",
+            length: 255,
+            nullable: false,
+            select: false,
+        },
         observacion:{
             type:"text",
             nullable:false,

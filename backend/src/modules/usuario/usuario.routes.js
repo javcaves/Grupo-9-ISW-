@@ -11,8 +11,8 @@ const router = Router();
  * Prefijo sugerido desde el router principal: /usuarios
  */
 
-// --- REGISTRO ---
-router.post('/', UsuarioController.registrarUsuario);
+// --- REGISTRO PROTEGIDO ---
+router.post('/', authenticateJwt, checkRole(['ROOT', 'ADMIN']), UsuarioController.registrarUsuario);
 
 // --- BÚSQUEDA Y LISTADO ---
 // Soporta queries: ?nombre=...&rol=...&poder=...&rut=...
