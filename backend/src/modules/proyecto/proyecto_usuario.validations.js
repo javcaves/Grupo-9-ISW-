@@ -44,6 +44,7 @@ export const proyecto_usuarioDeactivateValidation = Joi.object({
 });
 
 //validacion para actualizar rol de usuario en proyecto
+//sirve para el GET obtener usuarios del proyecto
 export const proyecto_usuarioUpdateRolValidation = Joi.object({
     rolproyecto: Joi.string()
     .valid(...ROLES_PROYECTO)
@@ -55,7 +56,7 @@ export const proyecto_usuarioUpdateRolValidation = Joi.object({
 });
 
 //validacion de id en params
-export const usuario_proyectoIdValidation = Joi.object({
+export const proyecto_usuarioIdValidation = Joi.object({
     id_proyecto: Joi.number()
     .integer()
     .positive()

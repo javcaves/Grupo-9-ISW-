@@ -11,15 +11,6 @@
  * @property {boolean} activo - Estado lógico para borrado suave (soft delete)
  */
 
-/**
- * @typedef {Object} ProyectoUsuario
- * @property {number} id_proyecto - Referencia al ID del proyecto
- * @property {number} id_usuario - Referencia al ID del usuario (Encargado, Supervisor, Empleado)
- * @property {string} fecha_asignacion - Fecha en que se vinculó al proyecto (ISO string)
- * @property {string|null} fecha_termino - Fecha de desvinculación o finalización (ISO string o null)
- * @property {boolean} activo - Define si la vinculación está vigente actualmente
- */
-
 import { AppDataSource } from '../../config/ConfigDB.js';
 import { In } from 'typeorm';
 /**
