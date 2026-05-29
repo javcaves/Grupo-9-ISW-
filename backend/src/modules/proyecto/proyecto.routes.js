@@ -1,30 +1,23 @@
 import { Router } from 'express';
 import * as ProyectoController from './proyecto.controller.js';
-import * as ProyectoSchema from './proyecto.schema.js';
+import { authenticateJwt } from '../../middlewares/auth.middleware.js';
+import { checkRole } from '../../middlewares/role.middleware.js';
 
 const router = Router();
 
-/**
- * RUTAS DE PROYECTOS
- * Prefijo sugerido: /proyectos
- */
 
-// --- RUTAS ADMINISTRATIVAS (ROOT / ADMIN) ---
-
-/**
- * 1. Crear un nuevo proyecto y asignar personal inicial
- */
 router.post('/', 
-    ProyectoSchema.validarCreacionProyecto, 
+    authenticateJwt,
+    checkRole(['ROOT', 'ADMIN']),
     ProyectoController.crearProyecto
 );
 
 /**
  * 2. Modificar datos del proyecto, estados o límites de personal
  */
-router.put('/:id', 
-    ProyectoSchema.validarProyectoId,
-    ProyectoSchema.validarEdicionProyecto, 
+router.put('/:id_proyecto', 
+    authenticateJwt,
+    checkRole(['ROOT', 'ADMIN']), 
     ProyectoController.editarProyecto
 );
 
@@ -36,6 +29,7 @@ router.put('/:id',
  * Filtra automáticamente según el rol del ejecutor
  */
 router.get('/', 
+    authenticateJwt,
     ProyectoController.obtenerMisProyectos
 );
 
@@ -43,9 +37,16 @@ router.get('/',
  * Ver la lista de personal (Encargados, Supervisores, Empleados) de un proyecto
  * Útil para que el Encargado gestione su equipo
  */
-router.get('/:id/personal', 
-    ProyectoSchema.validarProyectoId, 
-    ProyectoController.obtenerPersonalProyecto
+router.get('/todos', 
+    authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.obtenerTodosProyectos
+);
+
+router.get('/:id_proyecto', 
+    authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.obtenerProyectosPorId
+);
+
+router.delete('/:id_proyecto', 
+    authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.eliminarProyecto
 );
 
 export default router;

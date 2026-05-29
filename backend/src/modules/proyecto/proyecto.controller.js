@@ -1,4 +1,10 @@
 import * as ProyectoService from './proyecto.service.js';
+import {
+    proyectoCreateValidation,
+    proyectoIdValidation,
+    proyectoUpdateValidation
+} from './proyecto.validations.js';
+import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
 /**
  * 1. Crear nuevo proyecto (Solo Admin/Root)
@@ -6,21 +12,59 @@ import * as ProyectoService from './proyecto.service.js';
  */
 export const crearProyecto = async (req, res) => {
     try {
-        const datos = req.body;
-        const ejecutor = req.user; // Extraído del middleware de autenticación
+        const { error, value } = proyectoCreateValidation.validate(req.body);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
+        }
 
-        const nuevoProyecto = await ProyectoService.crearProyecto(datos, ejecutor);
+        // CORREGIDO: Se cambiaron las variables fantasmas por value y req.user
+        const [nuevoProyecto, err] = await ProyectoService.crearProyecto(value, req.user);
+        if (err) return handleErrorClient(res, 400, 'error al crear proyecto', err);
 
-        return res.status(201).json({
-            success: true,
-            message: "Proyecto creado y personal asignado correctamente.",
-            data: nuevoProyecto
-        });
+        return handleSuccess(res, 201, 'proyecto creado de forma exitosa', nuevoProyecto);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    }
+};
+
+export const obtenerTodosProyectos = async (req, res) => {
+    try {
+        if (!['ROOT', 'ADMIN'].includes(req.user.rol)) {
+            return handleErrorClient(res, 403, 'acceso denegado', 'no tienes permiso');
+        }
+
+        const [proyectos, err] = await ProyectoService.obtenerTodosProyectos();
+        if (err) return handleErrorClient(res, 500, 'error al obtener todos los proyectos', err);
+
+        return handleSuccess(res, 200, 'proyectos obtenidos de forma exitosa', proyectos);
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    } 
+};
+
+export const obtenerMisProyectos = async (req, res) => {
+    try {
+        const [proyectos, err] = await ProyectoService.obtenerProyectosPorUsuario(req.user);
+        if (err) return handleErrorClient(res, 500, 'error al obtener proyectos', err);
+
+        return handleSuccess(res, 200, 'proyectos obtenidos de forma exitosa', proyectos);
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    } 
+};
+
+export const obtenerProyectosPorId = async (req, res) => {
+    try {
+        const { error, value } = proyectoIdValidation.validate(req.params);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
+        }
+        const [proyecto, err] = await ProyectoService.obtenerProyectosPorId(value.id_proyecto, req.user);
+        if (err) return handleErrorClient(res, 404, 'proyecto no encontrado', err);
+
+        return handleSuccess(res, 200, 'proyecto obtenido de forma exitosa', proyecto);
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
 };
 
@@ -30,63 +74,42 @@ export const crearProyecto = async (req, res) => {
  */
 export const editarProyecto = async (req, res) => {
     try {
-        const { id } = req.params;
-        const datos = req.body;
-        const ejecutor = req.user;
+        const { error: idError, value: idValue } = proyectoIdValidation.validate(req.params);
+        // CORREGIDO: Se cambió error.message por idError.message
+        if (idError) return handleErrorClient(res, 400, 'error, id invalido', idError.message);
+        
+        const { error, value } = proyectoUpdateValidation.validate(req.body);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
+        }
 
-        const proyectoEditado = await ProyectoService.editarProyecto(id, datos, ejecutor);
+        const [actualizado, err] = await ProyectoService.editarProyecto(idValue.id_proyecto, value, req.user);
+        // CORREGIDO: Se cambió error.message por err
+        if (err) return handleErrorClient(res, 400, 'error al editar proyecto', err);
 
-        return res.status(200).json({
-            success: true,
-            message: "Proyecto actualizado correctamente.",
-            data: proyectoEditado
-        });
+        return handleSuccess(res, 200, 'proyecto actualizado de forma exitosa', actualizado);
     } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
 };
 
 /**
- * Obtener lista de proyectos según el rol
- * GET /proyectos
+ * 3. Eliminar proyecto (Solo Admin/Root)
+ * DELETE /proyectos/:id
  */
-export const obtenerMisProyectos = async (req, res) => {
+// CORREGIDO: Se cambió la firma para que reciba (req, res) correspondientes a Express
+export const eliminarProyecto = async (req, res) => {
     try {
-        const usuario = req.user;
-        const proyectos = await ProyectoService.obtenerProyectosPorUsuario(usuario);
+        const { error, value } = proyectoIdValidation.validate(req.params);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
+        }
+        const [resultado, err] = await ProyectoService.eliminarProyecto(value.id_proyecto, req.user);
+        if (err) return handleErrorClient(res, 404, 'error al eliminar', err);
 
-        return res.status(200).json({
-            success: true,
-            data: proyectos
-        });
+        // CORREGIDO: Se cambió la variable fantasma 'proyecto' por 'resultado'
+        return handleSuccess(res, 200, 'proyecto eliminado de forma exitosa', resultado);
     } catch (error) {
-        return res.status(500).json({
-            success: false,
-            error: "Error al recuperar la lista de proyectos."
-        });
-    }
-};
-
-/**
- * Obtener detalle de personal de un proyecto específico
- * GET /proyectos/:id/personal
- */
-export const obtenerPersonalProyecto = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const personal = await ProyectoService.obtenerPersonalProyecto(id);
-
-        return res.status(200).json({
-            success: true,
-            data: personal
-        });
-    } catch (error) {
-        return res.status(error.status || 500).json({
-            success: false,
-            error: error.message
-        });
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
 };

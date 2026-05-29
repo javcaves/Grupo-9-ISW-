@@ -1,30 +1,17 @@
 import { Router } from 'express';
 import * as PowerController from './power.controller.js';
-import { validarAsignacionPower } from './power.schema.js';
+import { authenticateJwt } from '../../middlewares/auth.middleware.js';
+//AGREGAR CHECKROLE EN MIDDLEWARE
+import { checkRole } from '../../middlewares/role.middleware.js';
 
 const router = Router();
 
-/**
- * RUTAS DE PODERES (Permissions)
- * Este router se monta usualmente bajo el prefijo /powers o /autorizaciones
- */
+//obtener catalogo
+router.get('/catalogo', authenticateJwt, PowerController.obtenerCatalogo);
+//obtener usuario
+router.get('/usuario/:id_usuario', authenticateJwt, PowerController.obtenerPoderesDeUsuario);
 
-// --- LECTURA ---
-
-/**
- * Obtener el catálogo maestro (Diccionario de poderes.json)
- * Público para lectura de usuarios autenticados
- */
-router.get('/catalogo', PowerController.obtenerCatalogo);
-
-/**
- * Obtener los poderes actuales de un usuario específico
- */
-router.get('/usuario/:idUsuario', PowerController.obtenerPoderesDeUsuario);
-
-
-// --- ESCRITURA (Gestión de Privilegios) ---
-
+//
 /**
  * Asignar o modificar poderes de un usuario
  * Requiere: 
@@ -32,9 +19,9 @@ router.get('/usuario/:idUsuario', PowerController.obtenerPoderesDeUsuario);
  * 2. Pasar la validación de estructura (Schema)
  * 3. Cumplir la regla de linaje (en el Controller/Service)
  */
-router.post('/asignar/:idDestino', 
-    PowerController.verificarPermiso('USER:ASSIGN_POWER'), 
-    validarAsignacionPower, 
+router.post('/asignar/:id_usuario', 
+    authenticateJwt, 
+    checkRole(['ROOT', 'ADMIN']), 
     PowerController.gestionarAsignacion
 );
 

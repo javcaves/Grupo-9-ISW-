@@ -2,36 +2,87 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 
-import rrhhRoutes from '../routes/rrhh.routes.js';
-import bodegaRoutes from '../routes/bodega.routes.js';
-import actividadesRoutes from '../routes/actividades.routes.js';
+import routes from './routes/index.routes.js';
+import passport from 'passport';
+import { passportJwtSetup } from './config/passport.config.js';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 
-app.use(cors()); 
-app.use(morgan('dev')); 
+
+// =============================
+// MIDDLEWARES
+// =============================
+
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
+
+app.use(morgan('dev'));
+
 app.use(express.json());
 
-// ################# CHECKEO DE QUE CORRE BIEN :D #################
-// BORRAR EN VERSIÓN FINAL
+
+// =============================
+// HEALTH CHECK
+// =============================
+
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Servidor funcionando correctamente' });
+
+    res.json({
+        status: 'ok',
+        message: 'Servidor funcionando correctamente'
+    });
+
 });
 
-// ################# RUTAS #################
-app.use('/api', rrhhRoutes);
-app.use('/api', bodegaRoutes);
-app.use('/api', actividadesRoutes);
 
-// ################# MANEJO DE ERRORES #################
-// MANEJO DE ERRORES FUERA DE APP???
-app.use((req, res, next) => {
-    res.status(404).json({ error: "Recurso no encontrado" });
+// =============================
+// INICIALIZAR JWT / COOKIES
+// =============================
+app.use(cookieParser());
+
+passportJwtSetup();
+
+app.use(passport.initialize());
+
+
+// =============================
+// RUTAS
+// =============================
+
+app.use('/api', routes);
+
+
+
+
+// =============================
+// ERRORS
+// =============================
+
+
+
+app.use((req, res) => {
+
+    res.status(404).json({
+        success: false,
+        message: "Recurso no encontrado"
+    });
+
 });
+
 
 app.use((err, req, res, next) => {
+
     console.error(err.stack);
-    res.status(500).json({ error: "Error interno del servidor" });
+
+    res.status(500).json({
+        success: false,
+        message: "Error interno del servidor"
+    });
+
 });
+
 
 export default app;
