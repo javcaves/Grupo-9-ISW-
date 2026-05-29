@@ -18,11 +18,11 @@ export default function Login() {
       const response = await fetch("http://localhost:3000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // 🌟 CAMBIO: Enviamos 'identifier' hacia el backend
         body: JSON.stringify({ identifier, password }), 
         credentials: "include",
       });
 
+      
       const data = await response.json();
 
       if (response.ok && data.success) {
@@ -53,13 +53,13 @@ export default function Login() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* 🌟 CAMBIO VISUAL: Input adaptado para recibir Correo o RUT */}
+          {/* Input adaptado para recibir Correo o RUT */}
           <div>
             <label className="block text-sm font-medium text-slate-900 mb-1.5">
               Correo Electrónico o RUT
             </label>
             <input
-              type="text" // 🌟 IMPORTANTE: Cambiado a text para soportar letras (como la 'K' del RUT)
+              type="text"
               required
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}

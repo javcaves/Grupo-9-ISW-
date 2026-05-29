@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
       try {
         const response = await fetch("http://localhost:3000/api/auth/me", {
           method: "GET",
-          credentials: "include", // 🌟 OBLIGATORIO para enviar la cookie al backend
+          credentials: "include",
         });
 
         const data = await response.json();
