@@ -7,7 +7,7 @@ import{
     powerIdValidation,
     asignarPowerValidation
 } from './power.validations.js';
-import { power_usuarioIdValidation } from './powerUsuario.validations.js';
+import { power_usuarioIdValidation } from './power_usuario.validations.js';
 
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
