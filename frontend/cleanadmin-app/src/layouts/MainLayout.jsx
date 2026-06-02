@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { GestionTurnos } from "./gestion_turno.jsx";
 
 export default function MainLayout() {
   const { user, logoutUser } = useAuth();
@@ -25,6 +26,7 @@ export default function MainLayout() {
       {/* Contenedor principal donde se inyectan las vistas de las URLs (/dashboard, etc.) */}
       <main style={{ padding: "20px" }}>
         <Outlet />
+        <GestionTurnos />
       </main>
     </div>
   );
