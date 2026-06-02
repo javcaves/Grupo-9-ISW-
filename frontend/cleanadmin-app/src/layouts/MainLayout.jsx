@@ -1,6 +1,7 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { GestionTurnos } from "./gestion_turno.jsx";
+import { FormularioTurno } from "./form_turno.jsx";
 
 export default function MainLayout() {
   const { user, logoutUser } = useAuth();
