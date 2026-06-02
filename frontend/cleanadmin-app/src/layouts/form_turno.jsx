@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { FormContainer } from './Formulario.jsx';
 
-export const FormularioTurno = () => {
+export const FormularioTurno = ({ onSuccess }) => {
   const [turnoData, setTurnoData] = useState({ ingreso: '', salida: '', descripcion: '' });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log("Enviando a la API de Turnos:", turnoData);
     // Lógica para enviar al backend...
+    onSuccess?.();
   };
 
   return (
