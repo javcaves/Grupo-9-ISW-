@@ -13,8 +13,11 @@ export const login = async (req, res) => {
             return handleErrorClient(res, 400, "Datos incompletos", "Debe proporcionar un correo/RUT y una contraseña.");
         }
 
+        const isEmail = identifier.includes('@');
+        const cleanIdentifier = isEmail ? identifier: identifier.replace(/\./g, "").trim();
+
         const userRepository = AppDataSource.getRepository("Usuario");
-        
+
         const user = await userRepository.findOne({
             select: {
                 id_usuario: true,
@@ -26,8 +29,8 @@ export const login = async (req, res) => {
                 activo: true
             },
             where: [
-                { email: identifier },
-                { rut: identifier }
+                { email: cleanIdentifier },
+                { rut: cleanIdentifier }
             ]
         });
 
