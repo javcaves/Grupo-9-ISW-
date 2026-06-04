@@ -1,8 +1,6 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { GestionTurnos } from "./gestion_turno.jsx";
-import { FormularioTurno } from "./form_turno.jsx";
-import DashboardView from "./DashboardView.jsx";
+import Admin from "../pages/admin/adminPage";
 
 export default function MainLayout() {
   const { user, logoutUser } = useAuth();
@@ -13,6 +11,7 @@ export default function MainLayout() {
     navigate("/login");
   };
 
+  
   return (
     <div>
       {/* Barra o indicador superior estructural */}
@@ -20,16 +19,11 @@ export default function MainLayout() {
         <div>
           <span>Usuario: <strong>{user?.nombre}</strong> ({user?.rol})</span>
         </div>
-        <button onClick={handleLogout}>
-          Cerrar Sesión
-        </button>
       </header>
 
       {/* Contenedor principal donde se inyectan las vistas de las URLs (/dashboard, etc.) */}
-      <main style={{ padding: "20px" }}>
-        <Outlet />
-        <DashboardView/>
-        <GestionTurnos />
+      <main className="flex-1 overflow-hidden">
+        <Admin />
       </main>
     </div>
   );
