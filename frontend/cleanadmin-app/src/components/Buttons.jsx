@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Esta es tu plantilla general ajustable (el molde puro)
 export default function ButtonTemplate({ text, icon: Icon, className = "", onClick }) {
   return (
     <button 
