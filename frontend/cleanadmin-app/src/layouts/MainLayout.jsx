@@ -29,7 +29,6 @@ export default function MainLayout() {
       <main style={{ padding: "20px" }}>
         <Outlet />
         <DashboardView/>
-        <GestionTurnos />
       </main>
     </div>
   );
