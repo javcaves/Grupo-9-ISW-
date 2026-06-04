@@ -7,6 +7,7 @@ import TabsContent from "../components/tabsContent.jsx";
 
 import { GestionTurnos } from "./gestion_turno.jsx";
 import { FormularioTurno } from "./form_turno.jsx";
+import { Card } from '../components/Card.jsx';
 
 export default function DashboardView() {
 
@@ -28,22 +29,21 @@ export default function DashboardView() {
 
       content: (
         <div className="grid grid-cols-4 gap-6">
-
-          <div className="bg-white rounded-3xl p-6 shadow-sm h-40">
-            Card 1
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 shadow-sm h-40">
-            Card 2
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 shadow-sm h-40">
-            Card 3
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 shadow-sm h-40">
-            Card 4
-          </div>
+                  <Card
+          title = "Hola mundo"
+          subtitle = "chao mundo"
+          className = "rounded-2xl"
+        />
+                          <Card
+          title = "Hola mundo"
+          subtitle = "chao mundo"
+          className = "rounded-2xl"
+        />
+                          <Card
+          title = "Hola mundo"
+          subtitle = "chao mundo"
+          className = "rounded-2xl"
+        />
 
           <div className="col-span-4">
             <GestionTurnos />
@@ -59,17 +59,26 @@ export default function DashboardView() {
       content: (
         <div className="space-y-4">
 
-          <div className="bg-white rounded-3xl p-6 shadow-sm h-32">
-            Actividad 1
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 shadow-sm h-32">
-            Actividad 2
-          </div>
-
-          <div className="bg-white rounded-3xl p-6 shadow-sm h-32">
-            Actividad 3
-          </div>
+                            <Card
+          title = "Hola mundo"
+          subtitle = "chao mundo"
+          className = "rounded-2xl"
+        />
+                          <Card
+          title = "Hola mundo"
+          subtitle = "chao mundo"
+          className = "rounded-2xl"
+        />
+                          <Card
+          title = "Hola mundo"
+          subtitle = "chao mundo"
+          className = "rounded-2xl"
+        />
+                          <Card
+          title = "Hola mundo"
+          subtitle = "chao mundo"
+          className = "rounded-2xl"
+        />
 
         </div>
       )
