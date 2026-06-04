@@ -31,9 +31,11 @@ El sistema opera bajo un esquema piramidal de responsabilidades:
 * **Base de Datos:** PostgreSQL
 * **Frontend:** React (Vite)
 
+## Créditos
+
 Proyecto de Ingeniería de Software de la carrera Ingeniería Civil en Informática para la Universidad del Bío-Bío
 
-Grupo 9 integrado por:
+### Grupo 9 integrado por:
  - Antonia Peña
  - Fernanda Fernandez
  - Javiera Cuevas
