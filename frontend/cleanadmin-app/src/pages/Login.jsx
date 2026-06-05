@@ -137,12 +137,9 @@ export default function Login() {
             o continúa con
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <button type="button" className="flex items-center justify-center gap-2 py-3 rounded-[14px] border border-[#0f172a]/10 bg-white text-sm font-semibold hover:shadow-md transition-all">
               <FaGoogle /> Google
-            </button>
-            <button type="button" className="flex items-center justify-center gap-2 py-3 rounded-[14px] border border-[#0f172a]/10 bg-white text-sm font-semibold hover:shadow-md transition-all">
-              <FaMicrosoft /> Microsoft
             </button>
           </div>
 
