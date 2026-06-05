@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FormContainer } from './Formulario.jsx';
+import { FormContainer } from '../components/Formulario.jsx';
 
 export const FormularioTurno = ({ onSuccess }) => {
   const [turnoData, setTurnoData] = useState({ ingreso: '', salida: '', descripcion: '' });
