@@ -37,8 +37,7 @@ export default function TopBar({
         </div>
       </div>
 
-      {/* TABS */}
-      {tabs && tabs.length > 0 && (
+      {tabs && tabs.length > 0 && (/* TABS */
       <div className="inline-flex items-center gap-3 p-2 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.label;
