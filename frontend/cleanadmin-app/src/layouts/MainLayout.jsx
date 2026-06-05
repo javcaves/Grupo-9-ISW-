@@ -23,20 +23,9 @@ export default function MainLayout() {
       </header>
 
       {/* Contenedor principal donde se inyectan las vistas de las URLs (/dashboard, etc.) */}
-<<<<<<< Updated upstream
       <main className="flex-1 overflow-hidden">
         <DashboardView />
         <Admin />
-=======
-<<<<<<< HEAD
-      <main style={{ padding: "20px" }}>
-        <Outlet />
-        <DashboardView/>
-=======
-      <main className="flex-1 overflow-hidden">
-        <Admin />
->>>>>>> daea703ac2e29ce420bfa123df61bf46e17b7bcb
->>>>>>> Stashed changes
       </main>
     </div>
   );
