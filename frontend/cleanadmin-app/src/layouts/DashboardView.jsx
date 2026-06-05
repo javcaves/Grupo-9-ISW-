@@ -122,15 +122,15 @@ export default function DashboardView() {
         </div>
       }
 
-      actionButton={
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 transition-all text-white px-5 py-3 rounded-full shadow-sm"
-        >
-          <LogOut size={18} />
-          Cerrar Sesión
-        </button>
-      }
+      // actionButton={
+      //   <button
+      //     onClick={handleLogout}
+      //     className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 transition-all text-white px-5 py-3 rounded-full shadow-sm"
+      //   >
+      //     <LogOut size={18} />
+      //     Cerrar Sesión
+      //   </button>
+      // }
     />
   );
 }

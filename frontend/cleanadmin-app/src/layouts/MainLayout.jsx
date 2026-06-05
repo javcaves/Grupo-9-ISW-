@@ -1,6 +1,7 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Admin from "../pages/admin/adminPage";
+import DashboardView from './DashboardView'
 
 export default function MainLayout() {
   const { user, logoutUser } = useAuth();
@@ -24,6 +25,7 @@ export default function MainLayout() {
       {/* Contenedor principal donde se inyectan las vistas de las URLs (/dashboard, etc.) */}
 <<<<<<< Updated upstream
       <main className="flex-1 overflow-hidden">
+        <DashboardView />
         <Admin />
 =======
 <<<<<<< HEAD
