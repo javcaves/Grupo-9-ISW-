@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import TopBar from './topBar';
+import { useAuth } from "../context/AuthContext";
+import { LogOut } from 'lucide-react';
 
 export default function TabsContent({
   title,
@@ -9,7 +11,7 @@ export default function TabsContent({
   actionButton,
   tabs
 }) {
-
+  const { user, logoutUser } = useAuth();
   const [activeTab, setActiveTab] = useState(
     tabs[0]?.label
   );
@@ -28,6 +30,7 @@ export default function TabsContent({
         search={search}
         userIcon={userIcon}
         actionButton={actionButton}
+        onLogout={logoutUser}
         tabs={tabs}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
