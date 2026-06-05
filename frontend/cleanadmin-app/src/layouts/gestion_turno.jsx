@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal } from './Modal.jsx';
+import { Modal } from '../components/Modal.jsx';
 import { FormularioTurno } from './form_turno.jsx';
 import { TurnoCard } from './TurnoCard.jsx';
 

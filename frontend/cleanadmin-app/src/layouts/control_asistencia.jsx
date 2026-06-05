@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal } from './Modal';
+import { Modal } from '../components/Modal';
 
 export const ControlAsistencia = () => {
   const [isOpen, setIsOpen] = useState(false);

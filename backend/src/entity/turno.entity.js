@@ -13,7 +13,7 @@ export const Turno = new EntitySchema({
         nombre: {
             type: "varchar",
             length: 100,
-            nullable: false,
+            nullable: true,
         },
         hora_ingreso: {
             type: "time",

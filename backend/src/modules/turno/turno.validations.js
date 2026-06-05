@@ -9,8 +9,7 @@ const horaPattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export const turnoCreateValidation = Joi.object({
     id_proyecto:  Joi.number().integer().positive().required(),
-    nombre:       Joi.string().min(3).max(100).required() // 🌟 Agregado
-        .messages({ "string.empty": "El nombre del turno no puede estar vacío" }),
+    nombre:       Joi.string().min(3).max(100).optional().allow(null, ""), // quité la opción de obligatorio nombre
     hora_ingreso: Joi.string().pattern(horaPattern).required()
         .messages({ "string.pattern.base": "hora_ingreso debe tener formato HH:MM" }),
     hora_salida:  Joi.string().pattern(horaPattern).required()
@@ -22,8 +21,7 @@ export const turnoCreateValidation = Joi.object({
             fecha_egreso:     Joi.date().iso().optional().allow(null),
             trabaja_feriados: Joi.boolean().optional().default(false),
         })
-    ).min(1).required()
-        .messages({ "array.min": "Se requiere al menos un empleado para crear el turno" }),
+    ).min(1).optional().allow(null), // quité la opción de obligatorio empleados al inicio
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
 
 export const turnoUpdateValidation = Joi.object({
