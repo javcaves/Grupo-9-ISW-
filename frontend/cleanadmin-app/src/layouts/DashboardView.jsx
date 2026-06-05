@@ -45,10 +45,6 @@ export default function DashboardView() {
           className = "rounded-2xl"
         />
 
-          <div className="col-span-4">
-            <GestionTurnos />
-          </div>
-
         </div>
       )
     },
@@ -88,9 +84,10 @@ export default function DashboardView() {
       label: "Turnos",
 
       content: (
-        <div className="bg-white rounded-3xl p-6 shadow-sm">
-          <FormularioTurno />
-        </div>
+        
+          <div className="col-span-4">
+            <GestionTurnos />
+          </div>
       )
     }
   ];

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal.jsx';
 import { FormularioTurno } from './form_turno.jsx';
+import { TurnoCard } from './TurnoCard.jsx';
 
 // gestion_turno.jsx
 export const GestionTurnos = () => {

@@ -7,7 +7,7 @@ export default function TopBar({
   search,
   userIcon,
   actionButton,
-  tabs,
+  tabs = [],
   activeTab,
   setActiveTab,
   onLogout
