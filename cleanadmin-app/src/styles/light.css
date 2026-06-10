@@ -1,0 +1,79 @@
+.theme-light {
+  --bg-color: radial-gradient(circle at top left, rgba(124,58,237,0.10), transparent 25%), radial-gradient(circle at bottom right, rgba(59,130,246,0.08), transparent 20%), linear-gradient(135deg,#f8fafc,#eef2ff,#f1f5f9);
+
+  /* Top bar */
+  --text-primary: black;
+  --text-secondary: black;
+
+  /* Variables de Color del Sidebar */
+  --sidebar-bg: rgba(255, 255, 255, 0.75);
+  --sidebar-border: rgba(15, 23, 42, 0.05);
+  --sidebar-bg-brand: rgba(255, 255, 255, 0.8);
+  --sidebar-text-primary: #0f172a;
+  --sidebar-text-secondary: #64748b;
+  --sidebar-text-menu: #334155;
+  --sidebar-text-label: #94a3b8;
+  
+  /* Gradientes */
+  --sidebar-grad-overlay: linear-gradient(to bottom, rgba(124, 58, 237, 0.1), transparent);
+  --sidebar-grad-brand: linear-gradient(to bottom right, #7c3aed, #3b82f6);
+  --sidebar-grad-active: linear-gradient(to bottom right, rgba(124, 58, 237, 0.15), rgba(59, 130, 246, 0.1));
+  --sidebar-grad-hover: rgba(124, 58, 237, 0.1);
+  
+  /* Sombras y Luces */
+  --sidebar-shadow-main: 10px 0 30px rgba(15, 23, 42, 0.04);
+  --sidebar-shadow-brand: 0 8px 24px rgba(15, 23, 42, 0.05);
+  --sidebar-shadow-icon: 0 10px 20px rgba(124, 58, 237, 0.25);
+  --sidebar-shadow-active: 0 10px 24px rgba(124, 58, 237, 0.08);
+  --sidebar-glow-active: 0 0 10px rgba(167, 139, 250, 0.8);
+  --sidebar-accent-color: #a78bfa;
+
+
+
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0; /* slate-200 */
+
+  /* Estado Activo */
+  --tab-active-from: 124, 58, 237;  /* violet-600 */
+  --tab-active-to: 59, 130, 246;    /* blue-500 */
+  --tab-active-border: 167, 139, 250; /* violet-300 */
+  --tab-active-text: #6d28d9;       /* violet-700 */
+  --tab-active-shadow: rgba(124, 58, 237, 0.10);
+
+  /* Estado Inactivo / Hover */
+  --tab-inactive-text: #334155;     /* slate-700 */
+  --tab-inactive-shadow: rgba(15, 23, 42, 0.04);
+  --tab-hover-text: #000000;
+  --tab-hover-shadow: rgba(15, 23, 42, 0.08);
+
+  
+--lc-bg: rgba(255, 255, 255, 0.7);
+  --lc-border: rgba(241, 245, 249, 0.5); /* slate-200/50 */
+  --lc-title: #0f172a;                   /* slate-900 */
+  --lc-subtitle: #64748b;                /* slate-500 */
+  
+  /* Table Wrapper */
+  --lc-table-bg: rgba(255, 255, 255, 0.5);
+  --lc-table-border: #f1f5f9;
+
+
+  
+
+--card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --card-divider: #f1f5f9;
+  --card-title: #0f172a;
+  --card-subtitle: #64748b;
+  --card-icon-bg-from: #ede9fe;
+  --card-icon-bg-to: #e0e7ff;
+  --card-icon-text: #6366f1;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --card-shadow-hover: 0 4px 6px rgba(0,0,0,0.15);
+
+  --card-decorator-bg: rgba(139, 92, 246, 0.1); /* violet-500/10 */
+  --card-label-text: #64748b; /* slate-500 */
+  --card-number-text: #0f172a; /* slate-900 */
+  --card-detail-text: #64748b; /* slate-500 */
+  --card-icon-wrapper-bg: rgba(139, 92, 246, 0.1); /* violet-500/10 */
+  --card-icon-wrapper-text: #e2e8f0; /* gray-200 */
+}

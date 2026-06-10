@@ -10,101 +10,67 @@ export default function Sidebar({ activeMenu, setActiveMenu }) {
         { id: 'configuracion', label: 'Configuración', icon: 'fa-gear' }
     ];
 
-return (
-    <aside className="
-        w-[280px]
-        h-screen
-        bg-white/75
-        border-r border-slate-900/5
-        shadow-[10px_0_30px_rgba(15,23,42,0.04)]
-        p-6
-        flex
-        flex-col
-        gap-[14px]
-        relative
-        overflow-hidden
-        backdrop-blur-xl
-        flex-shrink-0">
-      {/* Resplandor de fondo superior (Gradient Overlay) */}
-    <div className="absolute inset-0 bg-gradient-to-b from-violet-600/10 
-    to-transparent pointer-events-none"></div>
+    return (
+        <aside 
+            className="w-[280px] h-screen p-6 flex flex-col gap-[14px] relative overflow-hidden backdrop-blur-xl flex-shrink-0 border-r"
+            style={{ backgroundColor: 'var(--sidebar-bg)', borderColor: 'var(--sidebar-border)', boxShadow: 'var(--sidebar-shadow-main)' }}
+        >
+            {/* Resplandor de fondo superior */}
+            <div 
+                className="absolute inset-0 pointer-events-none" 
+                style={{ background: 'var(--sidebar-grad-overlay)' }}
+            ></div>
 
-      {/* Tarjeta de Marca (Brand) */}
-    <div className="
-        relative z-10
-        flex items-center gap-[14px]
-        p-[14px_16px]
-        rounded-[20px]
-        bg-white/80
-        border border-slate-900/5
-        shadow-[0_8px_24px_rgba(15,23,42,0.05)]
-        mb-6">
-            <div className="
-                w-[52px] h-[52px]
-                rounded-2xl
-                bg-gradient-to-br from-violet-600 to-blue-500
-                flex items-center justify-center
-                text-white text-[1.2rem]
-                shadow-[0_10px_20px_rgba(124,58,237,0.25)]">
-                <i className="fas fa-layer-group"></i>
-            </div>
-        <div>
-            <h2 className="text-[1.1rem] font-bold text-slate-900 mb-1">CleanAdmin</h2>
-            <span className="text-slate-500 text-[0.82rem]">Enterprise Panel</span>
-        </div>
-    </div>
-
-      {/* Título de Sección */}
-    <div className="relative z-10 text-slate-400 
-    text-[0.78rem] tracking-[2px] uppercase px-2.5 mt-2 mb-1">
-        Administración
-    </div>
-
-      {/* Items del Menú Dinámicos */}
-    {menuItems.map((item) => {
-        const isActive = activeMenu === item.id;
-
-        return (
-            <div
-            key={item.id}
-            onClick={() => setActiveMenu && setActiveMenu(item.id)}
-            className={`
-                relative z-10
-                flex items-center gap-[14px]
-                p-[15px_18px]
-                rounded-[18px]
-                font-medium
-                cursor-pointer
-                transition-all duration-300
-                ${isActive
-                ? `
-                    bg-gradient-to-br from-violet-600/15 to-blue-500/10
-                    border border-violet-600/10
-                    text-slate-900
-                    shadow-[0_10px_24px_rgba(124,58,237,0.08)]
-                `
-                : `
-                    border border-transparent
-                    text-slate-700
-                    hover:bg-violet-600/10
-                    hover:translate-x-1
-                `
-                }
-            `}
+            {/* Tarjeta de Marca (Brand) */}
+            <div 
+                className="relative z-10 flex items-center gap-[14px] p-[14px_16px] rounded-[20px] mb-6 border"
+                style={{ backgroundColor: 'var(--sidebar-bg-brand)', borderColor: 'var(--sidebar-border)', boxShadow: 'var(--sidebar-shadow-brand)' }}
             >
-            {/* Indicador brillante de pestaña activa */}
-            {isActive && (
-                <div className="
-                    absolute left-[-1px] top-[12px] bottom-[12px] w-[4px]
-                    rounded-full bg-violet-400
-                    shadow-[0_0_10px_rgba(167,139,250,0.8)]"></div>
-            )}
-            
-            <i className={`fas ${item.icon} w-[20px] text-center text-[1rem]`}></i>
-            <span>{item.label}</span>
+                <div 
+                    className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-white text-[1.2rem]"
+                    style={{ background: 'var(--sidebar-grad-brand)', boxShadow: 'var(--sidebar-shadow-icon)' }}
+                >
+                    <i className="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <h2 className="text-[1.1rem] font-bold mb-1" style={{ color: 'var(--sidebar-text-primary)' }}>CleanAdmin</h2>
+                    <span className="text-[0.82rem]" style={{ color: 'var(--sidebar-text-secondary)' }}>Enterprise Panel</span>
+                </div>
             </div>
-            );
-        })}
-    </aside>
+
+            {/* Título de Sección */}
+            <div className="relative z-10 text-[0.78rem] tracking-[2px] uppercase px-2.5 mt-2 mb-1" style={{ color: 'var(--sidebar-text-label)' }}>
+                Administración
+            </div>
+
+            {/* Items del Menú Dinámicos */}
+            {menuItems.map((item) => {
+                const isActive = activeMenu === item.id;
+                return (
+                    <div
+                        key={item.id}
+                        onClick={() => setActiveMenu && setActiveMenu(item.id)}
+                        className={`relative z-10 flex items-center gap-[14px] p-[15px_18px] rounded-[18px] font-medium cursor-pointer transition-all duration-300 border ${isActive ? '' : 'border-transparent hover:translate-x-1'}`}
+                        style={{
+                            color: isActive ? 'var(--sidebar-text-primary)' : 'var(--sidebar-text-menu)',
+                            background: isActive ? 'var(--sidebar-grad-active)' : 'transparent',
+                            borderColor: isActive ? 'rgba(124, 58, 237, 0.1)' : 'transparent',
+                            boxShadow: isActive ? 'var(--sidebar-shadow-active)' : 'none'
+                        }}
+                    >
+                        {/* Indicador brillante de pestaña activa */}
+                        {isActive && (
+                            <div 
+                                className="absolute left-[-1px] top-[12px] bottom-[12px] w-[4px] rounded-full"
+                                style={{ backgroundColor: 'var(--sidebar-accent-color)', boxShadow: 'var(--sidebar-glow-active)' }}
+                            ></div>
+                        )}
+                        
+                        <i className={`fas ${item.icon} w-[20px] text-center text-[1rem]`}></i>
+                        <span>{item.label}</span>
+                    </div>
+                );
+            })}
+        </aside>
     );
 }
