@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";
 import Admin from "../pages/adminPage";
 
 export default function MainLayout() {
@@ -11,20 +12,28 @@ export default function MainLayout() {
     navigate("/login");
   };
 
-  
   return (
-    <div>
-      {/* Barra o indicador superior estructural */}
-      <header style={{ display: "flex", justifyContent: "space-between", padding: "10px", borderBottom: "1px solid #ccc" }}>
-        <div>
-          <span>Usuario: <strong>{user?.nombre}</strong> ({user?.rol})</span>
-        </div>
-      </header>
+    <ThemeProvider>
+      <div className="layout-container">
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            padding: "10px",
+            borderBottom: "1px solid var(--border-color)"
+          }}
+        >
+          <div>
+            <span>
+              Usuario: <strong>{user?.nombre}</strong> ({user?.rol})
+            </span>
+          </div>
+        </header>
 
-      {/* Contenedor principal donde se inyectan las vistas de las URLs (/dashboard, etc.) */}
-      <main className="flex-1 overflow-hidden">
-        <Admin />
-      </main>
-    </div>
+        <main className="flex-1 overflow-hidden">
+          <Admin />
+        </main>
+      </div>
+    </ThemeProvider>
   );
 }
