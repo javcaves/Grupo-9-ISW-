@@ -119,11 +119,9 @@ export const mostrarAsistenciaActualService = async (id_turno) => {
     // LAZY CLOSURE: Simulación del RF-ASISTENCIA-7 On-Demand
     // =====================================================================
     const ahora = new Date();
-    const horaActualMin = ahora.getHours() * 60 + ahora.getMinutes();
-    const minSalidaTurno = convertirAMinutos(asistencia.turno.hora_salida);
 
-    // Si el turno ya terminó, pasamos los rezagados a FALTA_INJUSTIFICADA en caliente
-    if (horaActualMin >= minSalidaTurno) {
+    // Si ya pasó el tiempo de expiración del turno (hora de salida), pasamos los rezagados a FALTA_INJUSTIFICADA
+    if (ahora >= asistencia.token_expira) {
         await asistenciaEmpleadoRepo.update(
             { id_asistencia: asistencia.id_asistencia, estado: "EN_ESPERA", activo: true },
             { estado: "FALTA_INJUSTIFICADA" }
@@ -143,14 +141,12 @@ export const mostrarAsistenciaActualService = async (id_turno) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // RF-ASISTENCIA-3: Editar registro individual (Jornada Viva)
 // ─────────────────────────────────────────────────────────────────────────────
-export const editarRegistroIndividualService = async (id_asistencia, id_empleado, data, id_encargado) => {
+export const editarRegistroAsistenciaService = async (id_asistencia, id_empleado, data, id_encargado) => {
     const registro = await asistenciaEmpleadoRepo.findOne({
         where: { id_asistencia, id_empleado, activo: true },
         relations: {
-        asistencia: {
-            turno: true
+            asistencia: { turno: true }
         }
-    }
     });
 
     if (!registro) return [null, "El registro de asistencia para este empleado no existe."];
@@ -164,6 +160,18 @@ export const editarRegistroIndividualService = async (id_asistencia, id_empleado
             return [null, "La hora de ingreso manual no puede superar la hora de salida del turno asignado."];
         }
         registro.hora_ingreso = data.hora_ingreso;
+    }
+
+    // Validar hora de egreso (aplicable para historial o cierre de jornada)
+    if (data.hora_egreso) {
+        const horaIngresoAComparar = data.hora_ingreso || registro.hora_ingreso;
+        if (!horaIngresoAComparar) return [null, "No se puede registrar una hora de egreso si el empleado no posee hora de ingreso registrada."];
+        
+        const minIngreso = convertirAMinutos(horaIngresoAComparar);
+        const minEgreso = convertirAMinutos(data.hora_egreso);
+        if (minEgreso < minIngreso) return [null, "Validación: La hora de egreso no puede ser anterior a la hora de ingreso."];
+        
+        registro.hora_egreso = data.hora_egreso;
     }
 
     if (data.estado) registro.estado = data.estado;
@@ -212,32 +220,7 @@ export const obtenerHistorialService = async (id_proyecto) => {
     });
 };
 
-export const editarHistorialPasadoService = async (id_asistencia, id_empleado, data, id_encargado) => {
-    const registro = await asistenciaEmpleadoRepo.findOne({
-        where: { id_asistencia, id_empleado, activo: true },
-        relations: {asistencia: true}
-    });
 
-    if (!registro) return [null, "Registro histórico no encontrado."];
-
-    if (data.hora_egreso) {
-        if (!registro.hora_ingreso) return [null, "No se puede registrar una hora de egreso si el empleado no posee hora de ingreso registrada."];
-        
-        const minIngreso = convertirAMinutos(registro.hora_ingreso);
-        const minEgreso = convertirAMinutos(data.hora_egreso);
-        if (minEgreso < minIngreso) return [null, "Validación: La hora de egreso no puede ser anterior a la hora de ingreso."];
-        
-        registro.hora_egreso = data.hora_egreso;
-    }
-
-    if (data.estado) registro.estado = data.estado;
-    if (data.descripcion !== undefined) registro.descripcion = data.descripcion;
-    
-    registro.editado_por = id_encargado;
-    registro.fecha_edicion = new Date();
-
-    return [await asistenciaEmpleadoRepo.save(registro), null];
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RF-ASISTENCIA-6 & RF-ASISTENCIA-9: Registrar Asistencia (Empleado Web)
@@ -302,37 +285,3 @@ export const marcarAsistenciaEmpleadoService = async (id_empleado, data) => {
     }, null];
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RF-ASISTENCIA-7: Cierre automático de asistencia (Para ejecución del CRON JOB)
-// ─────────────────────────────────────────────────────────────────────────────
-export const ejecutarCierreAutomaticoAsistencia = async () => {
-    const hoy = new Date().toISOString().split("T")[0];
-    
-    // Buscar todas las asistencias del día que estén activas
-    const asistenciasActivas = await asistenciaRepo.find({
-        where: { fecha: hoy, activo: true },
-        relations: { turno: true }
-    });
-
-    const ahora = new Date();
-    const horaActualMin = ahora.getHours() * 60 + ahora.getMinutes();
-    let contados = 0;
-
-    for (const asis of asistenciasActivas) {
-        const minSalidaTurno = convertirAMinutos(asis.turno.hora_salida);
-        
-        // Si ya pasó la hora de salida del turno, cerramos los "EN_ESPERA" rezagados
-        if (horaActualMin >= minSalidaTurno) {
-            const rezagados = await asistenciaEmpleadoRepo.find({
-                where: { id_asistencia: asis.id_asistencia, estado: "EN_ESPERA", activo: true }
-            });
-
-            for (const rez of rezagados) {
-                rez.estado = "FALTA_INJUSTIFICADA";
-                await asistenciaEmpleadoRepo.save(rez);
-                contados++;
-            }
-        }
-    }
-    return { asistencias_procesadas: asistenciasActivas.length, faltas_automaticas_aplicadas: contados };
-};
