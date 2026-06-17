@@ -39,7 +39,7 @@ export const crearTurno = async (data) => {
 
         // 1.1 Verificar pertenencia al proyecto
         const perteneceAlProyecto = await proyectoUsuarioRepo.findOne({
-            where: { id_proyecto: data.id_proyecto, id_usuario: id_empleado, activo: true }
+            where: { id_proyecto: data.id_proyecto, id_usuario: id_empleado }
         });
         if (!perteneceAlProyecto) return [null, `El empleado con ID ${id_empleado} no pertenece formalmente a este proyecto.`];
 
@@ -206,7 +206,7 @@ export const agregarEmpleadoATurno = async (id_turno, data) => {
     // 1. (Validación Nueva) Verificar pertenencia al proyecto
     const proyectoUsuarioRepository = AppDataSource.getRepository("ProyectoUsuario");
     const perteneceAlProyecto = await proyectoUsuarioRepository.findOne({
-        where: { id_proyecto: turno.proyecto.id_proyecto, id_usuario: data.id_empleado, activo: true }
+        where: { id_proyecto: turno.proyecto.id_proyecto, id_usuario: data.id_empleado }
     });
     if (!perteneceAlProyecto) {
         return [null, "El empleado no pertenece formalmente al proyecto de este turno."];
