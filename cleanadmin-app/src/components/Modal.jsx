@@ -31,7 +31,7 @@ export const Modal = ({
   return (
     // Overlay (Fondo oscuro difuminado)
     <div 
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 animate-fade-in"
+      className="fixed inset-0 bg-black/25 flex justify-center items-center z-50 animate-fade-in"
       onClick={onClose}
     >
       {/* Contenedor del Modal */}
