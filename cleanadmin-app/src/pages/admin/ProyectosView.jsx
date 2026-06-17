@@ -2,6 +2,7 @@ import React from 'react';
 import { PROYECTOS_CONFIG } from '../../data/proyectosConfig';
 import LayoutContent from '../../layouts/LayoutContent';
 import { Card } from '../../components/Card';
+import { GestionTurnos } from '../../layouts/gestion_turno.jsx';
 
 export default function ProyectosView({ activeTab }) {
   const content = PROYECTOS_CONFIG.tabsContent[activeTab];
@@ -41,6 +42,7 @@ export default function ProyectosView({ activeTab }) {
           })}
         </>
       }
+      table={activeTab === 'Turno' ? <GestionTurnos /> : null}
     />
   );
 }

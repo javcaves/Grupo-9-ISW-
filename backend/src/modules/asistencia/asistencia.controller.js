@@ -40,7 +40,7 @@ export const editarRegistroIndividual = async (req, res) => {
         const { error, value } = registroIndividualUpdateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Parámetros de edición inválidos", error.message);
 
-        const [actualizado, err] = await AsistenciaService.editarRegistroIndividualService(
+        const [actualizado, err] = await AsistenciaService.editarRegistroAsistenciaService(
             id_asistencia, id_empleado, value, req.user.id_usuario
         );
         if (err) return handleErrorClient(res, 400, "Modificación denegada", err);
@@ -79,7 +79,7 @@ export const editarHistorialPasado = async (req, res) => {
         const { error, value } = registroIndividualUpdateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Datos erróneos", error.message);
 
-        const [modificado, err] = await AsistenciaService.editarHistorialPasadoService(
+        const [modificado, err] = await AsistenciaService.editarRegistroAsistenciaService(
             id_asistencia, id_empleado, value, req.user.id_usuario
         );
         if (err) return handleErrorClient(res, 400, "Error en reglas históricas", err);
