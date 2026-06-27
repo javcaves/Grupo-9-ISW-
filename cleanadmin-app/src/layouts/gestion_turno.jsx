@@ -13,7 +13,7 @@ export const GestionTurnos = () => {
         + Crear Nuevo Turno
       </button>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Configurar Nuevo Turno" variant="side">
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Configurar Nuevo Turno" variant="wide">
         {/* Le pasas el callback para cerrar el modal al guardar */}
         <FormularioTurno onSuccess={() => setIsOpen(false)} />
       </Modal>

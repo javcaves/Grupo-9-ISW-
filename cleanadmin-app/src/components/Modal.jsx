@@ -26,7 +26,9 @@ export const Modal = ({
   const containerClasses = 
     variant === 'side'
       ? 'fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl animate-slide-in-right flex flex-col z-50'
-      : 'relative w-full max-w-lg bg-white rounded-xl shadow-xl max-h-[85vh] animate-scale-up flex flex-col z-50';
+      : variant === 'wide'
+        ? 'relative w-full max-w-5xl bg-white rounded-xl shadow-xl max-h-[85vh] animate-scale-up flex flex-col z-50'
+        : 'relative w-full max-w-lg bg-white rounded-xl shadow-xl max-h-[85vh] animate-scale-up flex flex-col z-50';
 
   return (
     // Overlay (Fondo oscuro difuminado)
