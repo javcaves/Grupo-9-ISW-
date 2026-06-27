@@ -11,7 +11,7 @@ router.post('/:idProyecto/usuarios', authenticateJwt, checkRole(['ROOT', 'ADMIN'
 
 router.get('/:idProyecto/usuarios', authenticateJwt, ProyectoUsuarioController.obtenerUsuariosDelProyecto);
 
-router.delete('/:idProyecto/usuarios/idUsuario', authenticateJwt, checkRole(['ROOT', 'ADMIN', 'SUPERVISOR']), 
+router.delete('/:idProyecto/usuarios/:idUsuario', authenticateJwt, checkRole(['ROOT', 'ADMIN', 'SUPERVISOR']), 
     ProyectoUsuarioController.desvincularUsuarioDeProyecto
 );
 
