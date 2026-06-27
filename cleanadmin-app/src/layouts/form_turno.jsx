@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FormContainer } from '../components/Formulario.jsx';
+import { UsuarioService } from '../api/usuario.service';
+import { TurnoService } from '../api/turno.service';
 
 export const FormularioTurno = ({ onSuccess }) => {
   const [turnoData, setTurnoData] = useState({ 
@@ -7,10 +9,37 @@ export const FormularioTurno = ({ onSuccess }) => {
     ingreso: '', 
     salida: '', 
     descripcion: '',
-    empleados: '1' // ID por defecto para prueba rápida
+    empleados: [] // Inicializamos como array vacío, pero lo convertiremos a string para el input
   });
+  const [usuariosDisponibles, setUsuariosDisponibles] = useState([]);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(true);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      try {
+        const data = await UsuarioService.buscar();
+        setUsuariosDisponibles(data.data || data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingUsuarios(false);
+      }
+    };
+    fetchUsuarios();
+  }, []);
+
+  const toggleEmpleado = (id) => {
+    setTurnoData(prev => {
+      const isSelected = prev.empleados.includes(id);
+      if (isSelected) {
+        return { ...prev, empleados: prev.empleados.filter(e => e !== id) };
+      } else {
+        return { ...prev, empleados: [...prev.empleados, id] };
+      }
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,19 +47,14 @@ export const FormularioTurno = ({ onSuccess }) => {
     setLoading(true);
 
     try {
-      // 1. Transformar los empleados de un string ("1, 2") a un array de objetos
-      const empleadosArray = turnoData.empleados
-        .split(',')
-        .map(id => ({ id_empleado: parseInt(id.trim(), 10) }))
-        .filter(emp => !isNaN(emp.id_empleado));
-
-      if (empleadosArray.length === 0) {
-        throw new Error("Debes ingresar al menos un ID de empleado válido.");
+      if (turnoData.empleados.length === 0) {
+        throw new Error("Debes seleccionar al menos un empleado de la lista.");
       }
 
-      // 2. Preparar el payload con el formato exacto que pide el backend (Joi)
+      const empleadosArray = turnoData.empleados.map(id => ({ id_empleado: id }));
+
       const payload = {
-        id_proyecto: 1, // ⚠️ HARDCODEADO: Aquí debes pasar el ID del proyecto actual cuando lo tengas
+        id_proyecto: turnoData.id_proyecto || 1, // por si lo necesitamos hardcodeado
         nombre: turnoData.nombre,
         hora_ingreso: turnoData.ingreso,
         hora_salida: turnoData.salida,
@@ -38,20 +62,8 @@ export const FormularioTurno = ({ onSuccess }) => {
         empleados: empleadosArray
       };
 
-      // 3. Hacer la petición POST
-      const response = await fetch("http://localhost:3000/api/turno/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include", // Importante para enviar el token JWT en las cookies
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.errorDetails || data.message || "Error al crear el turno");
-      }
-
+      
+      const data = await TurnoService.crear(payload);
       console.log("Turno creado exitosamente:", data);
       onSuccess?.(); // Cierra el modal
     } catch (err) {
@@ -62,78 +74,112 @@ export const FormularioTurno = ({ onSuccess }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <FormContainer
-        title="Crear Nuevo Turno"
-        description="Configura los horarios y detalles del nuevo turno para el proyecto."
-        submitText={loading ? "Creando..." : "Crear Turno"}
-        onSubmit={handleSubmit}
-        onCancel={() => onSuccess?.()}
-      >
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm font-medium">
-            {error}
-          </div>
-        )}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4">
+      {/* Lado Izquierdo: Formulario */}
+      <div>
+        <FormContainer
+          title="Crear Nuevo Turno"
+          description="Configura los horarios y detalles del nuevo turno."
+          submitText={loading ? "Creando..." : "Crear Turno"}
+          onSubmit={handleSubmit}
+          onCancel={() => onSuccess?.()}
+        >
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm font-medium">
+              {error}
+            </div>
+          )}
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Turno</label>
-          <input 
-            type="text" 
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Ej: Turno Mañana"
-            value={turnoData.nombre}
-            onChange={(e) => setTurnoData({...turnoData, nombre: e.target.value})}
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hora de Ingreso</label>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Turno</label>
             <input 
-              type="time" 
+              type="text" 
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-              value={turnoData.ingreso}
-              onChange={(e) => setTurnoData({...turnoData, ingreso: e.target.value})}
+              placeholder="Ej: Turno Mañana"
+              value={turnoData.nombre}
+              onChange={(e) => setTurnoData({...turnoData, nombre: e.target.value})}
               required
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hora de Ingreso</label>
+              <input 
+                type="time" 
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                value={turnoData.ingreso}
+                onChange={(e) => setTurnoData({...turnoData, ingreso: e.target.value})}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hora de Salida</label>
+              <input 
+                type="time" 
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                value={turnoData.salida}
+                onChange={(e) => setTurnoData({...turnoData, salida: e.target.value})}
+                required
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hora de Salida</label>
-            <input 
-              type="time" 
+            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+            <textarea 
+              rows="3"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-              value={turnoData.salida}
-              onChange={(e) => setTurnoData({...turnoData, salida: e.target.value})}
-              required
+              placeholder="Ej: Turno de guardia nocturna..."
+              value={turnoData.descripcion}
+              onChange={(e) => setTurnoData({...turnoData, descripcion: e.target.value})}
             />
           </div>
-        </div>
+        </FormContainer>
+      </div>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">IDs de Empleados (Separados por coma)</label>
-          <input 
-            type="text" 
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Ej: 1, 3, 5"
-            value={turnoData.empleados}
-            onChange={(e) => setTurnoData({...turnoData, empleados: e.target.value})}
-            required
-          />
+      {/* Lado Derecho: Lista de Usuarios Disponibles */}
+      <div className="flex flex-col bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden" style={{ minHeight: '500px', maxHeight: '650px' }}>
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/50">
+          <h2 className="text-xl font-bold text-gray-800">Usuarios Disponibles</h2>
+          <p className="text-sm text-gray-500 mt-1">Selecciona los empleados para este turno.</p>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-          <textarea 
-            rows="3"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Ej: Turno de guardia nocturna..."
-            value={turnoData.descripcion}
-            onChange={(e) => setTurnoData({...turnoData, descripcion: e.target.value})}
-          />
+        
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+          {loadingUsuarios ? (
+            <p className="text-gray-500 text-center py-4">Cargando usuarios...</p>
+          ) : usuariosDisponibles.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No hay usuarios disponibles.</p>
+          ) : (
+            usuariosDisponibles.map(usuario => {
+              const userId = usuario.id_usuario || usuario.id;
+              const isSelected = turnoData.empleados.includes(userId);
+              return (
+                <div 
+                  key={userId} 
+                  onClick={() => toggleEmpleado(userId)}
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors duration-200 ${
+                    isSelected ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:bg-gray-100'
+                  }`}
+                >
+                  <div>
+                    <p className="font-semibold text-gray-800">{usuario.nombres || usuario.nombre} {usuario.apellidos || usuario.apellido}</p>
+                    <p className="text-xs text-gray-500">{usuario.rol || 'Sin Rol'} | RUT: {usuario.rut || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <input 
+                      type="checkbox" 
+                      className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded pointer-events-none" 
+                      checked={isSelected} 
+                      readOnly
+                    />
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
-      </FormContainer>
+      </div>
     </div>
   );
 };
