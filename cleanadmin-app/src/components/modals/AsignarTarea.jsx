@@ -13,6 +13,7 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, emplea
     try {
       await AsignacionService.crear(formData);
       
+      alert("¡Empleado asignado a la tarea con éxito!");
       actualizarLista();
       onClose();
       setFormData({ id_tarea: '', id_empleado: '', tipoAsignacion: 'PROGRAMADA' });

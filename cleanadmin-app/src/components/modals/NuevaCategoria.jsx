@@ -14,12 +14,12 @@ export default function NuevaCategoria({ isOpen, onClose, actualizarLista }) {
         await CategoriaService.crear({
                 nombre: formData.nombre,
                 descripcion: formData.descripcion,
-                requiereCertificacion: formData.requiereCertificacion === 'true'
+                requiere_calificacion: formData.requiereCertificacion === 'true'
             });
-
+        alert("¡Categoría creada con éxito!");
         actualizarLista(); 
-            onClose();
-            setFormData({ nombre: '', descripcion: '', requiereCertificacion: 'false' });
+        onClose();
+        setFormData({ nombre: '', descripcion: '', requiereCertificacion: 'false' });
         } catch (error) {
             console.error("Error de conexión:", error);
             alert("Error al guardar la categoría");

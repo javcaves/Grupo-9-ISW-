@@ -25,7 +25,7 @@ export default function EditarCategoria({ isOpen, onClose, categoriaSeleccionada
           ...formData,
           requiereCertificacion: formData.requiereCertificacion === 'true'
       });
-
+      alert("¡Categoría actualizada con éxito!");
       actualizarLista();
       onClose();
     } catch (error) {

@@ -13,6 +13,7 @@ export default function ConfirmarEliminacion({
     try {
       await servicioEliminar(idElemento);
 
+      alert("¡Elemento eliminado correctamente del sistema!");
       actualizarLista();
       onClose();
     } catch (error) {

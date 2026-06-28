@@ -11,6 +11,7 @@ export default function CancelarTarea({ isOpen, onClose, tareaSeleccionada, actu
     try {
       await TareaService.cancelar(tareaSeleccionada?.id, comentario);
 
+      alert("¡La tarea ha sido cancelada y justificada con éxito!");
       actualizarLista();
       onClose();
       setComentario('');
