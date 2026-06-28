@@ -220,6 +220,41 @@ export const obtenerHistorialService = async (id_proyecto) => {
     });
 };
 
+// ───────────────────────────────────────────────────────────────
+// Historial del empleado por proyecto
+// GET /proyecto/:id_proyecto/mis-asistencias
+// ───────────────────────────────────────────────────────────────
+export const obtenerMisAsistenciasProyectoService = async (
+    idEmpleado,
+    idProyecto
+) => {
+
+    const registros = await asistenciaEmpleadoRepo
+        .createQueryBuilder("ae")
+        .leftJoinAndSelect("ae.asistencia", "a")
+        .leftJoinAndSelect("a.turno", "t")
+        .where("ae.id_empleado = :idEmpleado", {
+            idEmpleado: Number(idEmpleado)
+        })
+        .andWhere("a.id_proyecto = :idProyecto", {
+            idProyecto: Number(idProyecto)
+        })
+        .andWhere("ae.activo = true")
+        .orderBy("a.fecha", "DESC")
+        .getMany();
+
+    const historial = registros.map(registro => ({
+        id: registro.id_asistencia,
+        fecha: registro.asistencia.fecha,
+        estado: registro.estado,
+        hora_ingreso: registro.hora_ingreso,
+        hora_egreso: registro.hora_egreso,
+        descripcion: registro.descripcion,
+        turno: registro.asistencia.turno?.nombre
+    }));
+
+    return [historial, null];
+};
 
 
 // ─────────────────────────────────────────────────────────────────────────────

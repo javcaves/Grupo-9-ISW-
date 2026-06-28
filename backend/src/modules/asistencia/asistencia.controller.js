@@ -90,16 +90,76 @@ export const editarHistorialPasado = async (req, res) => {
 
 export const obtenerMisAsistenciasPorProyecto = async (req, res) => {
     try {
-        // Corregido para mapear exactamente con tu firma del service: obtenerMiHistorialService(id_usuario)
-        const [historial, err] = await AsistenciaService.obtenerMiHistorialService(req.user.id_usuario);
+
+        const { id_proyecto } = req.params;
+
+        const [historial, err] =
+            await AsistenciaService.obtenerMisAsistenciasProyectoService(
+                req.user.id_usuario,
+                id_proyecto
+            );
 
         if (err) {
-            return handleErrorClient(res, 403, "No fue posible obtener el historial", err);
+            return handleErrorClient(
+                res,
+                403,
+                "No fue posible obtener el historial",
+                err
+            );
         }
 
-        return handleSuccess(res, 200, "Historial de asistencia obtenido correctamente", historial);
+        return handleSuccess(
+            res,
+            200,
+            "Historial de asistencia obtenido correctamente",
+            historial
+        );
+
     } catch (error) {
-        return handleErrorServer(res, 500, "Error de servidor", error.message);
+
+        return handleErrorServer(
+            res,
+            500,
+            "Error de servidor",
+            error.message
+        );
+
+    }
+};
+
+export const obtenerMiHistorial = async (req, res) => {
+    try {
+
+        const [historial, err] =
+            await AsistenciaService.obtenerMiHistorialService(
+                req.user.id_usuario
+            );
+
+        if (err) {
+            return handleErrorClient(
+                res,
+                400,
+                "No fue posible obtener el historial",
+                err
+            );
+        }
+
+        return handleSuccess(
+            res,
+            200,
+            "Historial obtenido correctamente",
+            historial
+        );
+
+    } catch (error) {
+
+        return handleErrorServer(
+            res,
+            500,
+            "Error interno",
+            error.message
+        );
+
     }
 };
 

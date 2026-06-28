@@ -52,13 +52,10 @@ export const AsistenciaService = {
   },
 
   /** GET /asistencia/proyecto/:id_proyecto/mis-asistencias */
-  async obtenerMiHistorial(idProyecto) {
-    const response = await api.get(
-      `/asistencia/proyecto/${idProyecto}/mis-asistencias`
-    );
+  async obtenerMisAsistencias() {
+    const response = await api.get("/asistencia/mi-historial");
     return response.data ?? response;
   },
-
   /**
    * Obtener el turno activo del empleado autenticado.
    * GET /asistencia/mi-turno
