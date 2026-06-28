@@ -24,6 +24,7 @@ export default function OtorgarCalificacion({
     try {
       await CalificacionService.otorgar(formData);
 
+      alert("¡Certificación otorgada al empleado con éxito!");
       actualizarLista();
       onClose();
       setFormData({

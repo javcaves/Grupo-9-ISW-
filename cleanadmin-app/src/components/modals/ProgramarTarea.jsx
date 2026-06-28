@@ -13,6 +13,7 @@ export default function ProgramarTarea({ isOpen, onClose, actividades, actualiza
     try {
       await TareaService.crear(formData);
       
+      alert("¡Tarea programada con éxito!");
       actualizarLista();
       onClose();
 

@@ -13,6 +13,7 @@ export default function CrearActividad({ isOpen, onClose, categorias, actualizar
     try {
       await ActividadesService.crear(formData);
       
+      alert("¡Actividad base creada con éxito!");
       actualizarLista();
       onClose();
       setFormData({ nombre: '', id_categoria: '', descripcion: '', recurrencia: 'DIARIA' });
