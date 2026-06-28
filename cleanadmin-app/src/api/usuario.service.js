@@ -6,6 +6,10 @@ const URL = "/usuarios";
 
 export const UsuarioService = {
 
+  listar(filtros = {}) {
+    return this.buscar(filtros);
+  },
+
   /**
    * Obtiene todos los usuarios.
    * Permite filtros:
