@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PROYECTOS_CONFIG } from '../../data/proyectosConfig';
 import LayoutContent from '../../layouts/LayoutContent';
 import { Card } from '../../components/Card';
@@ -8,10 +8,41 @@ import CrearActividad from '../../components/modals/CrearActividad';
 import ProgramarTarea from '../../components/modals/ProgramarTarea';
 import AsignarTarea from '../../components/modals/AsignarTarea';
 
+import { CategoriaService } from '../../api/categorias.service';
+import { ActividadesService } from '../../api/actividades.service';
+import { TareaService } from '../../api/tareas.service';
+import { UsuarioService } from '../../api/usuario.service';
+
 export default function ProyectosView({ activeTab }) {
   const [abrirActividad, setAbrirActividad] = useState(false);
   const [abrirProgramar, setAbrirProgramar] = useState(false);
   const [abrirAsignar, setAbrirAsignar] = useState(false);
+
+  const [listaCategorias, setListaCategorias] = useState([]);
+  const [listaActividades, setListaActividades] = useState([]);
+  const [listaTareasPendientes, setListaTareasPendientes] = useState([]);
+  const [listaEmpleados, setListaEmpleados] = useState([]);
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        // Consulta la base de datos
+        const categorias = await CategoriaService.listar();
+        const actividades = await ActividadesService.listar();
+        const tareas = await TareaService.listar(); 
+        const empleados = await UsuarioService.listar(); 
+
+        setListaCategorias(categorias);
+        setListaActividades(actividades);
+        setListaTareasPendientes(tareas);
+        setListaEmpleados(empleados);
+      } catch (error) {
+        console.error("Error cargando los datos iniciales desde la BD:", error);
+      }
+    };
+
+    cargarDatos();
+  }, []);
 
   const content = PROYECTOS_CONFIG.tabsContent[activeTab];
   const cards = content.cards || [];
@@ -26,7 +57,7 @@ export default function ProyectosView({ activeTab }) {
     if (action.label === 'Asignar Tarea' || action.text === 'Asignar Tarea') {
       return { ...action, onClick: () => setAbrirAsignar(true) };
     }
-    return action; // Si es otro botón, se devuelve intacto
+    return action;
   }) || [];
 
   return (
@@ -69,14 +100,14 @@ export default function ProyectosView({ activeTab }) {
       <CrearActividad 
         isOpen={abrirActividad} 
         onClose={() => setAbrirActividad(false)} 
-        categorias={[]} 
+        categorias={listaCategorias} 
         actualizarLista={() => console.log('Actualizar tabla tras crear actividad')}
       />
       
       <ProgramarTarea 
         isOpen={abrirProgramar} 
         onClose={() => setAbrirProgramar(false)} 
-        actividades={[]} 
+        actividades={listaActividades} 
         actualizarLista={() => console.log('Actualizar tabla tras programar tarea')}
       />
       
@@ -84,7 +115,7 @@ export default function ProyectosView({ activeTab }) {
         isOpen={abrirAsignar} 
         onClose={() => setAbrirAsignar(false)}
         tareasPendientes={[]}
-        empleados={[]}
+        empleados={listaEmpleados}
         actualizarLista={() => console.log('Actualizar tabla tras asignar')}
       />
     </>
