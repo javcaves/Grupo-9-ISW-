@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
-import { CategoriaService } from '../../api/categoria.service';
+import { CategoriaService } from '../../api/categorias.service';
 
 export default function EditarCategoria({ isOpen, onClose, categoriaSeleccionada, actualizarLista }) {
   const [formData, setFormData] = useState({ nombre: '', descripcion: '', requiereCertificacion: 'false' });

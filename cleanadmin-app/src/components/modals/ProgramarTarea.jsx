@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
-import { TareaService } from '../../api/tarea.service';
+import { TareaService } from '../../api/tareas.service';
 
 export default function ProgramarTarea({ isOpen, onClose, actividades, actualizarLista }) {
   const [formData, setFormData] = useState({ id_actividad: '', fecha: '', hora: '', comentario: '', estado: 'PLANIFICADA' });

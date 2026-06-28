@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
-import { CategoriaService } from '../../api/categoria.service';
+import { CategoriaService } from '../../api/categorias.service';
 
 export default function NuevaCategoria({ isOpen, onClose, actualizarLista }) {
     const [formData, setFormData] = useState({ nombre: '', descripcion: '', requiereCertificacion: 'false' });
