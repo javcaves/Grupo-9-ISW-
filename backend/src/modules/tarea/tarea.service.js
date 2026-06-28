@@ -20,15 +20,27 @@ export const programarTarea = async (data, id_programador) => {
     return [await tareaRepo.save(nueva), null];
 };
 
-// ----- Buscar -----
+// ----- Buscar (Todas las tareas del sistema) -----
 export const obtenerTodas = async () => {
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
-    return await tareaRepo.find({ relations: {actividad: true} });
+    return await tareaRepo.find({ 
+        relations: {
+            actividad: true,
+            programador: true // Incluido para saber quién planificó la tarea globalmente
+        },
+        order: {
+            fecha: "ASC",
+            hora: "ASC"
+        }
+    });
 };
 
 export const obtenerPorId = async (id) => {
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
-    const tarea = await tareaRepo.findOne({ where: { id_tarea: id }, relations: {actividad: true} });
+    const tarea = await tareaRepo.findOne({ 
+        where: { id_tarea: id }, 
+        relations: { actividad: true } 
+    });
     if (!tarea) return [null, "Tarea no encontrada"];
     return [tarea, null];
 };
@@ -57,7 +69,7 @@ export const eliminarTarea = async (id) => {
 
     if (!tarea) return [null, "Tarea no encontrada"];
 
-    //No se puede eliminar si está en proceso
+    // No se puede eliminar si está en proceso
     if (tarea.estado === "EN_PROCESO") {
         return [null, "ESTADO_EN_PROCESO_NO_ELIMINABLE"];
     }
@@ -79,31 +91,28 @@ export const cancelarTarea = async (id, data) => {
     return [await tareaRepo.save(tarea), null];
 };
 
-// ----- Mis Tareas -----
+// ----- Mis Tareas (Filtro por empleado con relaciones en cascada) -----
 export async function obtenerMisTareas(idEmpleado) {
+    const asignacionRepository = AppDataSource.getRepository("AsignacionTarea");
 
-  const asignacionRepository = AppDataSource.getRepository("AsignacionTarea");
+    const asignaciones = await asignacionRepository.find({
+        where: {
+            empleado: {
+                id_usuario: idEmpleado
+            }
+        },
+        relations: {
+            tarea: {
+                actividad: true // 👈 El doble salto relacional se mantiene intacto
+            },
+            asignador: true // Opcional: añade contexto de quién generó la asignación
+        },
+        order: {
+            hora_asignacion: "DESC" // Muestra primero lo último asignado
+        }
+    });
 
-  const asignaciones = await asignacionRepository.find({
-
-    where: {
-      empleado: {
-        id_usuario: idEmpleado
-      }
-    },
-
-    relations: {
-      tarea: {
-        actividad: true
-      }
-    },
-
-    order: {
-      hora_asignacion: "DESC"
-    }
-
-  });
-
-  return asignaciones.map(a => a.tarea);
-
+    // Devolvemos todo el array con los objetos 'AsignacionTarea' raíz.
+    // Esto te permitirá tener en tu frontend tanto los datos del momento de asignación como los de la tarea misma.
+    return asignaciones;
 }

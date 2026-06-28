@@ -2,12 +2,14 @@ import { tareaCreateValidation, tareaUpdateValidation, tareaCancelValidation } f
 import * as TareaService from "./tarea.service.js";
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
-// ----- Listar -----
+// ----- Listar todas las tareas (Global con actividades relacionales) -----
 export const listarTareas = async (req, res) => {
     try {
         const lista = await TareaService.obtenerTodas();
-        return handleSuccess(res, 200, "Tareas obtenidas", lista);
-    } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
+        return handleSuccess(res, 200, "Tareas globales obtenidas con éxito", lista);
+    } catch (error) { 
+        return handleErrorServer(res, 500, "Error al listar tareas globales", error.message); 
+    }
 };
 
 // Buscar por id
@@ -77,28 +79,19 @@ export const cancelar = async (req, res) => {
     } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
 };
 
-// Mis Tareas
+// ----- Mis Tareas (Específicas del empleado autenticado) -----
 export async function obtenerMisTareas(req, res) {
+    try {
+        // Obtenemos el id del usuario desde el JWT middleware (ajustado a req.user.id_usuario)
+        const idEmpleado = req.user.id_usuario; 
 
-  try {
+        if (!idEmpleado) {
+            return handleErrorClient(res, 401, "No autorizado", "Identificador de empleado no disponible.");
+        }
 
-    const idEmpleado = req.user.id_usuario;
-
-    const tareas = await TareaService.obtenerMisTareas(idEmpleado);
-
-    res.status(200).json({
-      success: true,
-      message: "Tareas del empleado obtenidas",
-      data: tareas
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-
-  }
-
+        const tareas = await TareaService.obtenerMisTareas(idEmpleado);
+        return handleSuccess(res, 200, "Tareas del empleado obtenidas con éxito", tareas);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error al recuperar las tareas del empleado", error.message);
+    }
 }
