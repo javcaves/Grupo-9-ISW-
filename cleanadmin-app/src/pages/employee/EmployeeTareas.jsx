@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 import { Card } from "../../components/Card";
 import { TareaService } from "../../api/tareas.service";
-import { UsuarioService } from "../../api/usuario.service";
 import { ItemsService } from "../../api/items.service";
 
 export default function EmployeeTareas() {
@@ -15,7 +14,6 @@ export default function EmployeeTareas() {
   });
 
   const [list, setList] = useState([]);
-  const [team, setTeam] = useState([]);
   const [inventory, setInventory] = useState([]);
 
   // =========================
@@ -33,8 +31,9 @@ export default function EmployeeTareas() {
         const tareasRes = await TareaService.misTareas();
         console.log("[Tareas] response tareas =>", tareasRes);
 
-        const asignaciones = tareasRes?.data ?? tareasRes ?? [];
 
+        const asignaciones = tareasRes?.data ?? tareasRes ?? [];
+        console.log(JSON.stringify(asignaciones[0], null, 2));
         setList(asignaciones);
 
         // =========================
@@ -49,27 +48,6 @@ export default function EmployeeTareas() {
         });
 
         // =========================
-        // TEAM (usuarios)
-        // =========================
-        console.log("[Tareas] Cargando equipo...");
-
-        const usuariosRes = await UsuarioService.buscar({}).catch(err => {
-          console.error("❌ Error cargando equipo:", err);
-          return [];
-        });
-        console.log("[Tareas] usuarios =>", usuariosRes);
-
-        const usuarios = usuariosRes?.data ?? usuariosRes ?? [];
-
-        setTeam(
-          usuarios.map(u => ({
-            id: u.id_usuario,
-            name: u.nombre,
-            role: u.rol,
-          }))
-        );
-
-        // =========================
         // INVENTARIO
         // =========================
         console.log("[Tareas] Cargando inventario...");
@@ -82,9 +60,16 @@ export default function EmployeeTareas() {
 
         const items = itemsRes?.data ?? itemsRes ?? [];
 
+        console.log("IDs tareas:", asignaciones.map(a => a.id_asignacion));
+console.log("IDs items:", items.map(i => i.id_item));
+
+console.log(items);
+console.log(items[0]);
+
+
         setInventory(
           items.map(i => ({
-            id: i.id,
+            id: i.id_item,
             name: i.nombre,
             stock: i.stock,
           }))
@@ -183,7 +168,7 @@ export default function EmployeeTareas() {
             // Desestructuramos con seguridad las capas anidadas que creamos en el backend
             const tareaInterna = item.tarea;
             const actividad = tareaInterna?.actividad;
-            
+            const companeros = item.companeros ?? [];
             const nombreActividad = actividad?.descripcion_esp ?? "Tarea sin descripción definida";
             const horaProgramada = tareaInterna?.hora ? tareaInterna.hora.substring(0, 5) : "--:--";
             const fechaProgramada = tareaInterna?.fecha ?? "--";
@@ -231,6 +216,41 @@ export default function EmployeeTareas() {
                   </span>
                 </div>
 
+                    <div className="mb-4">
+  <div className="text-xs font-semibold text-gray-500 mb-2">
+    Equipo asignado
+  </div>
+
+  {companeros.length === 0 ? (
+    <div className="text-xs text-gray-400 italic">
+      Trabajarás solo en esta tarea.
+    </div>
+  ) : (
+    <div className="space-y-2">
+      {companeros.map(persona => (
+        <div
+          key={persona.id_usuario}
+          className="flex items-center gap-3 p-2 rounded-xl bg-gray-50 border"
+        >
+          <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600">
+            <i className="fas fa-user" />
+          </div>
+
+          <div>
+            <div className="text-sm font-medium">
+              {persona.nombre} {persona.apellido}
+            </div>
+
+            <div className="text-xs text-gray-500">
+              {persona.rol}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
                 <button
                   className="w-full rounded-xl py-3 text-white font-semibold cursor-pointer hover:opacity-95 transition-opacity text-sm"
                   style={{
@@ -244,29 +264,6 @@ export default function EmployeeTareas() {
             );
           })}
 
-        </div>
-      </Card>
-
-      {/* EQUIPO */}
-      <Card title="Equipo de Trabajo" icon="fa-users">
-        <div className="space-y-3">
-          {team.length === 0 && (
-            <div className="text-center text-gray-500 py-2 text-sm">
-              Sin equipo de trabajo cargado
-            </div>
-          )}
-
-          {team.map((member) => (
-            <div key={member.id} className="flex items-center gap-3 p-3 border rounded-2xl bg-white/40">
-              <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center text-sm">
-                <i className="fas fa-user text-xs" />
-              </div>
-              <div>
-                <div className="font-medium text-sm">{member.name ?? "--"}</div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">{member.role ?? "--"}</div>
-              </div>
-            </div>
-          ))}
         </div>
       </Card>
 

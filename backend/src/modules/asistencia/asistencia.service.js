@@ -364,45 +364,120 @@ export const obtenerMiHistorialService = async (id_usuario) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function obtenerMiAsistenciaActual(idEmpleado, idTurno) {
     try {
-        // 1. Obtener la metadata horaria del turno asignado
-        const turno = await turnoRepo.findOne({ where: { id_turno: idTurno, activo: true } });
-        if (!turno) {
-            console.warn(`[Asistencia] Turno ${idTurno} no existe o está inactivo.`);
-            return { success: true, data: null };
-        }
+        // 1. OBTENER LA FECHA LOCAL (Evita desfases de servidores en la nube/UTC)
+        const tzOffset = (new Date()).getTimezoneOffset() * 60000; // Desfase en ms
+        const localISODate = (new Date(Date.now() - tzOffset)).toISOString();
+        const hoyStr = localISODate.split("T")[0]; // YYYY-MM-DD Local exacto
 
-        // 2. Establecer el rango de captura del día de hoy combinando fechas con el turno
-        const hoyStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-        const fechaIngreso = new Date(`${hoyStr}T${turno.hora_ingreso}`);
-        const fechaSalida = new Date(`${hoyStr}T${turno.hora_salida}`);
+        const fechaActual = new Date(Date.now() - tzOffset);
+        const diaSemana = fechaActual.getDay(); // 0 = Domingo, 6 = Sábado
 
-        // 3. Aplicar holgura de 60 minutos (para capturar marcas tempranas o tardías del turno)
-        const MINUTOS_HOLGURA = 60;
-        const inicioRango = new Date(fechaIngreso.getTime() - MINUTOS_HOLGURA * 60000);
-        const finRango = new Date(fechaSalida.getTime() + MINUTOS_HOLGURA * 60000);
-
-        // 4. Buscar en la base de datos mapeando las relaciones correctas del snapshot
+        // 2. BUSCAR SI YA EXISTE UN REGISTRO EN EL SNAPSHOT DE HOY (Asistencia ya iniciada)
         const registro = await asistenciaEmpleadoRepo
             .createQueryBuilder("ae")
             .leftJoinAndSelect("ae.asistencia", "asistencia")
             .leftJoinAndSelect("asistencia.turno", "turno")
-            .where("ae.id_empleado = :idEmpleado", { idEmpleado })
-            .andWhere("asistencia.id_turno = :idTurno", { idTurno })
+            .where("ae.id_empleado = :idEmpleado", { idEmpleado: Number(idEmpleado) })
+            .andWhere("asistencia.id_turno = :idTurno", { idTurno: Number(idTurno) })
             .andWhere("asistencia.fecha = :hoyStr", { hoyStr }) 
-            // Opcional: Descomentar si requieres validar estrictamente el timestamp exacto de la marca:
-            // .andWhere("asistencia.created_at BETWEEN :inicioRango AND :finRango", { inicioRango, finRango })
             .andWhere("ae.activo = true")
             .getOne();
 
-        // 5. Devolución limpia. Si no se encuentra registro, retorna null (no genera un HTTP 500)
+        // CASO A: El empleado ya figura en la jornada de hoy (tiene marcas o está en espera activo)
+        if (registro) {
+            const asignacionContrato = await turnoEmpleadoRepo.findOne({
+                where: { turno: { id_turno: Number(idTurno) }, empleado: { id_usuario: Number(idEmpleado) }, activo: true }
+            });
+
+            // Inyectamos las colaciones reales del contrato dinámicamente en el objeto
+            if (asignacionContrato && registro.asistencia?.turno) {
+                registro.asistencia.turno.hora_inicio_colacion = asignacionContrato.inicio_colacion;
+                registro.asistencia.turno.hora_fin_colacion = asignacionContrato.fin_colacion;
+            }
+
+            return {
+                success: true,
+                code: "MARCA_EXISTENTE",
+                data: registro
+            };
+        }
+
+        // =====================================================================
+        // CASO B: NO HAY MARCA HOY (Buscamos la vinculación contractual activa)
+        // =====================================================================
+        console.log(`[Asistencia - Predictivo] Buscando vinculación activa para Empleado: ${idEmpleado}, Turno: ${idTurno}`);
+        
+        const asignacionContrato = await turnoEmpleadoRepo.findOne({
+            where: {
+                turno: { id_turno: Number(idTurno) },
+                empleado: { id_usuario: Number(idEmpleado) },
+                activo: true
+            },
+            relations: {
+                turno: true
+            }
+        });
+
+        // Si existe la vinculación en la tabla intermedia, armamos el esqueleto para que el UIX no se rompa
+        if (asignacionContrato) {
+            
+            // Si es fin de semana, devolvemos la data del turno pero con código restrictivo
+            if (diaSemana === 0 || diaSemana === 6) {
+                return {
+                    success: true,
+                    code: "FIN_DE_SEMANA",
+                    message: "Fin de semana: No registras jornadas operativas para hoy.",
+                    data: {
+                        estado: "FUERA_DE_HORARIO",
+                        hora_ingreso: "--",
+                        hora_egreso: "Inhabilitado",
+                        asistencia: {
+                            turno: {
+                                id_turno: asignacionContrato.turno.id_turno,
+                                nombre: asignacionContrato.turno.nombre,
+                                hora_ingreso: asignacionContrato.turno.hora_ingreso,
+                                hora_salida: asignacionContrato.turno.hora_salida,
+                                hora_inicio_colacion: asignacionContrato.inicio_colacion,
+                                hora_fin_colacion: asignacionContrato.fin_colacion
+                            }
+                        }
+                    }
+                };
+            }
+
+            // Día de semana normal, esperando que abran el punto de control QR
+            return {
+                success: true,
+                code: "ESPERANDO_INGRESO",
+                message: "Sin marcas de asistencia registradas para la fecha de hoy.",
+                data: {
+                    estado: "EN_ESPERA",
+                    hora_ingreso: "--",
+                    hora_egreso: "Pendiente",
+                    asistencia: {
+                        turno: {
+                            id_turno: asignacionContrato.turno.id_turno,
+                            nombre: asignacionContrato.turno.nombre,
+                            hora_ingreso: asignacionContrato.turno.hora_ingreso,
+                            hora_salida: asignacionContrato.turno.hora_salida,
+                            hora_inicio_colacion: asignacionContrato.inicio_colacion,
+                            hora_fin_colacion: asignacionContrato.fin_colacion
+                        }
+                    }
+                }
+            };
+        }
+
+        // CASO C: El usuario ni siquiera está en la tabla intermedia asignado a este turno
         return {
             success: true,
-            data: registro ? registro : null
+            code: "SIN_TURNO_ASIGNADO",
+            message: "No registras una vinculación contractual o turno asignado para este proyecto.",
+            data: null
         };
 
     } catch (error) {
-        console.error("🔥 Error interno controlado en obtenerMiAsistenciaActual:", error);
-        // Retornamos un objeto de falla controlado para evitar el colapso del cliente
+        console.error("🔥 Error crítico en obtenerMiAsistenciaActual:", error);
         return { 
             success: false, 
             data: null, 
@@ -410,3 +485,13 @@ export async function obtenerMiAsistenciaActual(idEmpleado, idTurno) {
         };
     }
 }
+
+
+export const obtenerMiTurnoService = async (id_usuario) => {
+    const turnoEmpleado = await turnoEmpleadoRepo.findOne({
+        where: { empleado: { id_usuario: Number(id_usuario) }, activo: true },
+        relations: { turno: true }
+    });
+    if (!turnoEmpleado) return [null, "No tienes un turno activo asignado."];
+    return [turnoEmpleado.turno, null];
+};

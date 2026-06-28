@@ -29,7 +29,7 @@ router.put("/:id_asistencia/empleado/:id_empleado/historial", authenticateJwt, c
 
 
 // ==================== ENDPOINTS DE EMPLEADOS ====================
-
+router.get("/mi-turno", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl.obtenerMiTurno);
 // OPTIMIZADO: Ruta estática semántica explícita para el estado diario del Dashboard
 router.get("/mi-asistencia-hoy", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl.obtenerMiAsistenciaActual);
 
@@ -38,5 +38,6 @@ router.post("/marcar", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl
 
 // RF-ASISTENCIA-7: Ver historial personal del empleado (Con parámetro dinámico al final)
 router.get("/proyecto/:id_proyecto/mis-asistencias", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl.obtenerMisAsistenciasPorProyecto);
+
 
 export default router;
