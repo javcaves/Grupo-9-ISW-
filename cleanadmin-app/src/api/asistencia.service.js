@@ -99,7 +99,7 @@ export const AsistenciaService = {
    */
   async obtenerMiAsistenciaActual(idTurno) {
       // Forzamos la interpolación directa en la URL para asegurar que viaje sin que dependa de la config de Axios
-      const response = await api.get(`/asistencia/mi-asistencia?id_turno=${idTurno}`);
+      const response = await api.get(`/asistencia/mi-asistencia-hoy?id_turno=${idTurno}`);
       return response.data ?? response;
     }
 };
