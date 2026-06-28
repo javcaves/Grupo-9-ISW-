@@ -41,28 +41,9 @@ export default function EmployeeHistorial() {
 
   console.log("📡 Cargando historial para usuario:", user.id_usuario);
 
-  console.log("1️⃣ Antes de listar proyectos");
+console.log("📡 Cargando historial para usuario:", user.id_usuario);
 
-  const proyectos = await ProyectoService.listar();
-
-  console.log("2️⃣ Proyectos recibidos:", proyectos);
-
-  const proyecto = proyectos.data?.[0] || proyectos[0];
-
-  console.log("3️⃣ Proyecto seleccionado:", proyecto);
-
-  if (!proyecto) {
-    console.warn("⚠️ El empleado no tiene proyectos asignados");
-    setAttendanceHistory([]);
-    setLoading(false);
-    return;
-  }
-
-  console.log("4️⃣ Solicitando historial del proyecto:", proyecto.id_proyecto);
-
-  const response = await AsistenciaService.obtenerMiHistorial(
-    proyecto.id_proyecto
-  );
+const response = await AsistenciaService.obtenerMisAsistencias();
 
   console.log("5️⃣ Historial recibido:", response);
 

@@ -42,7 +42,7 @@ export default function UserMenu({ user, onLogout }) {
           <div
             className="rounded-2xl p-4 mb-3 border"
             style={{
-              background: 'var(--bg-main)',
+              background: 'var(--bg-color)',
               borderColor: 'var(--border-color)'
             }}
           >
@@ -76,12 +76,12 @@ export default function UserMenu({ user, onLogout }) {
           <div className="space-y-1">
             <button
               onClick={toggleTheme}
-              className="w-full flex items-center justify-between text-left px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-all duration-200"
+              className="w-full flex items-center justify-between text-left px-3 py-2.5 rounded-xl transition-all duration-200"
             >
               <div className="flex items-center gap-3">
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ background: 'var(--bg-main)' }}
+                  style={{ background: 'var(--bg-color)' }}
                 >
                   <i
                     className="fas fa-moon text-xs"

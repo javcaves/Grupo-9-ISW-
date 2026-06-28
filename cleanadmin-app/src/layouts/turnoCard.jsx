@@ -1,50 +1,90 @@
-import React from 'react';
-import { Card } from '../components/Card.jsx'; // Asegúrate de que la ruta apunte a tu componente
+// layouts/turnoCard.jsx
+import { Card } from '../components/Card.jsx';
 
 export const TurnoCard = ({ turno, onEdit }) => {
-  
-  // Creamos un pequeño "Badge" o etiqueta para inyectarlo en el headerAction de tu Card
   const badgeActivo = (
-    <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+    <span
+      className="px-2.5 py-1 text-xs font-semibold rounded-full border"
+      style={{
+        background:   "var(--turno-badge-bg)",
+        color:        "var(--turno-badge-text)",
+        borderColor:  "var(--turno-badge-border)",
+      }}
+    >
       Activo
     </span>
   );
 
   return (
     <Card
-      title={turno.descripcion ? turno.descripcion.split(' ').slice(0, 3).join(' ') : 'Turno sin título'}
-      subtitle={`ID: #${turno.id.toString().slice(-4)}`}
-      icon="fa-clock" // Usa un ícono de reloj (asumiendo que usas FontAwesome por la clase 'fas')
+      title={turno.nombre ?? turno.descripcion?.split(' ').slice(0, 3).join(' ') ?? 'Turno sin título'}
+      subtitle={`ID: #${turno.id_turno?.toString().slice(-4) ?? '—'}`}
+      icon="fa-clock"
       headerAction={badgeActivo}
       className="rounded-2xl flex flex-col h-full"
     >
-      {/* Todo esto entra automáticamente como 'children' dentro de tu Card */}
       <div className="flex flex-col flex-grow">
-        
+
         {/* Descripción */}
-        <p className="text-sm text-slate-500 line-clamp-2 mb-4">
+        <p
+          className="text-sm line-clamp-2 mb-4"
+          style={{ color: "var(--turno-desc-text)" }}
+        >
           {turno.descripcion || 'Sin descripción adicional.'}
         </p>
-        
-        {/* Bloque de Horarios */}
-        <div className="grid grid-cols-2 gap-3 bg-slate-50/50 p-3 rounded-xl border border-slate-100 text-sm mb-5">
+
+        {/* Bloque horario */}
+        <div
+          className="grid grid-cols-2 gap-3 p-3 rounded-xl text-sm mb-5"
+          style={{
+            background:   "var(--turno-horario-bg)",
+            border:       "1px solid var(--turno-horario-border)",
+          }}
+        >
           <div>
-            <span className="block text-xs font-medium text-slate-400 uppercase">Ingreso</span>
-            <span className="font-semibold text-slate-700">{turno.ingreso} hrs</span>
+            <span
+              className="block text-xs font-medium uppercase mb-0.5"
+              style={{ color: "var(--turno-horario-label)" }}
+            >
+              Ingreso
+            </span>
+            <span
+              className="font-semibold"
+              style={{ color: "var(--turno-horario-value)" }}
+            >
+              {turno.hora_ingreso ?? '—'} hrs
+            </span>
           </div>
           <div>
-            <span className="block text-xs font-medium text-slate-400 uppercase">Salida</span>
-            <span className="font-semibold text-slate-700">{turno.salida} hrs</span>
+            <span
+              className="block text-xs font-medium uppercase mb-0.5"
+              style={{ color: "var(--turno-horario-label)" }}
+            >
+              Salida
+            </span>
+            <span
+              className="font-semibold"
+              style={{ color: "var(--turno-horario-value)" }}
+            >
+              {turno.hora_salida ?? '—'} hrs
+            </span>
           </div>
         </div>
 
-        {/* Botón para Modificar que llama a la función del padre */}
+        {/* Botón modificar */}
         <button
           onClick={() => onEdit(turno)}
-          className="w-full mt-auto py-2 text-sm font-medium text-violet-600 bg-violet-50 hover:bg-violet-100 rounded-xl transition-colors duration-200 focus:outline-none"
+          className="w-full mt-auto py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
+          style={{
+            color:      "var(--turno-btn-text)",
+            background: "var(--turno-btn-bg)",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--turno-btn-bg-hover)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "var(--turno-btn-bg)"; }}
         >
           ✏️ Modificar Datos
         </button>
+
       </div>
     </Card>
   );

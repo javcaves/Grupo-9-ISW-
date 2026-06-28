@@ -50,6 +50,7 @@ router.use(authenticateJwt);
 router.use('/actividades', ActividadesRoutes);
 router.use('/categorias', CategoriasRoutes);
 router.use('/proyecto', ProyectoRoutes);
+router.use('/proyecto', ProyectoUsuarioRoutes);
 router.use('/tareas', TareasRoutes);
 router.use('/asignacion', AsignacionRoutes);
 

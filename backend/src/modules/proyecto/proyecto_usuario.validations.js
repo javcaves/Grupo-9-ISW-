@@ -48,28 +48,20 @@ export const proyecto_usuarioDeactivateValidation = Joi.object({
 export const proyecto_usuarioUpdateRolValidation = Joi.object({
     rolproyecto: Joi.string()
     .valid(...ROLES_PROYECTO)
-    .required()
+    .optional()
     .messages({
         "any.only": `El rol debe ser uno de: ${ROLES_PROYECTO.join(', ')}`,
         "any.required": "rol_proyecto es obligatorio"
     })
 });
 
-//validacion de id en params
 export const proyecto_usuarioIdValidation = Joi.object({
-    id_proyecto: Joi.number()
-    .integer()
-    .positive()
-    .required()
-    .messages({
-        "number.base": "el id debe ser un numero",
-        "number.integer": "el id debe ser un numero entero",
-        "number.positive": "el id debe ser un numero positivo",
-        "any.required": "el id es un campo obligatorio"
-    }),
-
-    id_usuario: Joi.number()
-    .integer()
-    .positive()
-    .optional()
+    idProyecto: Joi.number()  // ← cambiar id_proyecto → idProyecto
+        .integer()
+        .positive()
+        .required(),
+    idUsuario: Joi.number()   // ← cambiar id_usuario → idUsuario
+        .integer()
+        .positive()
+        .optional()
 });
