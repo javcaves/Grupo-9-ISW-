@@ -30,7 +30,7 @@
   --sidebar-accent-color: #a78bfa;
 
 
-  --bg-card: rgba(255, 255, 255, 0.06); /* Panel semitransparente */
+  --bg-card: rgb(35, 44, 66); /* Panel semitransparente */
   --border-color: rgba(255, 255, 255, 0.08); /* Borde sutil */
 
   /* Estado Activo */

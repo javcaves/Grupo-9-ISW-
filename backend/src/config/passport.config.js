@@ -47,6 +47,10 @@ export const passportJwtSetup = () => {
 
                 console.log("👤 Usuario encontrado en DB:", user ? "SÍ" : "NO");
 
+                console.log("👤 Usuario completo:", user);
+                console.log("🆔 Rut:", user?.rut);
+                console.log("📧 Email:", user?.email);
+                
                 if (user) {
                     console.log("✅ Autenticación exitosa para usuario:", user.id_usuario);
                     return done(null, user);

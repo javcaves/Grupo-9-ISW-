@@ -12,8 +12,14 @@ router.get("/me", authenticateJwt, (req, res) => {
         success: true,
         user: {
             id_usuario: req.user.id_usuario,
+            rut: req.user.rut,
             nombre: req.user.nombre,
-            rol: req.user.rol
+            apellido: req.user.apellido,
+            email: req.user.email,
+            numero: req.user.numero,
+            rol: req.user.rol,
+            fecha_ingreso: req.user.fecha_ingreso,
+            activo: req.user.activo
         }
     });
 });

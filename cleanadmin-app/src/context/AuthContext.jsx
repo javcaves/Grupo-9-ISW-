@@ -19,7 +19,11 @@ export function AuthProvider({ children }) {
 
         const response = await AuthService.me();
 
-        console.log("🔐 Auth.me:", response);
+        console.log("🔐 Auth.me completo:", response);
+        console.log("👤 Usuario:", response.user);
+        console.log("📛 Nombre:", response.user?.nombre);
+        console.log("🆔 Rut:", response.user?.rut);
+        console.log("🎭 Rol:", response.user?.rol);
 
         if (response?.success && response?.user) {
           setUser(response.user);
