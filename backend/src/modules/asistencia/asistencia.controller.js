@@ -133,7 +133,10 @@ export async function obtenerMiAsistenciaActual(req, res) {
             res, 
             200, 
             resultadoService.data ? "Asistencia obtenida con éxito." : "Sin marcas de asistencia hoy.", 
-            resultadoService.data
+                {
+        code: resultadoService.code,
+        data: resultadoService.data
+    }
         );
 
     } catch (error) {
@@ -153,5 +156,15 @@ export const registrarAutoAsistenciaEmpleado = async (req, res) => {
         return handleSuccess(res, 200, "Operación exitosa", resultado);
     } catch (error) {
         return handleErrorServer(res, 500, "Error al procesar el registro", error.message);
+    }
+};
+
+export const obtenerMiTurno = async (req, res) => {
+    try {
+        const [turno, err] = await AsistenciaService.obtenerMiTurnoService(req.user.id_usuario);
+        if (err) return handleErrorClient(res, 404, "Sin turno asignado", err);
+        return handleSuccess(res, 200, "Turno obtenido", turno);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error al obtener turno", error.message);
     }
 };

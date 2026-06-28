@@ -3,8 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "../../components/Card";
 import { AuthService } from "../../api/auth.service";
 import { AsistenciaService } from "../../api/asistencia.service";
-import { ProyectoService } from "../../api/proyecto.service";
-import { TurnoService } from "../../api/turno.service";
+import QRScannerModal from "../../components/qr/QRScannerModal";
 
 export default function EmployeeAsistencia() {
   const location = useLocation();
@@ -13,16 +12,20 @@ export default function EmployeeAsistencia() {
   const [activeShiftId, setActiveShiftId] = useState(location.state?.idTurno ?? null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [apiCode, setApiCode] = useState("");
 
   const [currentShift, setCurrentShift] = useState(null);
   const [currentRecord, setCurrentRecord] = useState(null);
   const [lunch, setLunch] = useState(null);
   const [corrections, setCorrections] = useState([]);
 
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [tipoMarcaje, setTipoMarcaje] = useState(null);
+
   useEffect(() => {
     async function cargarDatos() {
       try {
-        console.log("🔍 [Asistencia - INSPECCIÓN] Iniciando carga inteligente...");
+        console.log("🔍 [Asistencia] Iniciando carga...");
         let turnoIdFinal = activeShiftId;
         let objetoTurnoAux = null;
 
@@ -32,85 +35,69 @@ export default function EmployeeAsistencia() {
           setUser(resMe.user);
         }
 
-        // Recuperación autónoma por si se pierde el State (F5)
+        // 2. Recuperación autónoma del turno real del empleado (F5 / navegación directa)
         if (!turnoIdFinal) {
-          const proyectosRes = await ProyectoService.listar().catch(() => []);
-          const proyectos = Array.isArray(proyectosRes) ? proyectosRes : (proyectosRes?.data ?? []);
-          const proyectoActual = proyectos[0] ?? null;
-
-          if (proyectoActual?.id_proyecto) {
-            const turnoRes = await TurnoService.listarPorProyecto(proyectoActual.id_proyecto).catch(() => null);
-            const listaTurnos = Array.isArray(turnoRes) ? turnoRes : (turnoRes?.data ?? []);
-            objetoTurnoAux = listaTurnos[0] ?? null;
-
-            if (objetoTurnoAux?.id_turno) {
-              turnoIdFinal = objetoTurnoAux.id_turno;
-              setActiveShiftId(turnoIdFinal);
-            }
+          const miTurnoRes = await AsistenciaService.obtenerMiTurno().catch(() => null);
+          // El backend devuelve { success, message, data: { id_turno, nombre, ... } }
+          const miTurno = miTurnoRes?.data ?? miTurnoRes ?? null;
+          if (miTurno?.id_turno) {
+            turnoIdFinal   = miTurno.id_turno;
+            objetoTurnoAux = miTurno;
+            setActiveShiftId(turnoIdFinal);
           }
         }
 
-        // 2. Consulta crítica a la API y Console Log de la Estructura Real
+        // 3. Consulta de asistencia del día
         if (turnoIdFinal) {
           const asistenciaRes = await AsistenciaService.obtenerMiAsistenciaActual(turnoIdFinal).catch(err => {
-            console.error("❌ [Asistencia - INSPECCIÓN] Falló la petición HTTP:", err);
+            console.error("❌ [Asistencia] Falló la petición:", err);
             return null;
           });
 
-          // ===================================================================
-          // 🔥 EL CONSOLE LOG RADAR: Copia lo que imprima esto en tu navegador
-          // ===================================================================
-          console.group("📡 [FRONTEND RADAR] ESTRUCTURA COMPLETA DEL ENDPOINT");
-          console.log("1. ¿La respuesta fue exitosa? ->", asistenciaRes?.success);
-          console.log("2. Payload completo (asistenciaRes):", asistenciaRes);
-          console.log("3. Datos internos (asistenciaRes?.data):", asistenciaRes?.data);
-          if (asistenciaRes?.data) {
-            console.log("4. ¿Tiene objeto turno anidado?:", asistenciaRes.data.asistencia?.turno || "No hay objeto turno anidado");
-            console.log("5. Llaves disponibles en la raíz de data:", Object.keys(asistenciaRes.data));
-          }
-          console.groupEnd();
-          // ===================================================================
+          console.log("🔍 [RAW] asistenciaRes:", JSON.stringify(asistenciaRes, null, 2));
 
-          if (asistenciaRes?.success && asistenciaRes?.data) {
-            const registroDb = asistenciaRes.data;
-            
+          // asistenciaRes = { code, data }  (el service ya hace response.data)
+          const codigoApi  = asistenciaRes?.code;
+          const registroDb = asistenciaRes?.data;
+
+          console.log("📡 [FRONTEND] Payload:", { codigoApi, registroDb });
+
+          if (codigoApi) setApiCode(codigoApi);
+
+          if (registroDb) {
             setCurrentRecord({
-              checkIn: registroDb.hora_ingreso ?? "--",
-              checkOut: registroDb.hora_egreso ?? "Pendiente",
-              estado: registroDb.estado ?? "EN_ESPERA"
+              checkIn:  registroDb.hora_ingreso ?? "--",
+              checkOut: registroDb.hora_egreso  ?? "Pendiente",
+              estado:   registroDb.estado       ?? "EN_ESPERA",
             });
 
-            // Intento dinámico leyendo lo que venga de la DB
-            const tInfo = registroDb.asistencia?.turno || objetoTurnoAux;
+            const tInfo = registroDb.asistencia?.turno;
             setCurrentShift({
-              nombre: tInfo?.nombre ?? "Turno Operativo",
-              start: tInfo?.hora_ingreso?.substring(0, 5) ?? "--:--",
-              end: tInfo?.hora_salida?.substring(0, 5) ?? "--:--",
+              nombre: tInfo?.nombre                        ?? "Turno Operativo",
+              start:  tInfo?.hora_ingreso?.substring(0, 5) ?? "--:--",
+              end:    tInfo?.hora_salida?.substring(0, 5)  ?? "--:--",
             });
-
-            // Evaluamos si el backend ya manda campos de colación
             setLunch({
-              startTime: tInfo?.hora_inicio_colacion?.substring(0, 5) || tInfo?.inicio_colacion?.substring(0, 5) || "13:00",
-              endTime: tInfo?.hora_fin_colacion?.substring(0, 5) || tInfo?.fin_colacion?.substring(0, 5) || "14:00"
+              startTime: tInfo?.hora_inicio_colacion?.substring(0, 5) || "13:00",
+              endTime:   tInfo?.hora_fin_colacion?.substring(0, 5)    || "14:00",
             });
 
           } else {
-            // Estructura limpia de fallback si no hay marcas creadas todavía
-            setCurrentRecord({ checkIn: "--", checkOut: "Pendiente", estado: "EN_ESPERA" });
+            // FALLBACK: sin registro, usamos datos del turno recuperado
+            setCurrentRecord({ checkIn: "--", checkOut: "Pendiente", estado: "FUERA_DE_HORARIO" });
             setCurrentShift({
-              nombre: objetoTurnoAux?.nombre ?? "Turno General",
-              start: objetoTurnoAux?.hora_ingreso?.substring(0, 5) ?? "--:--",
-              end: objetoTurnoAux?.hora_salida?.substring(0, 5) ?? "--:--",
+              nombre: objetoTurnoAux?.nombre                        ?? "Turno General",
+              start:  objetoTurnoAux?.hora_ingreso?.substring(0, 5) ?? "--:--",
+              end:    objetoTurnoAux?.hora_salida?.substring(0, 5)  ?? "--:--",
             });
-            setLunch({ startTime: "13:00", endTime: "14:00" });
+            setLunch({
+              startTime: objetoTurnoAux?.inicio_colacion?.substring(0, 5) || "13:00",
+              endTime:   objetoTurnoAux?.fin_colacion?.substring(0, 5)    || "14:00",
+            });
           }
-        } else {
-          setCurrentRecord(null);
-          setCurrentShift(null);
         }
 
         setCorrections([]);
-
       } catch (err) {
         console.error("[Asistencia] Error crítico:", err);
       } finally {
@@ -121,38 +108,63 @@ export default function EmployeeAsistencia() {
     cargarDatos();
   }, [activeShiftId]);
 
-  // =====================================================================
-  // ACCIONES DE MARCAJE
-  // =====================================================================
-  const ejecutarMarcaje = async (tipoMarca) => {
-    try {
-      if (!activeShiftId) return alert("Error: No hay un turno asociado para efectuar la marca.");
-      
-      const res = await AsistenciaService.marcar({
-        tipo: tipoMarca,
-        id_turno: Number(activeShiftId)
-      });
+  function abrirScanner(tipo) {
 
-      if (res?.success) {
-        alert(`✅ ${tipoMarca === "ENTRADA" ? "Ingreso" : "Salida"} registrada correctamente.`);
-        window.location.reload();
-      } else {
-        alert(`❌ Error en marcaje: ${res?.message || "Operación denegada por reglas de geofencing o tiempo."}`);
-      }
-    } catch (err) {
-      console.error(`[Asistencia] Error registrando ${tipoMarca}:`, err);
+    setTipoMarcaje(tipo);
+
+    setScannerOpen(true);
+
+}
+
+async function registrarQR(datosQR) {
+
+    try {
+
+        const res = await AsistenciaService.marcar({
+
+            token: datosQR.token,
+
+            latitud_emp: datosQR.latitud,
+
+            longitud_emp: datosQR.longitud,
+
+            tipo: tipoMarcaje
+
+        });
+
+        if (res?.success) {
+
+            alert("✅ " + (res.mensaje ?? "Asistencia registrada."));
+
+            setScannerOpen(false);
+
+            window.location.reload();
+
+            return;
+
+        }
+
+        throw new Error(res?.message || "No fue posible registrar la asistencia.");
+
     }
-  };
+
+    catch (err) {
+
+        alert(err.message);
+
+    }
+
+}
 
   if (loading) {
     return <div className="p-4 text-center font-medium">Sincronizando registros biométricos...</div>;
   }
 
-  const estadoActual = currentRecord?.estado ?? "SINFOTO";
-  const tieneIngreso = currentRecord?.checkIn && currentRecord.checkIn !== "--";
-  const tieneSalida = currentRecord?.checkOut && currentRecord.checkOut !== "Pendiente";
-
-  const esEstadoBloqueado = ["RETIRADO", "FALTA_INJUSTIFICADA", "FALTA_JUSTIFICADA", "SINFOTO"].includes(estadoActual);
+  const estadoActual      = currentRecord?.estado ?? "FUERA_DE_HORARIO";
+  const tieneIngreso      = currentRecord?.checkIn  && currentRecord.checkIn  !== "--";
+  const tieneSalida       = currentRecord?.checkOut && currentRecord.checkOut !== "Pendiente";
+  const esEstadoBloqueado = ["RETIRADO", "FALTA_INJUSTIFICADA", "FALTA_JUSTIFICADA", "FUERA_DE_HORARIO"].includes(estadoActual)
+                          || apiCode === "FIN_DE_SEMANA";
 
   return (
     <div className="p-4 space-y-4 pb-24">
@@ -174,28 +186,48 @@ export default function EmployeeAsistencia() {
         </p>
       </Card>
 
-      {/* ALERTA EN CASO DE NO ESTAR EN SU TURNO */}
-      {esEstadoBloqueado && (
-        <div className={`p-4 rounded-xl text-sm font-medium border ${
-          estadoActual === "FALTA_INJUSTIFICADA" ? "bg-red-50 border-red-200 text-red-800" :
-          estadoActual === "FALTA_JUSTIFICADA" ? "bg-amber-50 border-amber-200 text-amber-800" :
-          estadoActual === "RETIRADO" ? "bg-blue-50 border-blue-200 text-blue-800" :
-          "bg-gray-50 border-gray-200 text-gray-500"
-        }`}>
-          <i className="fas fa-circle-info mr-2"></i>
-          {estadoActual === "FALTA_INJUSTIFICADA" && "Jornada Cerrada por Inasistencia Automática (Tolerancia Excedida)."}
-          {estadoActual === "FALTA_JUSTIFICADA" && "Día Libre / Ausencia Justificada autorizada por la empresa."}
-          {estadoActual === "RETIRADO" && "Has completado tu turno de hoy. Tu registro está cerrado con éxito."}
-          {estadoActual === "SINFOTO" && "No registras ningún turno activo programado para el día de hoy."}
+      {/* ALERTAS DE CONTROL */}
+      {apiCode === "FIN_DE_SEMANA" ? (
+        <div className="p-4 rounded-xl text-sm font-medium border bg-blue-50 border-blue-200 text-blue-800">
+          <i className="fas fa-umbrella-beach mr-2"></i>
+          ¡Disfruta tu fin de semana! No registras mallas de turnos para el día de hoy.
         </div>
+      ) : estadoActual === "FUERA_DE_HORARIO" || apiCode === "SIN_TURNO_ASIGNADO" ? (
+        <div className="p-4 rounded-xl text-sm font-medium border bg-gray-50 border-gray-200 text-gray-600 shadow-sm">
+          <div className="flex items-start gap-2">
+            <i className="fas fa-clock mt-0.5 text-gray-400"></i>
+            <div>
+              <p className="font-semibold text-gray-800">No tienes un turno activo en este momento</p>
+              <p className="text-xs opacity-80 mt-1">
+                Tu jornada regular se reactivará el siguiente día hábil a las{" "}
+                <span className="font-bold text-violet-700">{currentShift?.start ?? "--:--"} hrs</span>.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        ["FALTA_INJUSTIFICADA", "FALTA_JUSTIFICADA", "RETIRADO"].includes(estadoActual) && (
+          <div className={`p-4 rounded-xl text-sm font-medium border ${
+            estadoActual === "FALTA_INJUSTIFICADA" ? "bg-red-50 border-red-200 text-red-800" :
+            estadoActual === "FALTA_JUSTIFICADA"   ? "bg-amber-50 border-amber-200 text-amber-800" :
+                                                     "bg-green-50 border-green-200 text-green-800"
+          }`}>
+            <i className="fas fa-circle-info mr-2"></i>
+            {estadoActual === "FALTA_INJUSTIFICADA" && "Jornada Cerrada por Inasistencia Automática (Tolerancia Excedida)."}
+            {estadoActual === "FALTA_JUSTIFICADA"   && "Día Libre / Ausencia Justificada autorizada por la empresa."}
+            {estadoActual === "RETIRADO"            && "Has completado tu turno de hoy. Tu registro está cerrado con éxito."}
+          </div>
+        )
       )}
 
       {/* TURNO ASIGNADO */}
       {activeShiftId && (
         <Card title="Horario de Turno Asignado" icon="fa-business-time">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white"
-              style={{ background: "linear-gradient(135deg,#7c3aed,#3b82f6)" }}>
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-white"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#3b82f6)" }}
+            >
               <i className="fas fa-business-time text-xl"></i>
             </div>
             <div>
@@ -204,25 +236,25 @@ export default function EmployeeAsistencia() {
               </div>
               <div className="text-xs opacity-70 mb-1">{currentShift?.nombre ?? "Ventana Laboral"}</div>
               <div className={`mt-1 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                estadoActual === "PRESENTE" ? "bg-green-100 text-green-700" :
-                estadoActual === "ATRASO" ? "bg-amber-100 text-amber-700" :
+                estadoActual === "PRESENTE"  ? "bg-green-100 text-green-700"  :
+                estadoActual === "ATRASO"    ? "bg-amber-100 text-amber-700"  :
                 estadoActual === "EN_ESPERA" ? "bg-violet-100 text-violet-700" :
-                "bg-gray-100 text-gray-700"
+                                               "bg-gray-100 text-gray-700"
               }`}>
                 <i className="fas fa-circle text-[8px]"></i>
-                {estadoActual}
+                {apiCode === "ESPERANDO_INGRESO" ? "EN ESPERA" : estadoActual.replace(/_/g, " ")}
               </div>
             </div>
           </div>
         </Card>
       )}
 
-      {/* REGISTRO DE ASISTENCIA */}
+      {/* REGISTRO QR */}
       {activeShiftId && (
         <Card title="Escanear Código QR de Punto de Control" icon="fa-qrcode">
           <div className="space-y-3">
             <button
-              onClick={() => ejecutarMarcaje("ENTRADA")}
+              onClick={() => abrirScanner("ENTRADA")}
               disabled={tieneIngreso || esEstadoBloqueado}
               className={`w-full rounded-xl py-4 text-white font-semibold transition-all shadow-sm text-sm ${
                 tieneIngreso || esEstadoBloqueado
@@ -246,7 +278,7 @@ export default function EmployeeAsistencia() {
               style={tieneIngreso && !tieneSalida && !esEstadoBloqueado ? { background: "linear-gradient(135deg,#0ea5e9,#3b82f6)" } : {}}
             >
               <i className="fas fa-sign-out-alt mr-2"></i>
-              {tieneSalida ? "Salida Registrada" : esEstadoBloqueado || !tieneIngreso ? "Salida Inhabilitada" : "Escanear QR Salida"}
+              {tieneSalida ? "Salida Registrada" : (esEstadoBloqueado || !tieneIngreso) ? "Salida Inhabilitada" : "Escanear QR Salida"}
             </button>
           </div>
         </Card>
@@ -262,7 +294,7 @@ export default function EmployeeAsistencia() {
       </Card>
 
       {/* HISTORIAL DIARIO */}
-      {activeShiftId && (
+      {activeShiftId && estadoActual !== "FUERA_DE_HORARIO" && (
         <Card title="Marcas Registradas de la Jornada" icon="fa-clock">
           <div className="grid grid-cols-2 gap-3">
             <div className="p-4 rounded-2xl border bg-white/40">
@@ -271,10 +303,9 @@ export default function EmployeeAsistencia() {
                 {currentRecord?.checkIn ?? "--:--"}
               </div>
             </div>
-
             <div className="p-4 rounded-2xl border bg-white/40">
               <div className="text-xs opacity-60 mb-1">Hora Salida</div>
-              <div className={`font-bold text-base ${currentRecord?.checkOut === "Pendiente" ? "text-amber-500 font-medium" : "text-gray-800"}`}>
+              <div className={`font-bold text-base ${currentRecord?.checkOut === "Pendiente" ? "text-amber-500" : "text-gray-800"}`}>
                 {currentRecord?.checkOut ?? "Pendiente"}
               </div>
             </div>
@@ -292,7 +323,6 @@ export default function EmployeeAsistencia() {
           <i className="fas fa-file-contract mr-2"></i>
           Ingresar Justificativo / Apelación
         </button>
-
         <div className="space-y-3">
           {corrections.length === 0 && (
             <div className="text-xs text-center opacity-50 py-2">
@@ -301,6 +331,20 @@ export default function EmployeeAsistencia() {
           )}
         </div>
       </Card>
+
+      <QRScannerModal
+
+    open={scannerOpen}
+
+    onClose={() => {
+
+        setScannerOpen(false);
+
+    }}
+
+    onSuccess={registrarQR}
+
+/>
     </div>
   );
 }

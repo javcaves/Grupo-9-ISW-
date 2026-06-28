@@ -134,12 +134,16 @@ export const listarTurnos = async () => {
 
 export const actualizarTurno = async (id, data) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
-
     const turno = await turnoRepo.findOne({ where: { id_turno: parseInt(id, 10) } });
     if (!turno) return [null, "No se encontró el turno en el sistema."];
 
+    // Actualización de campos
     if (data.descripcion !== undefined) turno.descripcion = data.descripcion;
     if (data.activo !== undefined) turno.activo = data.activo;
+    
+    // 🌟 Nueva lógica para actualizar horarios
+    if (data.hora_ingreso) turno.hora_ingreso = data.hora_ingreso;
+    if (data.hora_salida) turno.hora_salida = data.hora_salida;
 
     const turnoActualizado = await turnoRepo.save(turno);
     return [turnoActualizado, null];

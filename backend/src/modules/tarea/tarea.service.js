@@ -98,21 +98,55 @@ export async function obtenerMisTareas(idEmpleado) {
     const asignaciones = await asignacionRepository.find({
         where: {
             empleado: {
-                id_usuario: idEmpleado
-            }
+                id_usuario: idEmpleado,
+            },
         },
         relations: {
             tarea: {
-                actividad: true // 👈 El doble salto relacional se mantiene intacto
+                actividad: true,
+                asignaciones: {
+                    empleado: true,
+                },
             },
-            asignador: true // Opcional: añade contexto de quién generó la asignación
+            asignador: true,
         },
         order: {
-            hora_asignacion: "DESC" // Muestra primero lo último asignado
-        }
+            hora_asignacion: "DESC",
+        },
     });
 
-    // Devolvemos todo el array con los objetos 'AsignacionTarea' raíz.
-    // Esto te permitirá tener en tu frontend tanto los datos del momento de asignación como los de la tarea misma.
-    return asignaciones;
+    // Transformamos la respuesta para no exponer información sensible
+    // de otros trabajadores.
+    return asignaciones.map(asignacion => ({
+
+        id_asignacion: asignacion.id_asignacion,
+        tipo_asignacion: asignacion.tipo_asignacion,
+        hora_asignacion: asignacion.hora_asignacion,
+
+        asignador: asignacion.asignador && {
+            id_usuario: asignacion.asignador.id_usuario,
+            nombre: asignacion.asignador.nombre,
+            apellido: asignacion.asignador.apellido,
+            rol: asignacion.asignador.rol,
+        },
+
+        tarea: {
+            id_tarea: asignacion.tarea.id_tarea,
+            fecha: asignacion.tarea.fecha,
+            hora: asignacion.tarea.hora,
+            estado: asignacion.tarea.estado,
+            comentario: asignacion.tarea.comentario,
+
+            actividad: asignacion.tarea.actividad,
+
+            equipo: asignacion.tarea.asignaciones.map(companero => ({
+                id_usuario: companero.empleado.id_usuario,
+                nombre: companero.empleado.nombre,
+                apellido: companero.empleado.apellido,
+                rol: companero.empleado.rol,
+            })),
+        },
+
+    }));
+
 }

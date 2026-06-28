@@ -3,7 +3,7 @@
 import Joi from "joi";
 
 // Patrón HH:MM para validar horas
-const horaPattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const horaPattern = /^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/;
 
 // ==================== TURNO ====================
 
@@ -27,8 +27,10 @@ export const turnoCreateValidation = Joi.object({
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
 
 export const turnoUpdateValidation = Joi.object({
-    descripcion: Joi.string().max(255).optional().allow(null, ""),
-    activo:      Joi.boolean().optional(),
+    descripcion:  Joi.string().max(255).optional().allow(null, ""),
+    activo:       Joi.boolean().optional(),
+    hora_ingreso: Joi.string().pattern(horaPattern).optional(),
+    hora_salida:  Joi.string().pattern(horaPattern).optional(),
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
 
 // ==================== TURNO_EMPLEADO ====================

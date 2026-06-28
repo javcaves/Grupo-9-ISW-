@@ -24,6 +24,7 @@ export const AsignacionTarea =new EntitySchema({
             target: "ProgramarTarea",
             type: "many-to-one",
             joinColumn: { name: "id_tarea" },
+            inverseSide: "asignaciones",
         },
         empleado: {
             target: "Usuario",
