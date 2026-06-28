@@ -38,7 +38,7 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, emplea
               className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="">Seleccione una tarea...</option>
               {tareasPendientes?.map(tarea => (
-                <option key={tarea.id} value={tarea.id}>{tarea.nombre_actividad} ({tarea.hora})</option>
+                <option key={tarea.id_tarea} value={tarea.id_tarea}>{tarea.actividad?.descripcion_esp || "Sin nombre"} | {tarea.fecha} - {tarea.hora}</option>
               ))}
             </select>
           </div>
@@ -49,7 +49,7 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, emplea
               className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="">Selecciona empleado...</option>
               {empleados?.map(emp => (
-                <option key={emp.id} value={emp.id}>{emp.nombre} ({emp.certificacion || 'General'})</option>
+                <option key={emp.id_usuario} value={emp.id_usuario}>{emp.nombre} {emp.apellido }</option>
               ))}
             </select>
           </div>

@@ -37,7 +37,7 @@ export default function ProgramarTarea({ isOpen, onClose, actividades, actualiza
             <select name="id_actividad" value={formData.id_actividad} onChange={handleChange} required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="">Selecciona actividad...</option>
-              {actividades?.map(act => <option key={act.id} value={act.id}>{act.nombre}</option>)}
+              {actividades?.map(act => <option key={act.id_act} value={act.id_act}>{act.descripcion_esp}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-4">

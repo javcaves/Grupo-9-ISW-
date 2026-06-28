@@ -25,19 +25,43 @@ export default function ProyectosView({ activeTab }) {
 
   useEffect(() => {
     const cargarDatos = async () => {
+      // 1. Cargar Categorías
       try {
-        // Consulta la base de datos
-        const categorias = await CategoriaService.listar();
-        const actividades = await ActividadesService.listar();
-        const tareas = await TareaService.listar(); 
-        const empleados = await UsuarioService.listar(); 
-
-        setListaCategorias(categorias);
-        setListaActividades(actividades);
-        setListaTareasPendientes(tareas);
-        setListaEmpleados(empleados);
+        const resCat = await CategoriaService.listar();
+        setListaCategorias(resCat.data || resCat || []);
       } catch (error) {
-        console.error("Error cargando los datos iniciales desde la BD:", error);
+        console.error("Fallo al cargar Categorías:", error);
+      }
+
+      // 2. Cargar Actividades
+      try {
+        const resAct = await ActividadesService.listar();
+        const dataActividades = resAct.data || resAct || [];
+        setListaActividades(dataActividades);
+        // INSPECCIONA ESTO EN TU CONSOLA (F12)
+        console.log("ESTRUCTURA DE ACTIVIDADES:", dataActividades); 
+      } catch (error) {
+        console.error("Fallo al cargar Actividades:", error);
+      }
+
+      // 3. Cargar Tareas Pendientes
+      try {
+        const resTar = await TareaService.listar();
+        const dataTareas = resTar.data || resTar || [];
+        setListaTareasPendientes(dataTareas);
+        console.log("ESTRUCTURA DE TAREAS:", dataTareas);
+      } catch (error) {
+        console.error("Fallo al cargar Tareas:", error);
+      }
+
+      // 4. Cargar Empleados
+      try {
+        const resEmp = await UsuarioService.listar();
+        const dataEmpleados = resEmp.data || resEmp || [];
+        setListaEmpleados(dataEmpleados);
+        console.log("ESTRUCTURA DE EMPLEADOS:", dataEmpleados);
+      } catch (error) {
+        console.error("Fallo al cargar Empleados:", error);
       }
     };
 
@@ -114,7 +138,7 @@ export default function ProyectosView({ activeTab }) {
       <AsignarTarea 
         isOpen={abrirAsignar} 
         onClose={() => setAbrirAsignar(false)}
-        tareasPendientes={[]}
+        tareasPendientes={listaTareasPendientes}
         empleados={listaEmpleados}
         actualizarLista={() => console.log('Actualizar tabla tras asignar')}
       />
