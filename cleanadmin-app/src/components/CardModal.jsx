@@ -1,31 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 
-export default function TableModal({
+export default function CardModal({
     isOpen,
     onClose,
     mode, //edit, delete, ver
-    item,
+    data,
     fields = [],
     onSave,
     onDelete,
     isLoading = false,
-    title= "Gestion de registro"
-}){
+    title= "Gestion de tarjeta",
+    subtitle = "",
+    icon = null
+}) {
     const [formData, setFormData] = useState({});
     const [errors, setErrors] = useState({});
-
-    //cargar data cuando se abre el modal
     useEffect(()=>{
-        if (item && isOpen) {
+        if (data && isOpen) {
             const initialData = {};
             fields.forEach(field => {
-                initialData[field.key] = item[field.key] || '';
+                initialData[field.key] = data[field.key] || '';
+            });
+            setFormData(initialData);
+            setErrors({});
+        } else if(!data && isOpen && mode === 'add'){
+            //limpiar form para rellenar
+            const emptyData ={};
+            fields.forEach(field => {
+                emptyData[field.key] = '';
             });
             setFormData(initialData);
             setErrors({});
         }
-    }, [item, isOpen, fields]);
+    }, [data, isOpen, fields, mode]);
 
     const handleChange = (key, value) => {
         setFormData(prev => ({...prev, [key]: value}));
@@ -34,7 +42,7 @@ export default function TableModal({
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = () =>{
         const newErrors = {};
         fields.forEach(field => {
             if(field.required && !formData[field.key]?.trim()){
@@ -54,7 +62,7 @@ export default function TableModal({
         onSave(formData);
     };
 
-    const renderField = (field) => {
+    const renderField = (field) =>{
         const value = formData[field.key] || '';
         const error = errors[field.key];
         const baseClasses = `
@@ -88,6 +96,7 @@ export default function TableModal({
                 </select>
             );
         }
+
         if (field === 'textarea'){
             return(
                 <texarea
@@ -97,6 +106,28 @@ export default function TableModal({
                 className={baseClasses}
                 placeholder={field.placeholder}
                 />
+            );
+        }
+
+        if(field.type === 'checkbox'){
+            return(
+                <div className="flex items-center gap-3">
+                    <input
+                        type= 'checkbox'
+                        checked={value === true|| value === 'true'}
+                        onChange={(e) => handleChange(field.key, e.target.checked)}
+                        className="
+                            w-5 h-5
+                            rounded
+                            border-slate-300
+                            text-violet-600
+                            focus:ring-violet-500
+                            focus:ring-offset-0
+                            transition-all
+                        "
+                    />
+                    <span className="text-sm text-slate-600">{field.description}</span>
+                </div>
             );
         }
 
@@ -111,7 +142,6 @@ export default function TableModal({
         );
     };
 
-    //vista eliminacion
     if(mode === 'delete'){
         return(
             <Modal
@@ -135,22 +165,22 @@ export default function TableModal({
                         <i className="fas fa-trash-alt text-2xl text-red-600"></i>
                     </div>
                     <p className="text-slate-700 text-base">
-                        ¿estas seguro de eliminar este registro?
+                        ¿estas seguro de eliminar este elemento?
                     </p>
-                    {item && (
+                    {data && (
                         <p className="text-slate-900 font-semibold text-lg mt-2">
-                            "{item.nombre || item.name || 'Sin nombre'}"
+                            "{data.nombre || data.name || 'sin nombre'}"
                         </p>
                     )}
                     <p className="text-slate-500 text-sm mt-4">
-                        Esta acción no se puede deshacer.
-                    </p>
+                        esta accion no se puede deshacer
+                     </p>
                 </div>
-            </Modal>    
+            </Modal>
         );
     }
 
-    if(mode === 'edit'){
+    if(mode === 'edit' || mode === 'add'){
         return(
             <Modal
                 isOpen={isOpen}
@@ -158,11 +188,14 @@ export default function TableModal({
                 title={title}
                 size="dm"
                 onConfirm={handleSubmit}
-                confirmText={isLoading? "guardando..." : "guardar cambios"}
+                confirmText={isLoading? "guardando..." : mode === 'add' ? "agregar" : "guardar cambios"}
                 cancelText="cancelar"
                 isLoading={isLoading}
             >
-               <div className="space-y-4 py-2">
+                {subtitle && (
+                    <p className="text-slate-500 text-sm mb-4 -mt-2">{subtitle}</p>
+                )}
+                <div className="space-y-4 py-2">
                     {fields.map(field => (
                         <div key={field.key}>
                             <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -181,27 +214,39 @@ export default function TableModal({
                         </div>
                     ))}
                </div>
-            </Modal>    
+            </Modal>
         );
     }
-
     //vista visualizacion
     return(
         <Modal
             isOpen={isOpen}
             onClose={onClose}
             title={title}
-            size="dm"
+            size="md"
             showFooter={false}
         >
-            <div className="space-y-3 py-2">
+            <div className="space-y-4 py-2">
+                {icon &&(
+                    <div className='flex justify center mb-4'> 
+                        <div className="
+                            w-16 h-16
+                            rounded-full
+                            bg-violet-100
+                            flex items-center justify-center
+                        "> 
+                            <i className={`fas ${icon} text-2xl text-violet-600`}></i>
+                        </div>
+                    </div>
+                )}
+
                 {fields.map(field =>(
-                    <div key={field.key} className="flex items-start gap-4">
+                    <div key={field.key} className="flex items-start gap-4 border-b border-slate-100 pb-3 last:border-0">
                         <span className="text-sm font-medium text-slate-500 w-1/3">
                             {field.label}
                         </span>
                         <span className="text-sm text-slate-900 w-2/3">
-                            {item?.[field.key] || '-'}
+                            {data?.[field.key] || '-'}
                         </span>
                     </div>
                 ))}
