@@ -357,3 +357,56 @@ export const obtenerMiHistorialService = async (id_usuario) => {
     }
 };
 
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NUEVO: Obtener asistencia de hoy controlando rangos de turno y tolerancia
+// ─────────────────────────────────────────────────────────────────────────────
+export async function obtenerMiAsistenciaActual(idEmpleado, idTurno) {
+    try {
+        // 1. Obtener la metadata horaria del turno asignado
+        const turno = await turnoRepo.findOne({ where: { id_turno: idTurno, activo: true } });
+        if (!turno) {
+            console.warn(`[Asistencia] Turno ${idTurno} no existe o está inactivo.`);
+            return { success: true, data: null };
+        }
+
+        // 2. Establecer el rango de captura del día de hoy combinando fechas con el turno
+        const hoyStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+        const fechaIngreso = new Date(`${hoyStr}T${turno.hora_ingreso}`);
+        const fechaSalida = new Date(`${hoyStr}T${turno.hora_salida}`);
+
+        // 3. Aplicar holgura de 60 minutos (para capturar marcas tempranas o tardías del turno)
+        const MINUTOS_HOLGURA = 60;
+        const inicioRango = new Date(fechaIngreso.getTime() - MINUTOS_HOLGURA * 60000);
+        const finRango = new Date(fechaSalida.getTime() + MINUTOS_HOLGURA * 60000);
+
+        // 4. Buscar en la base de datos mapeando las relaciones correctas del snapshot
+        const registro = await asistenciaEmpleadoRepo
+            .createQueryBuilder("ae")
+            .leftJoinAndSelect("ae.asistencia", "asistencia")
+            .leftJoinAndSelect("asistencia.turno", "turno")
+            .where("ae.id_empleado = :idEmpleado", { idEmpleado })
+            .andWhere("asistencia.id_turno = :idTurno", { idTurno })
+            .andWhere("asistencia.fecha = :hoyStr", { hoyStr }) 
+            // Opcional: Descomentar si requieres validar estrictamente el timestamp exacto de la marca:
+            // .andWhere("asistencia.created_at BETWEEN :inicioRango AND :finRango", { inicioRango, finRango })
+            .andWhere("ae.activo = true")
+            .getOne();
+
+        // 5. Devolución limpia. Si no se encuentra registro, retorna null (no genera un HTTP 500)
+        return {
+            success: true,
+            data: registro ? registro : null
+        };
+
+    } catch (error) {
+        console.error("🔥 Error interno controlado en obtenerMiAsistenciaActual:", error);
+        // Retornamos un objeto de falla controlado para evitar el colapso del cliente
+        return { 
+            success: false, 
+            data: null, 
+            error: error.message 
+        };
+    }
+}

@@ -29,10 +29,13 @@ router.put("/:id_asistencia/empleado/:id_empleado/historial", authenticateJwt, c
 
 // ==================== ENDPOINTS DE EMPLEADOS ====================
 
+// NUEVO ORDEN: Primero la ruta estática fija para evitar colisiones analíticas en Express
+router.get("/mi-asistencia", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl.obtenerMiAsistenciaActual);
+
 // RF-ASISTENCIA-6: Auto-marcaje de asistencia por Token/QR con Geolocalización
 router.post("/marcar", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl.registrarAutoAsistenciaEmpleado);
 
-// RF-ASISTENCIA-7: Ver historial personal del empleado
+// RF-ASISTENCIA-7: Ver historial personal del empleado (Ruta con parámetro dinámico al final)
 router.get("/proyecto/:id_proyecto/mis-asistencias", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl.obtenerMisAsistenciasPorProyecto);
 
 export default router;

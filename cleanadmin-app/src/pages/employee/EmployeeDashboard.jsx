@@ -25,14 +25,16 @@ export default function EmployeeDashboard() {
 
         console.log("🚀 Cargando dashboard...");
 
-        // 1. Usuario
+        // =====================================================================
+        // 1. USUARIO
+        // =====================================================================
         const me = await AuthService.me();
         console.log("👤 Usuario:", me);
 
         const user = me?.user;
 
         if (!user) {
-          console.warn("No hay usuario");
+          console.warn("⚠️ No hay usuario autenticado.");
           return;
         }
 
@@ -54,33 +56,33 @@ export default function EmployeeDashboard() {
 
         setEmployee(empleado);
 
-        // 2. Proyecto + tareas en paralelo
+        // =====================================================================
+        // 2. PROYECTO + TAREAS EN PARALELO
+        // =====================================================================
+        console.log("📂 Solicitando proyectos y tareas en paralelo...");
         const [proyectosRes, tareasRes] = await Promise.all([
           ProyectoService.listar().catch(err => {
             console.error("❌ Error proyectos:", err);
-            return null;
+            return [];
           }),
-          TareaService.listar().catch(err => {
+          TareaService.misTareas().catch(err => {
             console.error("❌ Error tareas:", err);
-            return null;
+            return { data: [] };
           })
         ]);
 
-        console.log("📁 Proyectos:", proyectosRes);
-        console.log("📌 Tareas:", tareasRes);
-
-        const proyectos = proyectosRes?.data ?? [];
+        // Adaptación flexible si la API devuelve el array directo o envuelto en un .data
+        const proyectos = Array.isArray(proyectosRes) ? proyectosRes : (proyectosRes?.data ?? []);
         const tareas = tareasRes?.data ?? [];
 
-        const proyecto = proyectos[0] ?? null;
+        // Definimos una variable de alcance local firme para evitar desfases de estado asíncronos
+        const proyectoActual = proyectos[0] ?? null;
+        console.log("🏢 Proyecto Detectado Localmente:", proyectoActual);
+        setNextProject(proyectoActual);
 
-        setNextProject(proyecto);
-
-        // tareas del usuario (fallback simple)
-        const tareasUsuario = tareas.filter(t => t.id_usuario === user.id_usuario);
-
-        const total = tareasUsuario.length;
-        const completadas = tareasUsuario.filter(t => t.estado === "COMPLETADA").length;
+        // Procesar e integrar la métrica de tareas
+        const total = tareas.length;
+        const completadas = tareas.filter(t => t.estado === "FINALIZADA").length;
 
         setTasks({
           assigned: total,
@@ -88,55 +90,70 @@ export default function EmployeeDashboard() {
           progress: total === 0 ? 0 : Math.round((completadas / total) * 100)
         });
 
-        // 3. Turno
-        if (proyecto?.id) {
+        // =====================================================================
+        // 3. TURNO
+        // =====================================================================
+        let turnoActual = null;
 
-          const turnoRes = await TurnoService.listarPorProyecto(proyecto.id)
+        if (proyectoActual?.id_proyecto) {
+          console.log(`⏱️ Buscando turnos para el proyecto ID: ${proyectoActual.id_proyecto}`);
+          
+          const turnoRes = await TurnoService
+            .listarPorProyecto(proyectoActual.id_proyecto)
             .catch(err => {
               console.error("❌ Error turnos:", err);
               return null;
             });
 
-          console.log("⏰ Turnos:", turnoRes);
-
-          const turno = turnoRes?.data?.[0];
-
-          setShift(turno ?? null);
+          const listaTurnos = Array.isArray(turnoRes) ? turnoRes : (turnoRes?.data ?? []);
+          turnoActual = listaTurnos[0] ?? null;
+          
+          console.log("⏰ Turno Detectado Localmente:", turnoActual);
+          setShift(turnoActual);
+        } else {
+          console.warn("⚠️ No se procede a buscar turnos: El empleado no registra proyectos activos.");
+          setShift(null);
         }
 
-        // 4. Asistencia (mock lógico por ahora)
-        if (shift?.id_turno) {
-
-          const asistencia = await AsistenciaService.obtenerActual(shift.id_turno)
+        // =====================================================================
+        // 4. ASISTENCIA
+        // =====================================================================
+        if (turnoActual?.id_turno) {
+          console.log(`📍 Solicitando asistencia para el turno ID: ${turnoActual.id_turno}`);
+          
+          const asistenciaRes = await AsistenciaService
+            .obtenerMiAsistenciaActual(turnoActual.id_turno) // <-- Inyección segura del parámetro corregido
             .catch(err => {
-              console.error("❌ Error asistencia:", err);
+              console.error("❌ Error de comunicación en asistencia:", err);
               return null;
             });
+            
+          console.log("📍 Respuesta Asistencia del Servidor:", asistenciaRes);
 
-          console.log("📍 Asistencia:", asistencia);
-
-          setToday({
-            attendanceRegistered: !!asistencia?.data,
-            checkIn: asistencia?.data?.check_in ?? null
-          });
+          if (asistenciaRes?.success && asistenciaRes?.data) {
+            setToday({
+              attendanceRegistered: true,
+              checkIn: asistenciaRes.data.hora_ingreso ?? "Registrada"
+            });
+          } else {
+            setToday({
+              attendanceRegistered: false,
+              checkIn: null
+            });
+          }
 
         } else {
-
+          console.warn("❌ No se consulta asistencia: No se identificó ningún turno activo para hoy.");
           setToday({
             attendanceRegistered: false,
             checkIn: null
           });
-
         }
 
       } catch (error) {
-
-        console.error("🔥 Error general dashboard:", error);
-
+        console.error("🔥 Error general en la carga secuencial del dashboard:", error);
       } finally {
-
         setLoading(false);
-
       }
 
     }
@@ -176,7 +193,7 @@ export default function EmployeeDashboard() {
 
               <i className="fas fa-clock"></i>
 
-              {shift?.tipo ?? "Sin turno"} · {shift?.hora_inicio ?? "--"} - {shift?.hora_fin ?? "--"}
+              {shift?.nombre ?? "Sin turno"} · {shift?.hora_ingreso ?? "--"} - {shift?.hora_salida ?? "--"}
 
             </div>
 
@@ -201,7 +218,7 @@ export default function EmployeeDashboard() {
           <div className="rounded-2xl p-4 bg-white/50 border">
             <div className="text-xs mb-1">Entrada</div>
             <div className="font-bold">
-              {today?.checkIn ?? "--"}
+              {today?.checkIn ?? "No registrada"}
             </div>
           </div>
 
@@ -246,7 +263,7 @@ export default function EmployeeDashboard() {
           <div>
 
             <div className="font-semibold">
-              {nextProject?.nombre ?? "Sin proyecto"}
+              {nextProject?.nombre_proy ?? "Sin proyecto"}
             </div>
 
             <div className="text-sm opacity-70">
