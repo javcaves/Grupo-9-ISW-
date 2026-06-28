@@ -76,3 +76,29 @@ export const cancelar = async (req, res) => {
         return handleSuccess(res, 200, "Operación exitosa", resultado);
     } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
 };
+
+// Mis Tareas
+export async function obtenerMisTareas(req, res) {
+
+  try {
+
+    const idEmpleado = req.user.id_usuario;
+
+    const tareas = await TareaService.obtenerMisTareas(idEmpleado);
+
+    res.status(200).json({
+      success: true,
+      message: "Tareas del empleado obtenidas",
+      data: tareas
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+
+  }
+
+}

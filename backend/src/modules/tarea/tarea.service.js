@@ -78,3 +78,32 @@ export const cancelarTarea = async (id, data) => {
 
     return [await tareaRepo.save(tarea), null];
 };
+
+// ----- Mis Tareas -----
+export async function obtenerMisTareas(idEmpleado) {
+
+  const asignacionRepository = AppDataSource.getRepository("AsignacionTarea");
+
+  const asignaciones = await asignacionRepository.find({
+
+    where: {
+      empleado: {
+        id_usuario: idEmpleado
+      }
+    },
+
+    relations: {
+      tarea: {
+        actividad: true
+      }
+    },
+
+    order: {
+      hora_asignacion: "DESC"
+    }
+
+  });
+
+  return asignaciones.map(a => a.tarea);
+
+}

@@ -19,6 +19,11 @@ export const TareaService = {
 
   },
 
+  async misTareas() {
+
+    return await api.get(`${URL}/mis-tareas`);
+
+  },
   /**
    * Obtiene una tarea por su ID.
    */
