@@ -83,7 +83,7 @@ export const AsistenciaService = {
 
   /**
    * Obtener mi historial de asistencia del proyecto actual.
-   * GET /asistencia/mis-asistencias
+   * GET /asistencia/proyecto/:id_proyecto/mis-asistencias
    */
   async obtenerMiHistorial(idProyecto) {
       const response = await api.get(
@@ -91,6 +91,15 @@ export const AsistenciaService = {
       );
 
       return response.data ?? response;
-
-  }
+  },
+  
+  /**
+   * Obtener mi asistencia del día de hoy filtrada por la ventana horaria de mi turno.
+   * GET /asistencia/mi-asistencia?idTurno=X
+   */
+  async obtenerMiAsistenciaActual(idTurno) {
+      // Forzamos la interpolación directa en la URL para asegurar que viaje sin que dependa de la config de Axios
+      const response = await api.get(`/asistencia/mi-asistencia?id_turno=${idTurno}`);
+      return response.data ?? response;
+    }
 };

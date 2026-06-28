@@ -125,6 +125,56 @@ export const obtenerMisAsistenciasPorProyecto = async (req, res) => {
     }
 };
 
+export async function obtenerMiAsistenciaActual(req, res) {
+  try {
+    const idEmpleado = req.user?.id_usuario;
+    
+    // Capturamos ambas variantes posibles para máxima compatibilidad
+    const id_turno = req.query.id_turno || req.query.idTurno;
+
+    console.log("📥 [Backend] Query Params Recibidos:", req.query); // <-- Agrega este log para auditar en tu terminal
+    console.log("📥 [Backend] ID Turno procesado:", id_turno);
+
+    // Validación: Si no viene ninguna de las dos variantes
+    if (!id_turno) {
+      return res.status(200).json({
+        success: true,
+        message: "No se proporcionó un ID de turno para buscar.",
+        data: null
+      });
+    }
+
+    // Invocar al servicio pasando el ID unificado
+    const resultadoService = await AsistenciaService.obtenerMiAsistenciaActual(
+      idEmpleado,
+      Number(id_turno) 
+    );
+
+    if (!resultadoService.success) {
+      return res.status(400).json({
+        success: false,
+        message: resultadoService.error || "Error al procesar la asistencia."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: resultadoService.data 
+        ? "Asistencia actual obtenida con éxito." 
+        : "No se registran marcas de asistencia para este turno hoy.",
+      data: resultadoService.data
+    });
+
+  } catch (error) {
+    console.error("🔥 Error crítico en controlador obtenerMiAsistenciaActual:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Ocurrió un error inesperado en el servidor.",
+      error: error.message
+    });
+  }
+}
+
 export const registrarAutoAsistenciaEmpleado = async (req, res) => {
     try {
         const { error, value } = empleadoRegistrarValidation.validate(req.body);
