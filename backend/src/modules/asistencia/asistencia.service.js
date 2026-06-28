@@ -285,3 +285,75 @@ export const marcarAsistenciaEmpleadoService = async (id_empleado, data) => {
     }, null];
 };
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RF-ASISTENCIA-7: Obtener historial del empleado en su proyecto actual
+// ─────────────────────────────────────────────────────────────────────────────
+export const obtenerMiHistorialService = async (id_usuario) => {
+    try {
+
+        // Buscar el turno activo del empleado
+        const turnoEmpleado = await turnoEmpleadoRepo.findOne({
+            where: {
+                empleado: {
+                    id_usuario
+                },
+                activo: true
+            },
+            relations: {
+                turno: {
+                    proyecto: true
+                }
+            }
+        });
+
+        if (!turnoEmpleado) {
+            return [[], null];
+        }
+
+        const idProyecto = turnoEmpleado.turno.proyecto.id_proyecto;
+
+        // Obtener todas las asistencias del proyecto
+        const asistencias = await asistenciaRepo.find({
+            where: {
+                proyecto: {
+                    id_proyecto: idProyecto
+                },
+                activo: true
+            },
+            order: {
+                fecha: "DESC"
+            }
+        });
+
+        const resultado = [];
+
+        for (const asistencia of asistencias) {
+
+            const registro = await asistenciaEmpleadoRepo.findOne({
+                where: {
+                    id_asistencia: asistencia.id_asistencia,
+                    id_empleado: id_usuario,
+                    activo: true
+                }
+            });
+
+            if (!registro) continue;
+
+            resultado.push({
+                id_asistencia: asistencia.id_asistencia,
+                fecha: asistencia.fecha,
+                estado: registro.estado,
+                hora_ingreso: registro.hora_ingreso,
+                hora_egreso: registro.hora_egreso,
+                descripcion: registro.descripcion
+            });
+        }
+
+        return [resultado, null];
+
+    } catch (error) {
+        return [null, error.message];
+    }
+};
+

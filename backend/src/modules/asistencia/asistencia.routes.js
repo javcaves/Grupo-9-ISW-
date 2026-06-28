@@ -32,4 +32,7 @@ router.put("/:id_asistencia/empleado/:id_empleado/historial", authenticateJwt, c
 // RF-ASISTENCIA-6: Auto-marcaje de asistencia por Token/QR con Geolocalización
 router.post("/marcar", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl.registrarAutoAsistenciaEmpleado);
 
+// RF-ASISTENCIA-7: Ver historial personal del empleado
+router.get("/proyecto/:id_proyecto/mis-asistencias", authenticateJwt, checkRole(rolesEmpleado), AsistenciaCtrl.obtenerMisAsistenciasPorProyecto);
+
 export default router;

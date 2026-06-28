@@ -18,6 +18,7 @@ import ItemsRoutes from '../modules/items/items.routes.js';
 
 // MÓDULO DE PROYECTOS
 import ProyectoRoutes from '../modules/proyecto/proyecto.routes.js';
+import ProyectoUsuarioRoutes from '../modules/proyecto/proyecto_usuario.routes.js'
 
 // MÓDULO DE RECURSOS HUMANOS (RRHH)
 import UsuarioRoutes from '../modules/usuario/usuario.routes.js';

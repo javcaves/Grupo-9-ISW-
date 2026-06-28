@@ -80,4 +80,17 @@ export const AsistenciaService = {
     const response = await api.post("/asistencia/marcar", data);
     return response.data ?? response;
   },
+
+  /**
+   * Obtener mi historial de asistencia del proyecto actual.
+   * GET /asistencia/mis-asistencias
+   */
+  async obtenerMiHistorial(idProyecto) {
+      const response = await api.get(
+          `/asistencia/proyecto/${idProyecto}/mis-asistencias`
+      );
+
+      return response.data ?? response;
+
+  }
 };
