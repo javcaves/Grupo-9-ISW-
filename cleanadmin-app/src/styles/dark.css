@@ -1,27 +1,28 @@
 .theme-dark {
   --bg-color: radial-gradient(circle at top left, rgba(124,58,237,0.15), transparent 30%), 
-                radial-gradient(circle at bottom right, rgba(59,130,246,0.10), transparent 25%), 
-                linear-gradient(135deg, #020617, #0f172a, #1e293b);
- 
+              radial-gradient(circle at bottom right, rgba(59,130,246,0.10), transparent 25%), 
+              linear-gradient(135deg, #020617, #0f172a, #1e293b);
+
   /* Top bar */
   --text-primary: white;
   --text-secondary: white;
 
-  /* Variables de Color del Sidebar (Dark Mode) */
-  --sidebar-bg: rgba(15, 23, 42, 0.85); /* Fondo oscuro con transparencia */
-  --sidebar-border: rgba(255, 255, 255, 0.08); /* Borde sutil claro */
+  /* Variables de Color del Sidebar */
+  --sidebar-bg: rgba(15, 23, 42, 0.85);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-bg-brand: rgba(15, 23, 42, 0.90);
   --sidebar-text-primary: #f8fafc;
   --sidebar-text-secondary: #94a3b8;
   --sidebar-text-menu: #cbd5e1;
   --sidebar-text-label: #64748b;
-  
-  /* Gradientes (Ajustados para fondo oscuro) */
+
+  /* Gradientes */
   --sidebar-grad-overlay: linear-gradient(to bottom, rgba(124, 58, 237, 0.15), transparent);
   --sidebar-grad-brand: linear-gradient(135deg, #7c3aed, #3b82f6);
   --sidebar-grad-active: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(59, 130, 246, 0.15));
   --sidebar-grad-hover: rgba(255, 255, 255, 0.05);
-  
-  /* Sombras y Luces (Ajustadas para fondo oscuro) */
+
+  /* Sombras y Luces */
   --sidebar-shadow-main: 0 10px 30px rgba(0, 0, 0, 0.35);
   --sidebar-shadow-brand: 0 8px 24px rgba(0, 0, 0, 0.2);
   --sidebar-shadow-icon: 0 10px 20px rgba(124, 58, 237, 0.4);
@@ -29,63 +30,83 @@
   --sidebar-glow-active: 0 0 12px rgba(167, 139, 250, 0.4);
   --sidebar-accent-color: #a78bfa;
 
+  /* Card / Border */
+  --bg-card: rgb(35, 44, 66);
+  --border-color: rgba(255, 255, 255, 0.08);
 
-  --bg-card: rgb(35, 44, 66); /* Panel semitransparente */
-  --border-color: rgba(255, 255, 255, 0.08); /* Borde sutil */
+  /* Tabs — Estado Activo */
+  --tab-active-from: 124, 58, 237;
+  --tab-active-to: 59, 130, 246;
+  --tab-active-border: 167, 139, 250;
+  --tab-active-text: #ffffff;
+  --tab-active-shadow: rgba(124, 58, 237, 0.25);
 
-  /* Estado Activo */
-  --tab-active-from: 124, 58, 237;  /* violet-600 */
-  --tab-active-to: 59, 130, 246;    /* blue-500 */
-  --tab-active-border: 167, 139, 250; /* violet-300 */
-  --tab-active-text: #ffffff;       /* Blanco para contraste alto */
-  --tab-active-shadow: rgba(124, 58, 237, 0.25); /* Sombra más intensa */
-
-  /* Estado Inactivo / Hover */
-  --tab-inactive-text: #94a3b8;     /* slate-400 (gris claro) */
-  --tab-inactive-shadow: transparent; /* Sin sombra en reposo */
-  --tab-hover-text: #f8fafc;        /* Blanco humo */
+  /* Tabs — Estado Inactivo / Hover */
+  --tab-inactive-text: #94a3b8;
+  --tab-inactive-shadow: transparent;
+  --tab-hover-text: #f8fafc;
   --tab-hover-shadow: rgba(0, 0, 0, 0.2);
 
-
-  --lc-bg: rgba(255, 255, 255, 0.06); 
-  
-  /* Borde sutil para modo oscuro */
-  --lc-border: rgba(255, 255, 255, 0.08); 
-  
-  /* Textos (Blanco y Slate-soft para coherencia) */
+  /* Layout Content */
+  --lc-bg: rgba(255, 255, 255, 0.06);
+  --lc-border: rgba(255, 255, 255, 0.08);
   --lc-title: #f8fafc;
   --lc-subtitle: #94a3b8;
-  
-  /* Contenedor de la tabla (Transparencia mínima) */
   --lc-table-bg: rgba(255, 255, 255, 0.04);
   --lc-table-border: rgba(255, 255, 255, 0.06);
 
-
-
---card-bg: rgba(255, 255, 255, 0.03);
+  /* Card */
+  --card-bg: rgba(255, 255, 255, 0.03);
   --card-border: rgba(255, 255, 255, 0.08);
   --card-divider: rgba(255, 255, 255, 0.06);
-  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --card-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.5);
-
-  /* Textos */
   --card-title: #f8fafc;
   --card-subtitle: #94a3b8;
-  --card-label-text: #94a3b8;    /* Ajustado a --text-soft */
-  --card-number-text: #ffffff;   /* Blanco puro para resaltar */
-  --card-detail-text: #cbd5e1;   /* Un poco más claro que el subtitle */
-
-  /* Iconos y Decoradores */
-  --card-icon-bg-from: rgba(124, 58, 237, 0.2); /* Basado en --primary */
-  --card-icon-bg-to: rgba(59, 130, 246, 0.1);   /* Basado en azul de gradiente */
-  --card-icon-text: #a78bfa;     /* --primary-light */
-  
-  --card-decorator-bg: rgba(124, 58, 237, 0.12); /* Ligera transparencia de primario */
+  --card-icon-bg-from: rgba(124, 58, 237, 0.2);
+  --card-icon-bg-to: rgba(59, 130, 246, 0.1);
+  --card-icon-text: #a78bfa;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --card-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.5);
+  --card-decorator-bg: rgba(124, 58, 237, 0.12);
+  --card-label-text: #94a3b8;
+  --card-number-text: #ffffff;
+  --card-detail-text: #cbd5e1;
   --card-icon-wrapper-bg: rgba(255, 255, 255, 0.05);
   --card-icon-wrapper-text: #a78bfa;
 
+  /* Button */
+  --button-bg: linear-gradient(135deg, #a855f7, #7c3aed);
+  --button-text: #ffffff;
+  --button-border: rgba(168, 85, 247, 0.20);
+  --button-shadow: 0 8px 22px rgba(124, 58, 237, 0.35);
 
+  /* Table */
+  --table-bg:                     rgba(255, 255, 255, 0.04);
+  --table-border:                 rgba(255, 255, 255, 0.08);
+  --table-shadow:                 0 10px 30px rgba(0, 0, 0, 0.35);
+  --table-header-from:            rgba(255, 255, 255, 0.06);
+  --table-header-to:              rgba(255, 255, 255, 0.02);
+  --table-header-text:            #94a3b8;
+  --table-header-border:          rgba(255, 255, 255, 0.08);
+  --table-row-text:               #cbd5e1;
+  --table-row-border:             rgba(255, 255, 255, 0.05);
+  --table-row-hover:              rgba(124, 58, 237, 0.10);
+  --table-empty-text:             #64748b;
+  --table-action-text:            #64748b;
+  --table-action-edit-hover-bg:   rgba(139, 92, 246, 0.15);
+  --table-action-edit-hover-text: #a78bfa;
+  --table-action-del-hover-bg:    rgba(239, 68, 68, 0.15);
+  --table-action-del-hover-text:  #f87171;
 
-  
-
+  /* TurnoCard */
+  --turno-desc-text:        #94a3b8;
+  --turno-horario-bg:       rgba(255, 255, 255, 0.04);
+  --turno-horario-border:   rgba(255, 255, 255, 0.08);
+  --turno-horario-label:    #64748b;
+  --turno-horario-value:    #e2e8f0;
+  --turno-btn-text:         #a78bfa;
+  --turno-btn-bg:           rgba(139, 92, 246, 0.12);
+  --turno-btn-bg-hover:     rgba(139, 92, 246, 0.22);
+  --turno-badge-bg:         rgba(16, 185, 129, 0.12);
+  --turno-badge-text:       #34d399;
+  --turno-badge-border:     rgba(16, 185, 129, 0.20);
 }
