@@ -2,7 +2,7 @@
 
 import { api } from "./api";
 
-const URL = "/tarea";
+const URL = "/tareas";
 
 export const TareaService = {
 
@@ -15,7 +15,7 @@ export const TareaService = {
 
     const response = await api.get(URL);
 
-    return response.data;
+    return response;
 
   },
 
@@ -28,7 +28,7 @@ export const TareaService = {
       `${URL}/${idTarea}`
     );
 
-    return response.data;
+    return response;
 
   },
 
@@ -42,7 +42,7 @@ export const TareaService = {
       datos
     );
 
-    return response.data;
+    return response;
 
   },
 
@@ -56,7 +56,7 @@ export const TareaService = {
       datos
     );
 
-    return response.data;
+    return response;
 
   },
 
@@ -69,7 +69,7 @@ export const TareaService = {
       `${URL}/${idTarea}`
     );
 
-    return response.data;
+    return response;
 
   },
 
@@ -85,7 +85,7 @@ export const TareaService = {
       }
     );
 
-    return response.data;
+    return response;
 
   },
 

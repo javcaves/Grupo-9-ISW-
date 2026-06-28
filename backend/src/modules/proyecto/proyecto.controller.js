@@ -44,13 +44,29 @@ export const obtenerTodosProyectos = async (req, res) => {
 
 export const obtenerMisProyectos = async (req, res) => {
     try {
-        const [proyectos, err] = await ProyectoService.obtenerProyectosPorUsuario(req.user);
-        if (err) return handleErrorClient(res, 500, 'error al obtener proyectos', err);
 
-        return handleSuccess(res, 200, 'proyectos obtenidos de forma exitosa', proyectos);
+        console.log("USER:", req.user);
+
+        const [proyectos, err] =
+            await ProyectoService.obtenerProyectosPorUsuario(req.user);
+
+        console.log("RESULTADO:", proyectos);
+        console.log("ERROR:", err);
+
+        if (err)
+            return handleErrorClient(res, 500, "error al obtener proyectos", err);
+
+        return handleSuccess(
+            res,
+            200,
+            "proyectos obtenidos de forma exitosa",
+            proyectos
+        );
+
     } catch (error) {
-        return handleErrorServer(res, 500, 'error de servidor', error.message);
-    } 
+        console.error(error);
+        return handleErrorServer(res, 500, "error de servidor", error.message);
+    }
 };
 
 export const obtenerProyectosPorId = async (req, res) => {

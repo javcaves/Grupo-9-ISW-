@@ -23,6 +23,10 @@ const ProyectoUsuario = new EntitySchema({
         fecha_termino:{
             type: "timestamp",
             nullable: true,
+        },
+        activo: {
+            type: "boolean",
+            default: true
         }
     },
 

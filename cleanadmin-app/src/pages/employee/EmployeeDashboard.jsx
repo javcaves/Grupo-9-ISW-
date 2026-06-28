@@ -2,77 +2,138 @@ import { useEffect, useState } from "react";
 
 import { Card } from "../../components/Card";
 import { AuthService } from "../../api/auth.service";
-import { employeeData } from "../../data/employeeMockData";
+import { ProyectoService } from "../../api/proyecto.service";
+import { TurnoService } from "../../api/turno.service";
+import { TareaService } from "../../api/tareas.service";
+import { AsistenciaService } from "../../api/asistencia.service";
 
 export default function EmployeeDashboard() {
 
-  const [employee, setEmployee] = useState(
-    employeeData.dashboard.employee
-  );
-
+  const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Estos siguen siendo mock hasta tener sus endpoints.
-  const shift = employeeData.dashboard.shift;
-  const today = employeeData.dashboard.today;
-  const lunch = employeeData.dashboard.lunch;
-  const tasks = employeeData.dashboard.tasks;
-  const nextProject = employeeData.dashboard.nextProject;
-  const notifications = employeeData.dashboard.notifications;
+  const [shift, setShift] = useState(null);
+  const [today, setToday] = useState(null);
+  const [tasks, setTasks] = useState(null);
+  const [nextProject, setNextProject] = useState(null);
 
   useEffect(() => {
 
-    async function cargarEmpleado() {
+    async function cargarDashboard() {
 
       try {
 
-        const response = await AuthService.me();
+        console.log("🚀 Cargando dashboard...");
 
-        if (response?.success && response.user) {
+        // 1. Usuario
+        const me = await AuthService.me();
+        console.log("👤 Usuario:", me);
 
-          const usuario = response.user;
+        const user = me?.user;
 
-          const nombre = usuario.nombre ??
-            employeeData.dashboard.employee.name;
+        if (!user) {
+          console.warn("No hay usuario");
+          return;
+        }
 
-          setEmployee({
-            ...employeeData.dashboard.employee,
+        const nombre = user.nombre ?? "Empleado";
 
-            id: usuario.id_usuario,
+        const empleado = {
+          id: user.id_usuario,
+          name: nombre,
+          initials: nombre
+            .split(" ")
+            .filter(Boolean)
+            .map(w => w[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase(),
+          role: user.rol,
+          email: user.correo
+        };
 
-            name: nombre,
+        setEmployee(empleado);
 
-            initials:
-              nombre
-                .split(" ")
-                .filter(Boolean)
-                .map((palabra) => palabra[0])
-                .join("")
-                .substring(0, 2)
-                .toUpperCase(),
+        // 2. Proyecto + tareas en paralelo
+        const [proyectosRes, tareasRes] = await Promise.all([
+          ProyectoService.listar().catch(err => {
+            console.error("❌ Error proyectos:", err);
+            return null;
+          }),
+          TareaService.listar().catch(err => {
+            console.error("❌ Error tareas:", err);
+            return null;
+          })
+        ]);
 
-            role:
-              usuario.rol ??
-              employeeData.dashboard.employee.role,
+        console.log("📁 Proyectos:", proyectosRes);
+        console.log("📌 Tareas:", tareasRes);
 
-            email:
-              usuario.correo ??
-              employeeData.dashboard.employee.email,
+        const proyectos = proyectosRes?.data ?? [];
+        const tareas = tareasRes?.data ?? [];
 
+        const proyecto = proyectos[0] ?? null;
+
+        setNextProject(proyecto);
+
+        // tareas del usuario (fallback simple)
+        const tareasUsuario = tareas.filter(t => t.id_usuario === user.id_usuario);
+
+        const total = tareasUsuario.length;
+        const completadas = tareasUsuario.filter(t => t.estado === "COMPLETADA").length;
+
+        setTasks({
+          assigned: total,
+          completed: completadas,
+          progress: total === 0 ? 0 : Math.round((completadas / total) * 100)
+        });
+
+        // 3. Turno
+        if (proyecto?.id) {
+
+          const turnoRes = await TurnoService.listarPorProyecto(proyecto.id)
+            .catch(err => {
+              console.error("❌ Error turnos:", err);
+              return null;
+            });
+
+          console.log("⏰ Turnos:", turnoRes);
+
+          const turno = turnoRes?.data?.[0];
+
+          setShift(turno ?? null);
+        }
+
+        // 4. Asistencia (mock lógico por ahora)
+        if (shift?.id_turno) {
+
+          const asistencia = await AsistenciaService.obtenerActual(shift.id_turno)
+            .catch(err => {
+              console.error("❌ Error asistencia:", err);
+              return null;
+            });
+
+          console.log("📍 Asistencia:", asistencia);
+
+          setToday({
+            attendanceRegistered: !!asistencia?.data,
+            checkIn: asistencia?.data?.check_in ?? null
+          });
+
+        } else {
+
+          setToday({
+            attendanceRegistered: false,
+            checkIn: null
           });
 
         }
 
-      }
-      catch (error) {
+      } catch (error) {
 
-        console.error(
-          "Error cargando empleado:",
-          error
-        );
+        console.error("🔥 Error general dashboard:", error);
 
-      }
-      finally {
+      } finally {
 
         setLoading(false);
 
@@ -80,54 +141,34 @@ export default function EmployeeDashboard() {
 
     }
 
-    cargarEmpleado();
+    cargarDashboard();
 
   }, []);
 
   if (loading) {
-    return (
-      <div className="p-4">
-        Cargando...
-      </div>
-    );
+    return <div className="p-4">Cargando...</div>;
   }
 
   return (
     <div className="p-4 space-y-4 pb-24">
 
       {/* CABECERA */}
-
       <Card className="bg-gradient-to-r from-violet-500/10 to-blue-500/10">
 
         <div className="flex items-center gap-4">
 
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-white"
-            style={{
-              background:
-                "linear-gradient(135deg,#7c3aed,#3b82f6)",
-            }}
-          >
+          <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-white"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#3b82f6)" }}>
             {employee?.initials ?? "--"}
           </div>
 
           <div>
 
-            <h2
-              className="font-bold text-xl"
-              style={{
-                color: "var(--card-title)"
-              }}
-            >
+            <h2 className="font-bold text-xl">
               Hola {employee?.name ?? "Empleado"} 👋
             </h2>
 
-            <p
-              className="text-sm"
-              style={{
-                color: "var(--card-subtitle)"
-              }}
-            >
+            <p className="text-sm opacity-70">
               Bienvenido a tu panel de trabajo
             </p>
 
@@ -135,7 +176,7 @@ export default function EmployeeDashboard() {
 
               <i className="fas fa-clock"></i>
 
-              {shift?.type ?? "--"} · {shift?.start ?? "--"} - {shift?.end ?? "--"}
+              {shift?.tipo ?? "Sin turno"} · {shift?.hora_inicio ?? "--"} - {shift?.hora_fin ?? "--"}
 
             </div>
 
@@ -146,52 +187,22 @@ export default function EmployeeDashboard() {
       </Card>
 
       {/* ESTADO DEL DÍA */}
-
       <Card title="Estado de Hoy" icon="fa-calendar-day">
 
         <div className="grid grid-cols-2 gap-3">
 
-          <div
-            className="rounded-2xl p-4"
-            style={{
-              background: "rgba(255,255,255,.5)",
-              border: "1px solid var(--card-border)"
-            }}
-          >
-            <div
-              className="text-xs mb-1"
-              style={{ color: "var(--card-subtitle)" }}
-            >
-              Asistencia
-            </div>
-
+          <div className="rounded-2xl p-4 bg-white/50 border">
+            <div className="text-xs mb-1">Asistencia</div>
             <div className="font-bold">
-              {today?.attendanceRegistered
-                ? "✅ Registrada"
-                : "❌ Pendiente"}
+              {today?.attendanceRegistered ? "✅ Registrada" : "❌ Pendiente"}
             </div>
-
           </div>
 
-          <div
-            className="rounded-2xl p-4"
-            style={{
-              background: "rgba(255,255,255,.5)",
-              border: "1px solid var(--card-border)"
-            }}
-          >
-
-            <div
-              className="text-xs mb-1"
-              style={{ color: "var(--card-subtitle)" }}
-            >
-              Entrada
-            </div>
-
+          <div className="rounded-2xl p-4 bg-white/50 border">
+            <div className="text-xs mb-1">Entrada</div>
             <div className="font-bold">
               {today?.checkIn ?? "--"}
             </div>
-
           </div>
 
         </div>
@@ -199,7 +210,6 @@ export default function EmployeeDashboard() {
       </Card>
 
       {/* TAREAS */}
-
       <Card title="Tareas del Día" icon="fa-list-check">
 
         <div className="space-y-3">
@@ -208,28 +218,14 @@ export default function EmployeeDashboard() {
             {tasks?.completed ?? 0} completadas / {tasks?.assigned ?? 0} asignadas
           </div>
 
-          <div
-            className="w-full h-3 rounded-full overflow-hidden"
-            style={{
-              background: "#e2e8f0"
-            }}
-          >
-
+          <div className="w-full h-3 rounded-full bg-gray-200 overflow-hidden">
             <div
-              className="h-full"
-              style={{
-                width: `${tasks?.progress ?? 0}%`,
-                background:
-                  "linear-gradient(90deg,#7c3aed,#3b82f6)"
-              }}
+              className="h-full bg-gradient-to-r from-violet-500 to-blue-500"
+              style={{ width: `${tasks?.progress ?? 0}%` }}
             />
-
           </div>
 
-          <div
-            className="text-sm"
-            style={{ color: "var(--card-subtitle)" }}
-          >
+          <div className="text-sm opacity-70">
             {tasks?.progress ?? 0}% completado
           </div>
 
@@ -237,60 +233,24 @@ export default function EmployeeDashboard() {
 
       </Card>
 
-      {/* COLACIÓN */}
-
-      <Card title="Colación" icon="fa-utensils">
-
-        <div className="flex items-center gap-3">
-
-          <i className="fas fa-utensils text-xl"></i>
-
-          <div>
-
-            <div className="font-semibold">
-              {lunch?.start ?? "--"} - {lunch?.end ?? "--"}
-            </div>
-
-            <div
-              className="text-sm"
-              style={{ color: "var(--card-subtitle)" }}
-            >
-              Horario asignado
-            </div>
-
-          </div>
-
-        </div>
-
-      </Card>
-
       {/* PROYECTO */}
-
       <Card title="Próximo Proyecto" icon="fa-building">
 
         <div className="flex gap-4 items-center">
 
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center text-white"
-            style={{
-              background:
-                "linear-gradient(135deg,#7c3aed,#3b82f6)"
-            }}
-          >
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#3b82f6)" }}>
             <i className="fas fa-building"></i>
           </div>
 
           <div>
 
             <div className="font-semibold">
-              {nextProject?.name ?? "Sin proyecto"}
+              {nextProject?.nombre ?? "Sin proyecto"}
             </div>
 
-            <div
-              className="text-sm"
-              style={{ color: "var(--card-subtitle)" }}
-            >
-              {nextProject?.areas?.join(" • ") ?? "--"}
+            <div className="text-sm opacity-70">
+              {nextProject?.descripcion ?? "--"}
             </div>
 
           </div>
@@ -300,29 +260,18 @@ export default function EmployeeDashboard() {
       </Card>
 
       {/* ACCIONES */}
-
       <Card title="Acciones Rápidas" icon="fa-bolt">
 
         <div className="space-y-3">
 
-          <button
-            className="w-full rounded-xl py-3 font-semibold text-white"
-            style={{
-              background:
-                "linear-gradient(135deg,#7c3aed,#3b82f6)"
-            }}
-          >
+          <button className="w-full rounded-xl py-3 font-semibold text-white"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#3b82f6)" }}>
             <i className="fas fa-fingerprint mr-2"></i>
             Registrar Asistencia
           </button>
 
-          <button
-            className="w-full rounded-xl py-3 font-semibold text-white"
-            style={{
-              background:
-                "linear-gradient(135deg,#7c3aed,#3b82f6)"
-            }}
-          >
+          <button className="w-full rounded-xl py-3 font-semibold text-white"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#3b82f6)" }}>
             <i className="fas fa-list-check mr-2"></i>
             Ver Tareas
           </button>
@@ -331,47 +280,6 @@ export default function EmployeeDashboard() {
 
       </Card>
 
-      {/* NOTIFICACIONES */}
-
-      <Card title="Notificaciones" icon="fa-bell">
-
-        <div className="space-y-3">
-
-          {(notifications ?? []).map((notification) => (
-
-            <div
-              key={notification.id}
-              className="flex gap-3 pb-3 border-b last:border-none"
-            >
-
-              <i className="fas fa-bell text-violet-500 mt-1"></i>
-
-              <div>
-
-                <div className="font-medium">
-                  {notification.message}
-                </div>
-
-                <div
-                  className="text-xs"
-                  style={{
-                    color: "var(--card-subtitle)"
-                  }}
-                >
-                  {notification.createdAt}
-                </div>
-
-              </div>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </Card>
-
     </div>
   );
-
 }

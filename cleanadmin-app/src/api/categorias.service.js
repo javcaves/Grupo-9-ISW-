@@ -9,11 +9,11 @@ export const CategoriaService = {
   // ==========================
 
   listar(params = {}) {
-    return api.get("/categoria", params);
+    return api.get("/categorias", params);
   },
 
   obtener(id) {
-    return api.get(`/categoria/${id}`);
+    return api.get(`/categorias/${id}`);
   },
 
   // ==========================
@@ -21,19 +21,19 @@ export const CategoriaService = {
   // ==========================
 
   crear(data) {
-    return api.post("/categoria", data);
+    return api.post("/categorias", data);
   },
 
   actualizar(id, data) {
-    return api.put(`/categoria/${id}`, data);
+    return api.put(`/categorias/${id}`, data);
   },
 
   eliminar(id) {
-    return api.delete(`/categoria/${id}`);
+    return api.delete(`/categorias/${id}`);
   },
 
   reactivar(id) {
-    return api.patch(`/categoria/${id}/reactivar`);
+    return api.patch(`/categorias/${id}/reactivar`);
   },
 
 };

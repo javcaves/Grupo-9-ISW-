@@ -90,6 +90,41 @@ export const editarHistorialPasado = async (req, res) => {
     }
 };
 
+export const obtenerMisAsistenciasPorProyecto = async (req, res) => {
+    try {
+        const { id_proyecto } = req.params;
+
+        const [historial, err] = await AsistenciaService.obtenerMiHistorialService(
+            req.user.id_usuario,
+            id_proyecto
+        );
+
+        if (err) {
+            return handleErrorClient(
+                res,
+                403,
+                "No fue posible obtener el historial",
+                err
+            );
+        }
+
+        return handleSuccess(
+            res,
+            200,
+            "Historial de asistencia obtenido correctamente",
+            historial
+        );
+
+    } catch (error) {
+        return handleErrorServer(
+            res,
+            500,
+            "Error de servidor",
+            error.message
+        );
+    }
+};
+
 export const registrarAutoAsistenciaEmpleado = async (req, res) => {
     try {
         const { error, value } = empleadoRegistrarValidation.validate(req.body);

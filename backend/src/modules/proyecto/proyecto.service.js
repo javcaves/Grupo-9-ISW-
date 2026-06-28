@@ -18,7 +18,7 @@ import { In } from 'typeorm';
  */
 
 const proyectoRepository = AppDataSource.getRepository('Proyecto');
-const usuarioProyectoRepository = AppDataSource.getRepository('UsuarioProyecto');
+const usuarioProyectoRepository = AppDataSource.getRepository('ProyectoUsuario');
 
 
 // --- MÉTODOS ---
@@ -72,19 +72,24 @@ export const obtenerTodosProyectos = async () => {
  */
 export const obtenerProyectosPorUsuario = async (usuario) => { // 🌟 CORREGIDO: Ahora recibe 'usuario'
     try {
+        console.log("👤 [ProyectoService] Usuario recibido:", usuario);
         if (['ROOT', 'ADMIN'].includes(usuario.rol)) {
+            console.log("🧠 Usuario ADMIN/ROOT, devolviendo todos los proyectos");
             return await obtenerTodosProyectos();
         }
 
         const misProyectos = await usuarioProyectoRepository.find({
             where: { id_usuario: usuario.id_usuario || usuario.id, activo: true }
         });
+        console.log("📦 Mis proyectos RAW:", misProyectos);
 
         if (misProyectos.length === 0) {
             return [[], null];
         }
 
         const misIds = misProyectos.map(p => p.id_proyecto);
+
+        console.log("🧾 IDs de proyectos:", misIds);
 
         const proyectos = await proyectoRepository.find({
             where: { id_proyecto: In(misIds), activo: true },
@@ -93,6 +98,8 @@ export const obtenerProyectosPorUsuario = async (usuario) => { // 🌟 CORREGIDO
 
         return [proyectos, null];
     } catch (error) {
+        console.error("❌ ERROR EN obtenerProyectosPorUsuario");
+        console.error(error);
         return [null, error.message];
     }
 };
@@ -102,6 +109,8 @@ export const obtenerProyectosPorUsuario = async (usuario) => { // 🌟 CORREGIDO
  */
 export const obtenerProyectosPorId = async (id, usuario) => {
     try {
+        console.log("🔎 [ProyectoService] ID recibido:", id);
+        console.log("👤 [ProyectoService] Usuario:", usuario);
         // 🌟 CORREGIDO: Se cambió 'find' por 'findOne' para manejar el objeto directo
         const proyecto = await proyectoRepository.findOne({
             where: { id_proyecto: parseInt(id), activo: true }
