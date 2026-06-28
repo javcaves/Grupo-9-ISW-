@@ -1,4 +1,3 @@
-
 import * as AsistenciaService from "./asistencia.service.js";
 import { 
     asistenciaCreateValidation, 
@@ -12,7 +11,6 @@ export const crearAsistencia = async (req, res) => {
         const { error, value } = asistenciaCreateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Datos de entrada inválidos", error.message);
 
-        // id_usuario viene inyectado por tu middleware authenticateJwt
         const [nueva, err] = await AsistenciaService.crearAsistenciaService(value.id_turno, req.user.id_usuario);
         if (err) return handleErrorClient(res, 400, "No se pudo crear la jornada", err);
 
@@ -92,87 +90,56 @@ export const editarHistorialPasado = async (req, res) => {
 
 export const obtenerMisAsistenciasPorProyecto = async (req, res) => {
     try {
-        const { id_proyecto } = req.params;
-
-        const [historial, err] = await AsistenciaService.obtenerMiHistorialService(
-            req.user.id_usuario,
-            id_proyecto
-        );
+        // Corregido para mapear exactamente con tu firma del service: obtenerMiHistorialService(id_usuario)
+        const [historial, err] = await AsistenciaService.obtenerMiHistorialService(req.user.id_usuario);
 
         if (err) {
-            return handleErrorClient(
-                res,
-                403,
-                "No fue posible obtener el historial",
-                err
-            );
+            return handleErrorClient(res, 403, "No fue posible obtener el historial", err);
         }
 
-        return handleSuccess(
-            res,
-            200,
-            "Historial de asistencia obtenido correctamente",
-            historial
-        );
-
+        return handleSuccess(res, 200, "Historial de asistencia obtenido correctamente", historial);
     } catch (error) {
-        return handleErrorServer(
-            res,
-            500,
-            "Error de servidor",
-            error.message
-        );
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// REFACTORIZADO: Coherente con responseHandlers y desestructuración del Front
+// ─────────────────────────────────────────────────────────────────────────────
 export async function obtenerMiAsistenciaActual(req, res) {
-  try {
-    const idEmpleado = req.user?.id_usuario;
-    
-    // Capturamos ambas variantes posibles para máxima compatibilidad
-    const id_turno = req.query.id_turno || req.query.idTurno;
+    try {
+        const idEmpleado = req.user?.id_usuario;
+        const id_turno = req.query.id_turno || req.query.idTurno;
 
-    console.log("📥 [Backend] Query Params Recibidos:", req.query); // <-- Agrega este log para auditar en tu terminal
-    console.log("📥 [Backend] ID Turno procesado:", id_turno);
+        console.log("📥 [Backend] Query Params Recibidos:", req.query);
+        console.log("📥 [Backend] ID Turno procesado:", id_turno);
 
-    // Validación: Si no viene ninguna de las dos variantes
-    if (!id_turno) {
-      return res.status(200).json({
-        success: true,
-        message: "No se proporcionó un ID de turno para buscar.",
-        data: null
-      });
+        if (!id_turno) {
+            // Devolvemos un 200 con data null usando tu handler para evitar romper promesas paralelas
+            return handleSuccess(res, 200, "No se proporcionó un ID de turno para buscar.", null);
+        }
+
+        const resultadoService = await AsistenciaService.obtenerMiAsistenciaActual(
+            idEmpleado,
+            Number(id_turno)
+        );
+
+        if (!resultadoService.success) {
+            return handleErrorClient(res, 400, "Error al procesar la asistencia laboral", resultadoService.error);
+        }
+
+        // Retorno exitoso estandarizado. El frontend leerá .data directamente
+        return handleSuccess(
+            res, 
+            200, 
+            resultadoService.data ? "Asistencia obtenida con éxito." : "Sin marcas de asistencia hoy.", 
+            resultadoService.data
+        );
+
+    } catch (error) {
+        console.error("🔥 Error crítico en controlador obtenerMiAsistenciaActual:", error);
+        return handleErrorServer(res, 500, "Error crítico interno al procesar el estado de asistencia", error.message);
     }
-
-    // Invocar al servicio pasando el ID unificado
-    const resultadoService = await AsistenciaService.obtenerMiAsistenciaActual(
-      idEmpleado,
-      Number(id_turno) 
-    );
-
-    if (!resultadoService.success) {
-      return res.status(400).json({
-        success: false,
-        message: resultadoService.error || "Error al procesar la asistencia."
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: resultadoService.data 
-        ? "Asistencia actual obtenida con éxito." 
-        : "No se registran marcas de asistencia para este turno hoy.",
-      data: resultadoService.data
-    });
-
-  } catch (error) {
-    console.error("🔥 Error crítico en controlador obtenerMiAsistenciaActual:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Ocurrió un error inesperado en el servidor.",
-      error: error.message
-    });
-  }
 }
 
 export const registrarAutoAsistenciaEmpleado = async (req, res) => {
