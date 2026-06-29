@@ -1,7 +1,7 @@
-import React, { useState } from 'react'; 
-import { ADMIN_CONFIG } from '../../../data/adminConfig'; 
-import LayoutContent from '../../../layouts/LayoutContent';
-import Modal from '../../../components/Modal'; 
+import React, { useState } from 'react';
+import { ADMIN_CONFIG } from '../../data/adminConfig'; // Dos niveles (../..)
+import LayoutContent from '../../layouts/LayoutContent'; // Dos niveles (../..)
+import Modal from '../../components/Modal'; // Dos niveles (../..); 
 
 export default function InventariosView() {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
