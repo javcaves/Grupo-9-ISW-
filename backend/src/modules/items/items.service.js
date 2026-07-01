@@ -6,8 +6,8 @@
 /**
  * @typedef {Object} Item
  * @property {number} id -identificador
- * @property {string} nombre -Nombre de item 
- * @property {number} id_tipo 
+ * @property {string} nombre -Nombre de item
+ * @property {number} id_tipo
  * @property {number} stock_minimo -alerta si falta stock
  * @property {string} unidad_medida - bidon, caja etc
  * @property {boolean} activo -Soft delete
@@ -20,14 +20,56 @@ import { MovimientoInventario } from '../../entity/movimientoInventario.entity.j
 
 const itemRepo = () => AppDataSource.getRepository(Item);
 const itemProyectoRepo = () => AppDataSource.getRepository(ItemProyecto);
-const movRepo  = () => AppDataSource.getRepository(MovimientoInventario);
+const movRepo = () => AppDataSource.getRepository(MovimientoInventario);
 
-const TIPOS_QUE_SUMAN  = ['ENTRADA', 'ABASTECIMIENTO', 'COMPRA'];
+const TIPOS_QUE_SUMAN = ['ENTRADA', 'ABASTECIMIENTO', 'COMPRA'];
 const TIPOS_QUE_RESTAN = ['SALIDA'];
+
+// ID de proyecto que representa la Bodega Central / Matriz.
+// Toda SOLICITUD aprobada sale de aquí y entra al proyecto destino.
+const ID_BODEGA_CENTRAL = 1;
+
+// Enums válidos, espejo de las entidades (para dar mensajes de error propios
+// en vez de dejar que TypeORM/Postgres tire el error genérico)
+const TIPOS_ITEM_VALIDOS = ['MAQUINARIA', 'HERRAMIENTA', 'UTENSILIO', 'PRODUCTO'];
+const UNIDADES_VALIDAS = ['LITROS', 'UNIDADES', 'KILOS', 'SACOS', 'BOLSAS', 'METROS'];
+const CONTROL_VALIDOS = ['CONSUMO', 'PRESTAMO'];
+const TIPOS_MOVIMIENTO_VALIDOS = ['ENTRADA', 'SALIDA', 'SOLICITUD', 'ABASTECIMIENTO', 'COMPRA'];
+
+// ================= HELPERS =================
+const validarCantidadPositiva = (cantidad) => {
+    if (typeof cantidad !== 'number' || !Number.isFinite(cantidad) || cantidad <= 0) {
+        return 'La cantidad debe ser un número mayor a 0.';
+    }
+    return null;
+};
+
+const validarDatosItem = (data, { parcial = false } = {}) => {
+    if (!parcial || data.tipo !== undefined) {
+        if (!TIPOS_ITEM_VALIDOS.includes(data.tipo)) {
+            return `Tipo de item inválido. Valores permitidos: ${TIPOS_ITEM_VALIDOS.join(', ')}.`;
+        }
+    }
+    if (!parcial || data.unidad_medida !== undefined) {
+        if (!UNIDADES_VALIDAS.includes(data.unidad_medida)) {
+            return `Unidad de medida inválida. Valores permitidos: ${UNIDADES_VALIDAS.join(', ')}.`;
+        }
+    }
+    if (!parcial || data.control !== undefined) {
+        if (!CONTROL_VALIDOS.includes(data.control)) {
+            return `Control inválido. Valores permitidos: ${CONTROL_VALIDOS.join(', ')}.`;
+        }
+    }
+    return null;
+};
 
 // ================= ITEMS CORE =================
 export const crearItem = async (data) => {
     const repo = itemRepo();
+
+    const errorEnum = validarDatosItem(data);
+    if (errorEnum) return [null, errorEnum];
+
     const existe = await repo.findOne({ where: { nombre: data.nombre } });
     if (existe) return [null, 'Ya existe un item con ese nombre.'];
 
@@ -55,6 +97,9 @@ export const actualizarItem = async (id, data) => {
     const item = await repo.findOne({ where: { id_item: id } });
     if (!item) return [null, 'Item no encontrado.'];
 
+    const errorEnum = validarDatosItem(data, { parcial: true });
+    if (errorEnum) return [null, errorEnum];
+
     if (data.nombre && data.nombre !== item.nombre) {
         const existe = await repo.findOne({ where: { nombre: data.nombre } });
         if (existe) return [null, 'El nuevo nombre ya esta en uso.'];
@@ -81,190 +126,277 @@ export const desactivarItem = async (id) => {
 
 // ================= MOVIMIENTOS REGISTRAR =================
 export const registrarMovimiento = async (data) => {
-    const repoItemProj = itemProyectoRepo();
-    const repoMov = movRepo();
+    if (!TIPOS_MOVIMIENTO_VALIDOS.includes(data.tipo_movimiento)) {
+        return [null, `Tipo de movimiento inválido. Valores permitidos: ${TIPOS_MOVIMIENTO_VALIDOS.join(', ')}.`];
+    }
 
-    // 1. Manejo Especial si es una SOLICITUD
-    if (data.tipo_movimiento === 'SOLICITUD') {
-        let itemRel = null;
-        if (data.id_item) {
-            itemRel = await itemRepo().findOne({ where: { id_item: data.id_item, activo: true } });
-            if (!itemRel) return [null, 'Item asociado no encontrado o inactivo.'];
-        } else if (!data.item_sugerido) {
-            return [null, 'Debe indicar un item existente o proponer el nombre de uno nuevo.'];
-        }
+    const errorCantidad = validarCantidadPositiva(data.cantidad);
+    if (errorCantidad) return [null, errorCantidad];
 
-        const movimiento = repoMov.create({
-            item: itemRel,
-            item_sugerido: data.item_sugerido || null,
-            id_proyecto: data.id_proyecto,
-            id_emisor: data.id_emisor,
-            id_receptor: data.id_receptor || null,
-            tipo_movimiento: 'SOLICITUD',
-            cantidad: data.cantidad,
-            descripcion: data.descripcion || '',
-            estado_solicitud: 'PENDIENTE'
+    try {
+        return await AppDataSource.transaction(async (manager) => {
+            const repoItem = manager.getRepository(Item);
+            const repoItemProj = manager.getRepository(ItemProyecto);
+            const repoMov = manager.getRepository(MovimientoInventario);
+
+            // 1. Manejo Especial si es una SOLICITUD
+            if (data.tipo_movimiento === 'SOLICITUD') {
+                let itemRel = null;
+                if (data.id_item) {
+                    itemRel = await repoItem.findOne({ where: { id_item: data.id_item, activo: true } });
+                    if (!itemRel) return [null, 'Item asociado no encontrado o inactivo.'];
+                } else if (!data.item_sugerido) {
+                    return [null, 'Debe indicar un item existente o proponer el nombre de uno nuevo.'];
+                }
+
+                const movimiento = repoMov.create({
+                    item: itemRel,
+                    item_sugerido: data.item_sugerido || null,
+                    id_proyecto: data.id_proyecto,
+                    id_emisor: data.id_emisor,
+                    id_receptor: data.id_receptor || null,
+                    tipo_movimiento: 'SOLICITUD',
+                    cantidad: data.cantidad,
+                    descripcion: data.descripcion || '',
+                    estado_solicitud: 'PENDIENTE'
+                });
+
+                const guardado = await repoMov.save(movimiento);
+                return [guardado, null];
+            }
+
+            // 2. Manejo de Movimientos Regulares (Requieren Item existente)
+            if (!data.id_item) return [null, 'El id_item es requerido para este movimiento.'];
+            const item = await repoItem.findOne({ where: { id_item: data.id_item, activo: true } });
+            if (!item) return [null, 'Item no encontrado o inactivo.'];
+
+            let itemProj = await repoItemProj.findOne({ where: { id_proyecto: data.id_proyecto, id_item: data.id_item } });
+            if (!itemProj) {
+                itemProj = repoItemProj.create({ id_proyecto: data.id_proyecto, id_item: data.id_item, cantidad: 0, stock_minimo: 0, activo: true });
+            }
+            if (!itemProj.activo) {
+                return [null, 'El registro de inventario de este item en este proyecto está inactivo.'];
+            }
+
+            if (TIPOS_QUE_RESTAN.includes(data.tipo_movimiento)) {
+                if (itemProj.cantidad < data.cantidad) {
+                    return [null, `Stock insuficiente en este proyecto. Disponible: ${itemProj.cantidad} ${item.unidad_medida}.`];
+                }
+            }
+
+            const movimiento = repoMov.create({
+                item,
+                id_proyecto: data.id_proyecto,
+                id_emisor: data.id_emisor,
+                id_receptor: data.id_receptor || null,
+                tipo_movimiento: data.tipo_movimiento,
+                cantidad: data.cantidad,
+                descripcion: data.descripcion || '',
+                estado_solicitud: null
+            });
+
+            const guardado = await repoMov.save(movimiento);
+
+            if (TIPOS_QUE_SUMAN.includes(data.tipo_movimiento)) {
+                itemProj.cantidad += data.cantidad;
+            } else if (TIPOS_QUE_RESTAN.includes(data.tipo_movimiento)) {
+                itemProj.cantidad -= data.cantidad;
+            }
+            await repoItemProj.save(itemProj);
+
+            return [guardado, null];
         });
-
-        const guardado = await repoMov.save(movimiento);
-        return [guardado, null];
+    } catch (error) {
+        console.error('Error en registrarMovimiento:', error);
+        return [null, 'Error interno al registrar el movimiento.'];
     }
-
-    // 2. Manejo de Movimientos Regulares (Requieren Item existente)
-    if (!data.id_item) return [null, 'El id_item es requerido para este movimiento.'];
-    const item = await itemRepo().findOne({ where: { id_item: data.id_item, activo: true } });
-    if (!item) return [null, 'Item no encontrado o inactivo.'];
-
-    let itemProj = await repoItemProj.findOne({ where: { id_proyecto: data.id_proyecto, id_item: data.id_item } });
-    if (!itemProj) {
-        itemProj = repoItemProj.create({ id_proyecto: data.id_proyecto, id_item: data.id_item, cantidad: 0, stock_minimo: 0, activo: true });
-    }
-
-    if (TIPOS_QUE_RESTAN.includes(data.tipo_movimiento)) {
-        if (itemProj.cantidad < data.cantidad) {
-            return [null, `Stock insuficiente en este proyecto. Disponible: ${itemProj.cantidad} ${item.unidad_medida}.`];
-        }
-    }
-
-    const movimiento = repoMov.create({
-        item,
-        id_proyecto: data.id_proyecto,
-        id_emisor: data.id_emisor,
-        id_receptor: data.id_receptor || null,
-        tipo_movimiento: data.tipo_movimiento,
-        cantidad: data.cantidad,
-        descripcion: data.descripcion || '',
-        estado_solicitud: null
-    });
-
-    const guardado = await repoMov.save(movimiento);
-
-    if (TIPOS_QUE_SUMAN.includes(data.tipo_movimiento)) {
-        itemProj.cantidad += data.cantidad;
-    } else if (TIPOS_QUE_RESTAN.includes(data.tipo_movimiento)) {
-        itemProj.cantidad -= data.cantidad;
-    }
-    await repoItemProj.save(itemProj);
-
-    return [guardado, null];
 };
 
 // ================= RESOLVER SOLICITUD =================
 export const resolverSolicitud = async (id_mov, dataResolucion) => {
-    const repoMov = movRepo();
-    const repoItem = itemRepo();
-    const repoItemProj = itemProyectoRepo();
+    try {
+        return await AppDataSource.transaction(async (manager) => {
+            const repoMov = manager.getRepository(MovimientoInventario);
+            const repoItem = manager.getRepository(Item);
+            const repoItemProj = manager.getRepository(ItemProyecto);
 
-    const mov = await repoMov.findOne({ where: { id_mov } });
-    if (!mov) return [null, 'Movimiento no encontrado.'];
-    if (mov.tipo_movimiento !== 'SOLICITUD') return [null, 'Este movimiento no es una solicitud.'];
-    if (mov.estado_solicitud !== 'PENDIENTE') return [null, 'La solicitud ya fue resuelta.'];
+            const mov = await repoMov.findOne({ where: { id_mov } });
+            if (!mov) return [null, 'Movimiento no encontrado.'];
+            if (mov.tipo_movimiento !== 'SOLICITUD') return [null, 'Este movimiento no es una solicitud.'];
+            if (mov.estado_solicitud !== 'PENDIENTE') return [null, 'La solicitud ya fue resuelta.'];
 
-    if (dataResolucion.decision === 'APROBADO') {
-        let itemFinal = mov.item;
+            if (dataResolucion.decision === 'APROBADO') {
+                let itemFinal = mov.item;
 
-        // Si la solicitud era de un ítem no registrado, el Supervisor lo crea aquí
-        if (!itemFinal) {
-            if (!dataResolucion.nombre || !dataResolucion.tipo || !dataResolucion.unidad_medida || !dataResolucion.control) {
-                return [null, 'Para aprobar un item no registrado debe proveer los datos de creación completos.'];
+                // Si la solicitud era de un ítem no registrado, el Supervisor lo crea aquí
+                if (!itemFinal) {
+                    const errorEnum = validarDatosItem(dataResolucion);
+                    if (!dataResolucion.nombre || errorEnum) {
+                        return [null, errorEnum || 'Para aprobar un item no registrado debe proveer los datos de creación completos.'];
+                    }
+                    const existeNombre = await repoItem.findOne({ where: { nombre: dataResolucion.nombre } });
+                    if (existeNombre) return [null, 'El nombre propuesto ya está en uso.'];
+
+                    const nuevoItem = repoItem.create({
+                        nombre: dataResolucion.nombre,
+                        tipo: dataResolucion.tipo,
+                        unidad_medida: dataResolucion.unidad_medida,
+                        control: dataResolucion.control,
+                        activo: true
+                    });
+                    itemFinal = await repoItem.save(nuevoItem);
+                    mov.item = itemFinal;
+                }
+
+                if (mov.id_proyecto === ID_BODEGA_CENTRAL) {
+                    return [null, 'La Bodega Central no puede solicitarse a sí misma.'];
+                }
+
+                // 1. Validar y restar stock de Bodega Central (origen)
+                const bodegaCentral = await repoItemProj.findOne({
+                    where: { id_proyecto: ID_BODEGA_CENTRAL, id_item: itemFinal.id_item }
+                });
+
+                if (!bodegaCentral || bodegaCentral.cantidad < mov.cantidad) {
+                    return [null, `Stock insuficiente en Bodega Central para abastecer esta solicitud. Disponible: ${bodegaCentral?.cantidad ?? 0}.`];
+                }
+
+                // 2. Sumar stock al proyecto que solicitó (destino)
+                let itemProjDestino = await repoItemProj.findOne({
+                    where: { id_proyecto: mov.id_proyecto, id_item: itemFinal.id_item }
+                });
+                if (!itemProjDestino) {
+                    itemProjDestino = repoItemProj.create({
+                        id_proyecto: mov.id_proyecto,
+                        id_item: itemFinal.id_item,
+                        cantidad: 0,
+                        stock_minimo: 0,
+                        activo: true
+                    });
+                }
+
+                bodegaCentral.cantidad -= mov.cantidad;
+                itemProjDestino.cantidad += mov.cantidad;
+
+                await repoItemProj.save(bodegaCentral);
+                await repoItemProj.save(itemProjDestino);
             }
-            const existeNombre = await repoItem.findOne({ where: { nombre: dataResolucion.nombre } });
-            if (existeNombre) return [null, 'El nombre propuesto ya está en uso.'];
 
-            const nuevoItem = repoItem.create({
-                nombre: dataResolucion.nombre,
-                tipo: dataResolucion.tipo,
-                unidad_medida: dataResolucion.unidad_medida,
-                control: dataResolucion.control,
-                activo: true
-            });
-            itemFinal = await repoItem.save(nuevoItem);
-            mov.item = itemFinal;
-        }
-
-        let itemProj = await repoItemProj.findOne({ where: { id_proyecto: mov.id_proyecto, id_item: itemFinal.id_item } });
-        if (!itemProj) {
-            itemProj = repoItemProj.create({ id_proyecto: mov.id_proyecto, id_item: itemFinal.id_item, cantidad: 0, stock_minimo: 0, activo: true });
-        }
-
-        if (itemProj.cantidad < mov.cantidad) {
-            return [null, `Stock insuficiente en el proyecto para autorizar la solicitud. Disponible: ${itemProj.cantidad}.`];
-        }
-
-        itemProj.cantidad -= mov.cantidad;
-        await repoItemProj.save(itemProj);
+            mov.estado_solicitud = dataResolucion.decision;
+            const actualizado = await repoMov.save(mov);
+            return [actualizado, null];
+        });
+    } catch (error) {
+        console.error('Error en resolverSolicitud:', error);
+        return [null, 'Error interno al resolver la solicitud.'];
     }
-
-    mov.estado_solicitud = dataResolucion.decision;
-    const actualizado = await repoMov.save(mov);
-    return [actualizado, null];
 };
 
-// ================= ACTUALIZAR INVENTARIO  =================
+// ================= ACTUALIZAR INVENTARIO =================
 export const actualizarInventarioAuditoria = async (id_proyecto, id_emisor, itemsAuditados) => {
-    const repoItemProj = itemProyectoRepo();
-    const repoMov = movRepo();
-    const ahora = new Date();
+    try {
+        return await AppDataSource.transaction(async (manager) => {
+            const repoItemProj = manager.getRepository(ItemProyecto);
+            const repoMov = manager.getRepository(MovimientoInventario);
+            const ahora = new Date();
 
-    for (const audit of itemsAuditados) {
-        let itemProj = await repoItemProj.findOne({ where: { id_proyecto, id_item: audit.id_item } });
-        if (!itemProj) {
-            itemProj = repoItemProj.create({ id_proyecto, id_item: audit.id_item, cantidad: 0, stock_minimo: audit.stock_minimo, activo: true });
-        }
+            for (const audit of itemsAuditados) {
+                if (typeof audit.cantidad !== 'number' || audit.cantidad < 0) {
+                    return [null, `Cantidad auditada inválida para el item ${audit.id_item}.`];
+                }
 
-        const diferencia = audit.cantidad - itemProj.cantidad;
+                let itemProj = await repoItemProj.findOne({ where: { id_proyecto, id_item: audit.id_item } });
+                if (!itemProj) {
+                    itemProj = repoItemProj.create({ id_proyecto, id_item: audit.id_item, cantidad: 0, stock_minimo: audit.stock_minimo ?? 0, activo: true });
+                }
 
-        if (diferencia !== 0) {
-            const tipoMov = diferencia > 0 ? 'ENTRADA' : 'SALIDA';
-            const movAjuste = repoMov.create({
-                item: { id_item: audit.id_item },
-                id_proyecto,
-                id_emisor,
-                tipo_movimiento: tipoMov,
-                cantidad: Math.abs(diferencia),
-                descripcion: 'AJUSTE AUTOMÁTICO POR DISCREPANCIA EN AUDITORÍA',
-                estado_solicitud: null
-            });
-            await repoMov.save(movAjuste);
-        }
+                const diferencia = audit.cantidad - itemProj.cantidad;
 
-        itemProj.cantidad = audit.cantidad;
-        itemProj.stock_minimo = audit.stock_minimo;
-        itemProj.ultima_revision = ahora;
-        await repoItemProj.save(itemProj);
+                if (diferencia !== 0) {
+                    const tipoMov = diferencia > 0 ? 'ENTRADA' : 'SALIDA';
+                    const movAjuste = repoMov.create({
+                        item: { id_item: audit.id_item },
+                        id_proyecto,
+                        id_emisor,
+                        tipo_movimiento: tipoMov,
+                        cantidad: Math.abs(diferencia),
+                        descripcion: 'AJUSTE AUTOMÁTICO POR DISCREPANCIA EN AUDITORÍA',
+                        estado_solicitud: null
+                    });
+                    await repoMov.save(movAjuste);
+                }
+
+                itemProj.cantidad = audit.cantidad;
+                itemProj.stock_minimo = audit.stock_minimo ?? itemProj.stock_minimo;
+                itemProj.ultima_revision = ahora;
+                await repoItemProj.save(itemProj);
+            }
+
+            return [{ message: 'Inventario auditado y actualizado correctamente.' }, null];
+        });
+    } catch (error) {
+        console.error('Error en actualizarInventarioAuditoria:', error);
+        return [null, 'Error interno al auditar el inventario.'];
     }
-
-    return [{ message: 'Inventario auditado y actualizado correctamente.' }, null];
 };
 
 // ================= ELIMINAR MOVIMIENTO (RESTRICCIÓN 1 SEMANA) =================
 export const eliminarMovimiento = async (id_mov) => {
-    const repoMov = movRepo();
-    const repoItemProj = itemProyectoRepo();
+    try {
+        return await AppDataSource.transaction(async (manager) => {
+            const repoMov = manager.getRepository(MovimientoInventario);
+            const repoItemProj = manager.getRepository(ItemProyecto);
 
-    const mov = await repoMov.findOne({ where: { id_mov }, relations: {item: true} });
-    if (!mov) return [null, 'Movimiento no encontrado.'];
+            const mov = await repoMov.findOne({ where: { id_mov }, relations: { item: true } });
+            if (!mov) return [null, 'Movimiento no encontrado.'];
 
-    const unaSemanaMs = 7 * 24 * 60 * 60 * 1000;
-    if ((new Date() - new Date(mov.fecha)) > unaSemanaMs) {
-        return [null, 'No se pueden eliminar movimientos de inventario fuera de la semana de creación.'];
-    }
-
-    // Revertir el impacto en el stock si el movimiento no era una solicitud pendiente
-    if (mov.tipo_movimiento !== 'SOLICITUD' || mov.estado_solicitud === 'APROBADO') {
-        const itemProj = await repoItemProj.findOne({ where: { id_proyecto: mov.id_proyecto, id_item: mov.item.id_item } });
-        if (itemProj) {
-            if (TIPOS_QUE_SUMAN.includes(mov.tipo_movimiento)) {
-                itemProj.cantidad -= mov.cantidad;
-            } else {
-                itemProj.cantidad += mov.cantidad;
+            const unaSemanaMs = 7 * 24 * 60 * 60 * 1000;
+            if ((new Date() - new Date(mov.fecha)) > unaSemanaMs) {
+                return [null, 'No se pueden eliminar movimientos de inventario fuera de la semana de creación.'];
             }
-            await repoItemProj.save(itemProj);
-        }
-    }
 
-    await repoMov.delete(id_mov);
-    return [{ message: 'Movimiento eliminado y stock restaurado.' }, null];
+            if (mov.tipo_movimiento === 'SOLICITUD') {
+                // Solo revertir si fue aprobada (afectó stock); si sigue pendiente o fue rechazada, no tocó nada.
+                if (mov.estado_solicitud === 'APROBADO' && mov.item) {
+                    const bodega = await repoItemProj.findOne({ where: { id_proyecto: ID_BODEGA_CENTRAL, id_item: mov.item.id_item } });
+                    const destino = await repoItemProj.findOne({ where: { id_proyecto: mov.id_proyecto, id_item: mov.item.id_item } });
+
+                    if (destino && destino.cantidad < mov.cantidad) {
+                        return [null, 'No se puede revertir: el proyecto destino ya no tiene suficiente stock de este item (probablemente ya fue consumido).'];
+                    }
+
+                    if (bodega) {
+                        bodega.cantidad += mov.cantidad;
+                        await repoItemProj.save(bodega);
+                    }
+                    if (destino) {
+                        destino.cantidad -= mov.cantidad;
+                        await repoItemProj.save(destino);
+                    }
+                }
+            } else {
+                // Movimiento directo (ENTRADA, SALIDA, ABASTECIMIENTO, COMPRA)
+                const itemProj = await repoItemProj.findOne({ where: { id_proyecto: mov.id_proyecto, id_item: mov.item.id_item } });
+                if (itemProj) {
+                    if (TIPOS_QUE_SUMAN.includes(mov.tipo_movimiento)) {
+                        if (itemProj.cantidad < mov.cantidad) {
+                            return [null, 'No se puede revertir: el stock actual es menor a la cantidad del movimiento (probablemente ya fue consumido).'];
+                        }
+                        itemProj.cantidad -= mov.cantidad;
+                    } else {
+                        itemProj.cantidad += mov.cantidad;
+                    }
+                    await repoItemProj.save(itemProj);
+                }
+            }
+
+            await repoMov.delete(id_mov);
+            return [{ message: 'Movimiento eliminado y stock restaurado.' }, null];
+        });
+    } catch (error) {
+        console.error('Error en eliminarMovimiento:', error);
+        return [null, 'Error interno al eliminar el movimiento.'];
+    }
 };
 
 // ================= LECTURAS ADICIONALES =================
