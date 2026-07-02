@@ -42,6 +42,14 @@ export const usuarioQueryValidation = Joi.object({
     activo: Joi.boolean().optional()
 });
 
+export const usuarioQuerySearchValidation = Joi.object({
+    id_usuario: Joi.number().integer().positive(),
+    rut: Joi.string().min(8).max(15),
+    nombre: Joi.string().min(2).max(100).pattern(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/),
+    rol: Joi.string().valid(...ROLES_PERMITIDOS),
+    activo: Joi.boolean()
+});
+
 //validaciones de creacion de usuario para POST
 export const usuarioCreateValidation = Joi.object({
     nombre: Joi.string()
