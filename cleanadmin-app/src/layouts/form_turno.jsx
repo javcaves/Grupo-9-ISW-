@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FormContainer } from '../components/Formulario.jsx';
-import { UsuarioService } from '../api/usuario.service';
 import { TurnoService } from '../api/turno.service';
+import { ProyectoUsuarioService } from '../api/proyecto_usuario.service';
 
-export const FormularioTurno = ({ onSuccess }) => {
+export const FormularioTurno = ({ onSuccess, idProyecto }) => {
   const [turnoData, setTurnoData] = useState({ 
     nombre: '', 
     ingreso: '', 
@@ -18,17 +18,25 @@ export const FormularioTurno = ({ onSuccess }) => {
 
   useEffect(() => {
     const fetchUsuarios = async () => {
+      setLoadingUsuarios(true);
       try {
-        const data = await UsuarioService.buscar();
-        setUsuariosDisponibles(data.data || data);
+        if (!idProyecto) {
+          setUsuariosDisponibles([]);
+          return;
+        }
+
+        const data = await ProyectoUsuarioService.listarUsuarios(idProyecto);
+        setUsuariosDisponibles(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
+        setUsuariosDisponibles([]);
       } finally {
         setLoadingUsuarios(false);
       }
     };
+
     fetchUsuarios();
-  }, []);
+  }, [idProyecto]);
 
   const toggleEmpleado = (id) => {
     setTurnoData(prev => {
@@ -54,7 +62,7 @@ export const FormularioTurno = ({ onSuccess }) => {
       const empleadosArray = turnoData.empleados.map(id => ({ id_empleado: id }));
 
       const payload = {
-        id_proyecto: turnoData.id_proyecto || 1, // por si lo necesitamos hardcodeado
+        id_proyecto: Number(idProyecto) || Number(turnoData.id_proyecto) || 1,
         nombre: turnoData.nombre,
         hora_ingreso: turnoData.ingreso,
         hora_salida: turnoData.salida,
@@ -141,15 +149,15 @@ export const FormularioTurno = ({ onSuccess }) => {
       {/* Lado Derecho: Lista de Usuarios Disponibles */}
       <div className="flex flex-col bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden" style={{ minHeight: '500px', maxHeight: '650px' }}>
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/50">
-          <h2 className="text-xl font-bold text-gray-800">Usuarios Disponibles</h2>
-          <p className="text-sm text-gray-500 mt-1">Selecciona los empleados para este turno.</p>
+          <h2 className="text-xl font-bold text-gray-800">Empleados del Proyecto</h2>
+          <p className="text-sm text-gray-500 mt-1">Solo se muestran los empleados que pertenecen a este proyecto.</p>
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
           {loadingUsuarios ? (
             <p className="text-gray-500 text-center py-4">Cargando usuarios...</p>
           ) : usuariosDisponibles.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No hay usuarios disponibles.</p>
+            <p className="text-gray-500 text-center py-4">No hay empleados disponibles para este proyecto.</p>
           ) : (
             usuariosDisponibles.map(usuario => {
               const userId = usuario.id_usuario || usuario.id;
