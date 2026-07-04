@@ -20,15 +20,27 @@ export const programarTarea = async (data, id_programador) => {
     return [await tareaRepo.save(nueva), null];
 };
 
-// ----- Buscar -----
+// ----- Buscar (Todas las tareas del sistema) -----
 export const obtenerTodas = async () => {
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
-    return await tareaRepo.find({ relations: {actividad: true} });
+    return await tareaRepo.find({ 
+        relations: {
+            actividad: true,
+            programador: true // Incluido para saber quién planificó la tarea globalmente
+        },
+        order: {
+            fecha: "ASC",
+            hora: "ASC"
+        }
+    });
 };
 
 export const obtenerPorId = async (id) => {
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
-    const tarea = await tareaRepo.findOne({ where: { id_tarea: id }, relations: {actividad: true} });
+    const tarea = await tareaRepo.findOne({ 
+        where: { id_tarea: id }, 
+        relations: { actividad: true } 
+    });
     if (!tarea) return [null, "Tarea no encontrada"];
     return [tarea, null];
 };
@@ -57,7 +69,7 @@ export const eliminarTarea = async (id) => {
 
     if (!tarea) return [null, "Tarea no encontrada"];
 
-    //No se puede eliminar si está en proceso
+    // No se puede eliminar si está en proceso
     if (tarea.estado === "EN_PROCESO") {
         return [null, "ESTADO_EN_PROCESO_NO_ELIMINABLE"];
     }
@@ -78,3 +90,63 @@ export const cancelarTarea = async (id, data) => {
 
     return [await tareaRepo.save(tarea), null];
 };
+
+// ----- Mis Tareas (Filtro por empleado con relaciones en cascada) -----
+export async function obtenerMisTareas(idEmpleado) {
+    const asignacionRepository = AppDataSource.getRepository("AsignacionTarea");
+
+    const asignaciones = await asignacionRepository.find({
+        where: {
+            empleado: {
+                id_usuario: idEmpleado,
+            },
+        },
+        relations: {
+            tarea: {
+                actividad: true,
+                asignaciones: {
+                    empleado: true,
+                },
+            },
+            asignador: true,
+        },
+        order: {
+            hora_asignacion: "DESC",
+        },
+    });
+
+    // Transformamos la respuesta para no exponer información sensible
+    // de otros trabajadores.
+    return asignaciones.map(asignacion => ({
+
+        id_asignacion: asignacion.id_asignacion,
+        tipo_asignacion: asignacion.tipo_asignacion,
+        hora_asignacion: asignacion.hora_asignacion,
+
+        asignador: asignacion.asignador && {
+            id_usuario: asignacion.asignador.id_usuario,
+            nombre: asignacion.asignador.nombre,
+            apellido: asignacion.asignador.apellido,
+            rol: asignacion.asignador.rol,
+        },
+
+        tarea: {
+            id_tarea: asignacion.tarea.id_tarea,
+            fecha: asignacion.tarea.fecha,
+            hora: asignacion.tarea.hora,
+            estado: asignacion.tarea.estado,
+            comentario: asignacion.tarea.comentario,
+
+            actividad: asignacion.tarea.actividad,
+
+            equipo: asignacion.tarea.asignaciones.map(companero => ({
+                id_usuario: companero.empleado.id_usuario,
+                nombre: companero.empleado.nombre,
+                apellido: companero.empleado.apellido,
+                rol: companero.empleado.rol,
+            })),
+        },
+
+    }));
+
+}

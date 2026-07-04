@@ -18,6 +18,7 @@ import ItemsRoutes from '../modules/items/items.routes.js';
 
 // MÓDULO DE PROYECTOS
 import ProyectoRoutes from '../modules/proyecto/proyecto.routes.js';
+import ProyectoUsuarioRoutes from '../modules/proyecto/proyecto_usuario.routes.js'
 
 // MÓDULO DE RECURSOS HUMANOS (RRHH)
 import UsuarioRoutes from '../modules/usuario/usuario.routes.js';
@@ -49,6 +50,7 @@ router.use(authenticateJwt);
 router.use('/actividades', ActividadesRoutes);
 router.use('/categorias', CategoriasRoutes);
 router.use('/proyecto', ProyectoRoutes);
+router.use('/proyecto', ProyectoUsuarioRoutes);
 router.use('/tareas', TareasRoutes);
 router.use('/asignacion', AsignacionRoutes);
 

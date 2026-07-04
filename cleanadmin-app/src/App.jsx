@@ -1,0 +1,77 @@
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import Login from "./pages/Login";
+import RoleRouter from "./routes/RoleRouter";
+
+// Guardián para rutas privadas
+function PrivateRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-admin-bg text-admin-text-main">
+        <p className="font-medium">Verificando sesión activa...</p>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+}
+
+// Guardián para rutas públicas
+function PublicRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) return null;
+
+  return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
+}
+
+function RootRedirect() {
+  const { isAuthenticated } = useAuth();
+
+  return isAuthenticated
+    ? <Navigate to="/dashboard" replace />
+    : <Navigate to="/login" replace />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+
+          {/* Ruta raíz */}
+          <Route path="/" element={<RootRedirect />} />
+
+          {/* Login */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+
+          {/* Todo lo autenticado pasa por RoleRouter */}
+          <Route
+            path="/*"
+            element={
+              <PrivateRoute>
+                <RoleRouter />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Fallback */}
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
+
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}

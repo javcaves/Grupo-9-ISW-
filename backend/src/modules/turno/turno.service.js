@@ -30,51 +30,46 @@ export const crearTurno = async (data) => {
         return [null, "Se requiere al menos un empleado para crear el turno."];
     }
 
-    // Crear registros en TURNO_EMPLEADO para cada empleado asignado
+    // 1. Validar todos los empleados primero
     const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
     const hoy = new Date().toISOString().split("T")[0];
 
-    for (const emp of data.empleados) {                          // ✅ data.empleados
-        const { id_empleado, fecha_egreso, trabaja_feriados } = emp;
+    for (const emp of data.empleados) {
+        const { id_empleado } = emp;
 
-        // 1. Verificar pertenencia al proyecto
+        // 1.1 Verificar pertenencia al proyecto
         const perteneceAlProyecto = await proyectoUsuarioRepo.findOne({
-            where: { id_proyecto: data.id_proyecto, id_usuario: id_empleado, activo: true }
+            where: { id_proyecto: data.id_proyecto, id_usuario: id_empleado }
         });
-        if (!perteneceAlProyecto) {
-            return [null, `El empleado con ID ${id_empleado} no pertenece formalmente a este proyecto.`];
-        }
+        if (!perteneceAlProyecto) return [null, `El empleado con ID ${id_empleado} no pertenece formalmente a este proyecto.`];
 
-        // 2. Validar solapamiento de horarios
-        const solapado = await turnoEmpleadoRepo               
-            .createQueryBuilder("te")
-            .innerJoin("te.turno", "t")
-            .where("te.id_empleado = :id_empleado", { id_empleado })
-            .andWhere("t.id_proyecto = :id_proyecto", { id_proyecto: data.id_proyecto })  
-            .andWhere("te.activo = true")
-            .andWhere("t.activo = true")
-            .andWhere(
-                "(t.hora_ingreso < :hora_salida AND t.hora_salida > :hora_ingreso)",
-                { hora_ingreso: data.hora_ingreso, hora_salida: data.hora_salida }        
-            )
-            .getOne();
-        if (solapado) {
-            return [null, `El empleado ${id_empleado} ya tiene un turno con horario solapado en este proyecto.`];
-        }
+        // 1.2 Verificar solapamiento
+        const solapado = await _verificarSolapamientoHorario(
+            turnoEmpleadoRepo, id_empleado, data.id_proyecto, data.hora_ingreso, data.hora_salida
+        );
+        if (solapado) return [null, `El empleado ${id_empleado} ya tiene un turno con horario solapado en este proyecto.`];
 
-         // Crear el turno
-        const nuevoTurno = turnoRepo.create({
-            proyecto: { id_proyecto: data.id_proyecto },
-            nombre: data.nombre,
-            hora_ingreso: data.hora_ingreso,
-            hora_salida: data.hora_salida,
-            descripcion: data.descripcion ?? null,
-            activo: true
-        });
-        const turnoGuardado = await turnoRepo.save(nuevoTurno);
+        // 1.3 Verificar exclusividad de proyecto
+        const enOtroProyecto = await _verificarEmpleadoEnOtroProyecto(
+            turnoEmpleadoRepo, id_empleado, data.id_proyecto
+        );
+        if (enOtroProyecto) return [null, `El empleado ${id_empleado} ya está activo en otro proyecto.`];
+    }
 
+    // 2. Crear el turno (UNA SOLA VEZ)
+    const nuevoTurno = turnoRepo.create({
+        proyecto: { id_proyecto: data.id_proyecto },
+        nombre: data.nombre,
+        hora_ingreso: data.hora_ingreso,
+        hora_salida: data.hora_salida,
+        descripcion: data.descripcion ?? null,
+        activo: true
+    });
+    const turnoGuardado = await turnoRepo.save(nuevoTurno);
 
-        // 3. Crear el registro en turno_empleado               
+    // 3. Asignar los empleados al turno recién creado
+    for (const emp of data.empleados) {
+        const { id_empleado, fecha_egreso, trabaja_feriados } = emp;
         const nuevoRegistro = turnoEmpleadoRepo.create({
             id_turno: turnoGuardado.id_turno,
             id_empleado: id_empleado,
@@ -86,8 +81,7 @@ export const crearTurno = async (data) => {
         await turnoEmpleadoRepo.save(nuevoRegistro);
     }
 
-return [turnoGuardado, null];
-
+    return [turnoGuardado, null];
 };
 
 // ----- Búsqueda -----
@@ -95,8 +89,8 @@ return [turnoGuardado, null];
 export const obtenerTodosActivosPorProyecto = async (id_proyecto) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
     return await turnoRepo.find({
-        where: { 
-            proyecto: { id_proyecto: parseInt(id_proyecto, 10) } 
+        where: {
+            proyecto: { id_proyecto: parseInt(id_proyecto, 10) }
         },
         relations: {
             proyecto: true,
@@ -140,12 +134,16 @@ export const listarTurnos = async () => {
 
 export const actualizarTurno = async (id, data) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
-
-    const turno = await turnoRepo.findOne({ where: { id_turno: parseInt(id, 10) } }); 
+    const turno = await turnoRepo.findOne({ where: { id_turno: parseInt(id, 10) } });
     if (!turno) return [null, "No se encontró el turno en el sistema."];
 
+    // Actualización de campos
     if (data.descripcion !== undefined) turno.descripcion = data.descripcion;
-    if (data.activo !== undefined) turno.activo = data.activo; 
+    if (data.activo !== undefined) turno.activo = data.activo;
+    
+    // 🌟 Nueva lógica para actualizar horarios
+    if (data.hora_ingreso) turno.hora_ingreso = data.hora_ingreso;
+    if (data.hora_salida) turno.hora_salida = data.hora_salida;
 
     const turnoActualizado = await turnoRepo.save(turno);
     return [turnoActualizado, null];
@@ -202,7 +200,7 @@ export const agregarEmpleadoATurno = async (id_turno, data) => {
     }
 
     const solapado = await _verificarSolapamientoHorario(
-        turnoEmpleadoRepo, turnoRepo, data.id_empleado, turno.proyecto.id_proyecto,
+        turnoEmpleadoRepo, data.id_empleado, turno.proyecto.id_proyecto,
         turno.hora_ingreso, turno.hora_salida, id_turno
     );
     if (solapado) {
@@ -212,7 +210,7 @@ export const agregarEmpleadoATurno = async (id_turno, data) => {
     // 1. (Validación Nueva) Verificar pertenencia al proyecto
     const proyectoUsuarioRepository = AppDataSource.getRepository("ProyectoUsuario");
     const perteneceAlProyecto = await proyectoUsuarioRepository.findOne({
-        where: { id_proyecto: turno.proyecto.id_proyecto, id_usuario: data.id_empleado, activo: true }
+        where: { id_proyecto: turno.proyecto.id_proyecto, id_usuario: data.id_empleado }
     });
     if (!perteneceAlProyecto) {
         return [null, "El empleado no pertenece formalmente al proyecto de este turno."];
@@ -239,7 +237,7 @@ export const agregarEmpleadoATurno = async (id_turno, data) => {
 
     // 4. (Lógica Nueva) SOLUCIÓN AL EMPLEADO FANTASMA: Sincronización On-Demand con la Asistencia Activa de Hoy
     const asistenciaHoy = await asistenciaRepo.findOne({
-        where: { id_turno: id_turno, fecha: hoy, activo: true }
+        where: { turno: { id_turno }, fecha: hoy, activo: true }
     });
 
     if (asistenciaHoy) {
@@ -399,31 +397,29 @@ const _obtenerHoraActual = () => {
 };
 
 const _estaEnHorarioActivo = (hora_ingreso, hora_salida, horaActual) => {
+    if (hora_salida < hora_ingreso) { // Cruza la medianoche
+        return horaActual >= hora_ingreso || horaActual <= hora_salida;
+    }
     return horaActual >= hora_ingreso && horaActual <= hora_salida;
 };
 
 const _verificarSolapamientoHorario = async (
-    turnoEmpleadoRepo, turnoRepo, id_empleado, id_proyecto, hora_ingreso, hora_salida, id_turno_excluir
+    turnoEmpleadoRepo, id_empleado, id_proyecto, hora_ingreso, hora_salida, id_turno_excluir = null
 ) => {
-    // 🌟 CORREGIDO: Uso de columnas primarias numéricas directo y relations con objetos
-    const asignaciones = await turnoEmpleadoRepo.find({
-        where: { id_empleado, activo: true },
-        relations: {
-            turno: {
-                proyecto: true
-            }
-        }
-    });
+    const qb = turnoEmpleadoRepo.createQueryBuilder("te")
+        .innerJoin("te.turno", "t")
+        .where("te.id_empleado = :id_empleado", { id_empleado })
+        .andWhere("t.id_proyecto = :id_proyecto", { id_proyecto })
+        .andWhere("te.activo = true")
+        .andWhere("t.activo = true")
+        .andWhere("(t.hora_ingreso < :hora_salida AND t.hora_salida > :hora_ingreso)", { hora_ingreso, hora_salida });
 
-    for (const asig of asignaciones) {
-        if (!asig.turno || !asig.turno.activo) continue;
-        if (asig.turno.proyecto.id_proyecto !== id_proyecto) continue;
-        if (id_turno_excluir && asig.turno.id_turno === id_turno_excluir) continue;
-
-        const solapa = hora_ingreso < asig.turno.hora_salida && hora_salida > asig.turno.hora_ingreso;
-        if (solapa) return true;
+    if (id_turno_excluir) {
+        qb.andWhere("t.id_turno != :id_turno_excluir", { id_turno_excluir });
     }
-    return false;
+
+    const solapado = await qb.getOne();
+    return !!solapado;
 };
 
 const _verificarEmpleadoEnOtroProyecto = async (turnoEmpleadoRepo, id_empleado, id_proyecto_actual) => {

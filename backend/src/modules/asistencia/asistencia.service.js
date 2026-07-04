@@ -119,11 +119,9 @@ export const mostrarAsistenciaActualService = async (id_turno) => {
     // LAZY CLOSURE: Simulación del RF-ASISTENCIA-7 On-Demand
     // =====================================================================
     const ahora = new Date();
-    const horaActualMin = ahora.getHours() * 60 + ahora.getMinutes();
-    const minSalidaTurno = convertirAMinutos(asistencia.turno.hora_salida);
 
-    // Si el turno ya terminó, pasamos los rezagados a FALTA_INJUSTIFICADA en caliente
-    if (horaActualMin >= minSalidaTurno) {
+    // Si ya pasó el tiempo de expiración del turno (hora de salida), pasamos los rezagados a FALTA_INJUSTIFICADA
+    if (ahora >= asistencia.token_expira) {
         await asistenciaEmpleadoRepo.update(
             { id_asistencia: asistencia.id_asistencia, estado: "EN_ESPERA", activo: true },
             { estado: "FALTA_INJUSTIFICADA" }
@@ -143,14 +141,12 @@ export const mostrarAsistenciaActualService = async (id_turno) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // RF-ASISTENCIA-3: Editar registro individual (Jornada Viva)
 // ─────────────────────────────────────────────────────────────────────────────
-export const editarRegistroIndividualService = async (id_asistencia, id_empleado, data, id_encargado) => {
+export const editarRegistroAsistenciaService = async (id_asistencia, id_empleado, data, id_encargado) => {
     const registro = await asistenciaEmpleadoRepo.findOne({
         where: { id_asistencia, id_empleado, activo: true },
         relations: {
-        asistencia: {
-            turno: true
+            asistencia: { turno: true }
         }
-    }
     });
 
     if (!registro) return [null, "El registro de asistencia para este empleado no existe."];
@@ -164,6 +160,18 @@ export const editarRegistroIndividualService = async (id_asistencia, id_empleado
             return [null, "La hora de ingreso manual no puede superar la hora de salida del turno asignado."];
         }
         registro.hora_ingreso = data.hora_ingreso;
+    }
+
+    // Validar hora de egreso (aplicable para historial o cierre de jornada)
+    if (data.hora_egreso) {
+        const horaIngresoAComparar = data.hora_ingreso || registro.hora_ingreso;
+        if (!horaIngresoAComparar) return [null, "No se puede registrar una hora de egreso si el empleado no posee hora de ingreso registrada."];
+        
+        const minIngreso = convertirAMinutos(horaIngresoAComparar);
+        const minEgreso = convertirAMinutos(data.hora_egreso);
+        if (minEgreso < minIngreso) return [null, "Validación: La hora de egreso no puede ser anterior a la hora de ingreso."];
+        
+        registro.hora_egreso = data.hora_egreso;
     }
 
     if (data.estado) registro.estado = data.estado;
@@ -212,32 +220,42 @@ export const obtenerHistorialService = async (id_proyecto) => {
     });
 };
 
-export const editarHistorialPasadoService = async (id_asistencia, id_empleado, data, id_encargado) => {
-    const registro = await asistenciaEmpleadoRepo.findOne({
-        where: { id_asistencia, id_empleado, activo: true },
-        relations: {asistencia: true}
-    });
+// ───────────────────────────────────────────────────────────────
+// Historial del empleado por proyecto
+// GET /proyecto/:id_proyecto/mis-asistencias
+// ───────────────────────────────────────────────────────────────
+export const obtenerMisAsistenciasProyectoService = async (
+    idEmpleado,
+    idProyecto
+) => {
 
-    if (!registro) return [null, "Registro histórico no encontrado."];
+    const registros = await asistenciaEmpleadoRepo
+        .createQueryBuilder("ae")
+        .leftJoinAndSelect("ae.asistencia", "a")
+        .leftJoinAndSelect("a.turno", "t")
+        .where("ae.id_empleado = :idEmpleado", {
+            idEmpleado: Number(idEmpleado)
+        })
+        .andWhere("a.id_proyecto = :idProyecto", {
+            idProyecto: Number(idProyecto)
+        })
+        .andWhere("ae.activo = true")
+        .orderBy("a.fecha", "DESC")
+        .getMany();
 
-    if (data.hora_egreso) {
-        if (!registro.hora_ingreso) return [null, "No se puede registrar una hora de egreso si el empleado no posee hora de ingreso registrada."];
-        
-        const minIngreso = convertirAMinutos(registro.hora_ingreso);
-        const minEgreso = convertirAMinutos(data.hora_egreso);
-        if (minEgreso < minIngreso) return [null, "Validación: La hora de egreso no puede ser anterior a la hora de ingreso."];
-        
-        registro.hora_egreso = data.hora_egreso;
-    }
+    const historial = registros.map(registro => ({
+        id: registro.id_asistencia,
+        fecha: registro.asistencia.fecha,
+        estado: registro.estado,
+        hora_ingreso: registro.hora_ingreso,
+        hora_egreso: registro.hora_egreso,
+        descripcion: registro.descripcion,
+        turno: registro.asistencia.turno?.nombre
+    }));
 
-    if (data.estado) registro.estado = data.estado;
-    if (data.descripcion !== undefined) registro.descripcion = data.descripcion;
-    
-    registro.editado_por = id_encargado;
-    registro.fecha_edicion = new Date();
-
-    return [await asistenciaEmpleadoRepo.save(registro), null];
+    return [historial, null];
 };
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RF-ASISTENCIA-6 & RF-ASISTENCIA-9: Registrar Asistencia (Empleado Web)
@@ -302,37 +320,213 @@ export const marcarAsistenciaEmpleadoService = async (id_empleado, data) => {
     }, null];
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RF-ASISTENCIA-7: Cierre automático de asistencia (Para ejecución del CRON JOB)
-// ─────────────────────────────────────────────────────────────────────────────
-export const ejecutarCierreAutomaticoAsistencia = async () => {
-    const hoy = new Date().toISOString().split("T")[0];
-    
-    // Buscar todas las asistencias del día que estén activas
-    const asistenciasActivas = await asistenciaRepo.find({
-        where: { fecha: hoy, activo: true },
-        relations: { turno: true }
-    });
 
-    const ahora = new Date();
-    const horaActualMin = ahora.getHours() * 60 + ahora.getMinutes();
-    let contados = 0;
+// ─────────────────────────────────────────────────────────────────────────────
+// RF-ASISTENCIA-7: Obtener historial del empleado en su proyecto actual
+// ─────────────────────────────────────────────────────────────────────────────
+export const obtenerMiHistorialService = async (id_usuario) => {
+    try {
 
-    for (const asis of asistenciasActivas) {
-        const minSalidaTurno = convertirAMinutos(asis.turno.hora_salida);
-        
-        // Si ya pasó la hora de salida del turno, cerramos los "EN_ESPERA" rezagados
-        if (horaActualMin >= minSalidaTurno) {
-            const rezagados = await asistenciaEmpleadoRepo.find({
-                where: { id_asistencia: asis.id_asistencia, estado: "EN_ESPERA", activo: true }
+        // Buscar el turno activo del empleado
+        const turnoEmpleado = await turnoEmpleadoRepo.findOne({
+            where: {
+                empleado: {
+                    id_usuario
+                },
+                activo: true
+            },
+            relations: {
+                turno: {
+                    proyecto: true
+                }
+            }
+        });
+
+        if (!turnoEmpleado) {
+            return [[], null];
+        }
+
+        const idProyecto = turnoEmpleado.turno.proyecto.id_proyecto;
+
+        // Obtener todas las asistencias del proyecto
+        const asistencias = await asistenciaRepo.find({
+            where: {
+                proyecto: {
+                    id_proyecto: idProyecto
+                },
+                activo: true
+            },
+            order: {
+                fecha: "DESC"
+            }
+        });
+
+        const resultado = [];
+
+        for (const asistencia of asistencias) {
+
+            const registro = await asistenciaEmpleadoRepo.findOne({
+                where: {
+                    id_asistencia: asistencia.id_asistencia,
+                    id_empleado: id_usuario,
+                    activo: true
+                }
             });
 
-            for (const rez of rezagados) {
-                rez.estado = "FALTA_INJUSTIFICADA";
-                await asistenciaEmpleadoRepo.save(rez);
-                contados++;
-            }
+            if (!registro) continue;
+
+            resultado.push({
+                id_asistencia: asistencia.id_asistencia,
+                fecha: asistencia.fecha,
+                estado: registro.estado,
+                hora_ingreso: registro.hora_ingreso,
+                hora_egreso: registro.hora_egreso,
+                descripcion: registro.descripcion
+            });
         }
+
+        return [resultado, null];
+
+    } catch (error) {
+        return [null, error.message];
     }
-    return { asistencias_procesadas: asistenciasActivas.length, faltas_automaticas_aplicadas: contados };
+};
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NUEVO: Obtener asistencia de hoy controlando rangos de turno y tolerancia
+// ─────────────────────────────────────────────────────────────────────────────
+export async function obtenerMiAsistenciaActual(idEmpleado, idTurno) {
+    try {
+        // 1. OBTENER LA FECHA LOCAL (Evita desfases de servidores en la nube/UTC)
+        const tzOffset = (new Date()).getTimezoneOffset() * 60000; // Desfase en ms
+        const localISODate = (new Date(Date.now() - tzOffset)).toISOString();
+        const hoyStr = localISODate.split("T")[0]; // YYYY-MM-DD Local exacto
+
+        const fechaActual = new Date(Date.now() - tzOffset);
+        const diaSemana = fechaActual.getDay(); // 0 = Domingo, 6 = Sábado
+
+        // 2. BUSCAR SI YA EXISTE UN REGISTRO EN EL SNAPSHOT DE HOY (Asistencia ya iniciada)
+        const registro = await asistenciaEmpleadoRepo
+            .createQueryBuilder("ae")
+            .leftJoinAndSelect("ae.asistencia", "asistencia")
+            .leftJoinAndSelect("asistencia.turno", "turno")
+            .where("ae.id_empleado = :idEmpleado", { idEmpleado: Number(idEmpleado) })
+            .andWhere("asistencia.id_turno = :idTurno", { idTurno: Number(idTurno) })
+            .andWhere("asistencia.fecha = :hoyStr", { hoyStr }) 
+            .andWhere("ae.activo = true")
+            .getOne();
+
+        // CASO A: El empleado ya figura en la jornada de hoy (tiene marcas o está en espera activo)
+        if (registro) {
+            const asignacionContrato = await turnoEmpleadoRepo.findOne({
+                where: { turno: { id_turno: Number(idTurno) }, empleado: { id_usuario: Number(idEmpleado) }, activo: true }
+            });
+
+            // Inyectamos las colaciones reales del contrato dinámicamente en el objeto
+            if (asignacionContrato && registro.asistencia?.turno) {
+                registro.asistencia.turno.hora_inicio_colacion = asignacionContrato.inicio_colacion;
+                registro.asistencia.turno.hora_fin_colacion = asignacionContrato.fin_colacion;
+            }
+
+            return {
+                success: true,
+                code: "MARCA_EXISTENTE",
+                data: registro
+            };
+        }
+
+        // =====================================================================
+        // CASO B: NO HAY MARCA HOY (Buscamos la vinculación contractual activa)
+        // =====================================================================
+        console.log(`[Asistencia - Predictivo] Buscando vinculación activa para Empleado: ${idEmpleado}, Turno: ${idTurno}`);
+        
+        const asignacionContrato = await turnoEmpleadoRepo.findOne({
+            where: {
+                turno: { id_turno: Number(idTurno) },
+                empleado: { id_usuario: Number(idEmpleado) },
+                activo: true
+            },
+            relations: {
+                turno: true
+            }
+        });
+
+        // Si existe la vinculación en la tabla intermedia, armamos el esqueleto para que el UIX no se rompa
+        if (asignacionContrato) {
+            
+            // Si es fin de semana, devolvemos la data del turno pero con código restrictivo
+            if (diaSemana === 0 || diaSemana === 6) {
+                return {
+                    success: true,
+                    code: "FIN_DE_SEMANA",
+                    message: "Fin de semana: No registras jornadas operativas para hoy.",
+                    data: {
+                        estado: "FUERA_DE_HORARIO",
+                        hora_ingreso: "--",
+                        hora_egreso: "Inhabilitado",
+                        asistencia: {
+                            turno: {
+                                id_turno: asignacionContrato.turno.id_turno,
+                                nombre: asignacionContrato.turno.nombre,
+                                hora_ingreso: asignacionContrato.turno.hora_ingreso,
+                                hora_salida: asignacionContrato.turno.hora_salida,
+                                hora_inicio_colacion: asignacionContrato.inicio_colacion,
+                                hora_fin_colacion: asignacionContrato.fin_colacion
+                            }
+                        }
+                    }
+                };
+            }
+
+            // Día de semana normal, esperando que abran el punto de control QR
+            return {
+                success: true,
+                code: "ESPERANDO_INGRESO",
+                message: "Sin marcas de asistencia registradas para la fecha de hoy.",
+                data: {
+                    estado: "EN_ESPERA",
+                    hora_ingreso: "--",
+                    hora_egreso: "Pendiente",
+                    asistencia: {
+                        turno: {
+                            id_turno: asignacionContrato.turno.id_turno,
+                            nombre: asignacionContrato.turno.nombre,
+                            hora_ingreso: asignacionContrato.turno.hora_ingreso,
+                            hora_salida: asignacionContrato.turno.hora_salida,
+                            hora_inicio_colacion: asignacionContrato.inicio_colacion,
+                            hora_fin_colacion: asignacionContrato.fin_colacion
+                        }
+                    }
+                }
+            };
+        }
+
+        // CASO C: El usuario ni siquiera está en la tabla intermedia asignado a este turno
+        return {
+            success: true,
+            code: "SIN_TURNO_ASIGNADO",
+            message: "No registras una vinculación contractual o turno asignado para este proyecto.",
+            data: null
+        };
+
+    } catch (error) {
+        console.error("🔥 Error crítico en obtenerMiAsistenciaActual:", error);
+        return { 
+            success: false, 
+            data: null, 
+            error: error.message 
+        };
+    }
+}
+
+
+export const obtenerMiTurnoService = async (id_usuario) => {
+    const turnoEmpleado = await turnoEmpleadoRepo.findOne({
+        where: { empleado: { id_usuario: Number(id_usuario) }, activo: true },
+        relations: { turno: true }
+    });
+    if (!turnoEmpleado) return [null, "No tienes un turno activo asignado."];
+    return [turnoEmpleado.turno, null];
 };

@@ -1,4 +1,3 @@
-
 import * as AsistenciaService from "./asistencia.service.js";
 import { 
     asistenciaCreateValidation, 
@@ -12,7 +11,6 @@ export const crearAsistencia = async (req, res) => {
         const { error, value } = asistenciaCreateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Datos de entrada inválidos", error.message);
 
-        // id_usuario viene inyectado por tu middleware authenticateJwt
         const [nueva, err] = await AsistenciaService.crearAsistenciaService(value.id_turno, req.user.id_usuario);
         if (err) return handleErrorClient(res, 400, "No se pudo crear la jornada", err);
 
@@ -40,7 +38,7 @@ export const editarRegistroIndividual = async (req, res) => {
         const { error, value } = registroIndividualUpdateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Parámetros de edición inválidos", error.message);
 
-        const [actualizado, err] = await AsistenciaService.editarRegistroIndividualService(
+        const [actualizado, err] = await AsistenciaService.editarRegistroAsistenciaService(
             id_asistencia, id_empleado, value, req.user.id_usuario
         );
         if (err) return handleErrorClient(res, 400, "Modificación denegada", err);
@@ -79,7 +77,7 @@ export const editarHistorialPasado = async (req, res) => {
         const { error, value } = registroIndividualUpdateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Datos erróneos", error.message);
 
-        const [modificado, err] = await AsistenciaService.editarHistorialPasadoService(
+        const [modificado, err] = await AsistenciaService.editarRegistroAsistenciaService(
             id_asistencia, id_empleado, value, req.user.id_usuario
         );
         if (err) return handleErrorClient(res, 400, "Error en reglas históricas", err);
@@ -89,6 +87,123 @@ export const editarHistorialPasado = async (req, res) => {
         return handleErrorServer(res, 500, "Error de servidor", error.message);
     }
 };
+
+export const obtenerMisAsistenciasPorProyecto = async (req, res) => {
+    try {
+
+        const { id_proyecto } = req.params;
+
+        const [historial, err] =
+            await AsistenciaService.obtenerMisAsistenciasProyectoService(
+                req.user.id_usuario,
+                id_proyecto
+            );
+
+        if (err) {
+            return handleErrorClient(
+                res,
+                403,
+                "No fue posible obtener el historial",
+                err
+            );
+        }
+
+        return handleSuccess(
+            res,
+            200,
+            "Historial de asistencia obtenido correctamente",
+            historial
+        );
+
+    } catch (error) {
+
+        return handleErrorServer(
+            res,
+            500,
+            "Error de servidor",
+            error.message
+        );
+
+    }
+};
+
+export const obtenerMiHistorial = async (req, res) => {
+    try {
+
+        const [historial, err] =
+            await AsistenciaService.obtenerMiHistorialService(
+                req.user.id_usuario
+            );
+
+        if (err) {
+            return handleErrorClient(
+                res,
+                400,
+                "No fue posible obtener el historial",
+                err
+            );
+        }
+
+        return handleSuccess(
+            res,
+            200,
+            "Historial obtenido correctamente",
+            historial
+        );
+
+    } catch (error) {
+
+        return handleErrorServer(
+            res,
+            500,
+            "Error interno",
+            error.message
+        );
+
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REFACTORIZADO: Coherente con responseHandlers y desestructuración del Front
+// ─────────────────────────────────────────────────────────────────────────────
+export async function obtenerMiAsistenciaActual(req, res) {
+    try {
+        const idEmpleado = req.user?.id_usuario;
+        const id_turno = req.query.id_turno || req.query.idTurno;
+
+        console.log("📥 [Backend] Query Params Recibidos:", req.query);
+        console.log("📥 [Backend] ID Turno procesado:", id_turno);
+
+        if (!id_turno) {
+            // Devolvemos un 200 con data null usando tu handler para evitar romper promesas paralelas
+            return handleSuccess(res, 200, "No se proporcionó un ID de turno para buscar.", null);
+        }
+
+        const resultadoService = await AsistenciaService.obtenerMiAsistenciaActual(
+            idEmpleado,
+            Number(id_turno)
+        );
+
+        if (!resultadoService.success) {
+            return handleErrorClient(res, 400, "Error al procesar la asistencia laboral", resultadoService.error);
+        }
+
+        // Retorno exitoso estandarizado. El frontend leerá .data directamente
+        return handleSuccess(
+            res, 
+            200, 
+            resultadoService.data ? "Asistencia obtenida con éxito." : "Sin marcas de asistencia hoy.", 
+                {
+        code: resultadoService.code,
+        data: resultadoService.data
+    }
+        );
+
+    } catch (error) {
+        console.error("🔥 Error crítico en controlador obtenerMiAsistenciaActual:", error);
+        return handleErrorServer(res, 500, "Error crítico interno al procesar el estado de asistencia", error.message);
+    }
+}
 
 export const registrarAutoAsistenciaEmpleado = async (req, res) => {
     try {
@@ -101,5 +216,15 @@ export const registrarAutoAsistenciaEmpleado = async (req, res) => {
         return handleSuccess(res, 200, "Operación exitosa", resultado);
     } catch (error) {
         return handleErrorServer(res, 500, "Error al procesar el registro", error.message);
+    }
+};
+
+export const obtenerMiTurno = async (req, res) => {
+    try {
+        const [turno, err] = await AsistenciaService.obtenerMiTurnoService(req.user.id_usuario);
+        if (err) return handleErrorClient(res, 404, "Sin turno asignado", err);
+        return handleSuccess(res, 200, "Turno obtenido", turno);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error al obtener turno", error.message);
     }
 };
