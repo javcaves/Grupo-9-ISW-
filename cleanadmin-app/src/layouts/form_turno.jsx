@@ -3,7 +3,8 @@ import { FormContainer } from '../components/Formulario.jsx';
 import { TurnoService } from '../api/turno.service';
 import { ProyectoUsuarioService } from '../api/proyecto_usuario.service';
 
-export const FormularioTurno = ({ onSuccess, idProyecto }) => {
+export const FormularioTurno = ({ onSuccess, idProyecto, turno = null }) => {
+  const isEditing = Boolean(turno);
   const [turnoData, setTurnoData] = useState({ 
     nombre: '', 
     ingreso: '', 
@@ -14,7 +15,33 @@ export const FormularioTurno = ({ onSuccess, idProyecto }) => {
   const [usuariosDisponibles, setUsuariosDisponibles] = useState([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (turno) {
+      const empleadosIniciales = (turno.turnoEmpleados || turno.empleados || [])
+        .map((item) => item?.id_empleado ?? item?.empleado?.id_usuario ?? item?.id_usuario ?? item?.id ?? null)
+        .filter(Boolean);
+
+      setTurnoData({
+        nombre: turno.nombre || '',
+        ingreso: turno.hora_ingreso || '',
+        salida: turno.hora_salida || '',
+        descripcion: turno.descripcion || '',
+        empleados: empleadosIniciales,
+      });
+      return;
+    }
+
+    setTurnoData({
+      nombre: '',
+      ingreso: '',
+      salida: '',
+      descripcion: '',
+      empleados: [],
+    });
+  }, [turno]);
 
   useEffect(() => {
     const fetchUsuarios = async () => {
@@ -52,30 +79,58 @@ export const FormularioTurno = ({ onSuccess, idProyecto }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setLoading(true);
 
     try {
-      if (turnoData.empleados.length === 0) {
+      if (!isEditing && turnoData.empleados.length === 0) {
         throw new Error("Debes seleccionar al menos un empleado de la lista.");
       }
 
-      const empleadosArray = turnoData.empleados.map(id => ({ id_empleado: id }));
+      if (isEditing) {
+        const payload = {
+          nombre: turnoData.nombre,
+          hora_ingreso: turnoData.ingreso,
+          hora_salida: turnoData.salida,
+          descripcion: turnoData.descripcion,
+        };
 
-      const payload = {
-        id_proyecto: Number(idProyecto) || Number(turnoData.id_proyecto) || 1,
-        nombre: turnoData.nombre,
-        hora_ingreso: turnoData.ingreso,
-        hora_salida: turnoData.salida,
-        descripcion: turnoData.descripcion,
-        empleados: empleadosArray
-      };
+        await TurnoService.actualizar(turno.id_turno, payload);
 
-      
-      const data = await TurnoService.crear(payload);
-      console.log("Turno creado exitosamente:", data);
+        const empleadosActuales = new Set((turno.turnoEmpleados || turno.empleados || [])
+          .map((item) => item?.id_empleado ?? item?.empleado?.id_usuario ?? item?.id_usuario ?? item?.id ?? null)
+          .filter(Boolean));
+        const empleadosDeseados = new Set(turnoData.empleados);
+
+        const paraAgregar = [...empleadosDeseados].filter((id) => !empleadosActuales.has(id));
+        const paraQuitar = [...empleadosActuales].filter((id) => !empleadosDeseados.has(id));
+
+        for (const idEmpleado of paraAgregar) {
+          await TurnoService.agregarEmpleado(turno.id_turno, idEmpleado);
+        }
+
+        for (const idEmpleado of paraQuitar) {
+          await TurnoService.eliminarEmpleado(turno.id_turno, idEmpleado);
+        }
+      } else {
+        const empleadosArray = turnoData.empleados.map(id => ({ id_empleado: id }));
+
+        const payload = {
+          id_proyecto: Number(idProyecto) || Number(turnoData.id_proyecto) || 1,
+          nombre: turnoData.nombre,
+          hora_ingreso: turnoData.ingreso,
+          hora_salida: turnoData.salida,
+          descripcion: turnoData.descripcion,
+          empleados: empleadosArray
+        };
+
+        await TurnoService.crear(payload);
+      }
+
+      setSuccess(isEditing ? "Turno actualizado correctamente." : "Turno creado correctamente.");
       onSuccess?.(); // Cierra el modal
     } catch (err) {
-      setError(err.message);
+      setError(err?.message || "No se pudo guardar el turno.");
     } finally {
       setLoading(false);
     }
@@ -86,15 +141,20 @@ export const FormularioTurno = ({ onSuccess, idProyecto }) => {
       {/* Lado Izquierdo: Formulario */}
       <div>
         <FormContainer
-          title="Crear Nuevo Turno"
-          description="Configura los horarios y detalles del nuevo turno."
-          submitText={loading ? "Creando..." : "Crear Turno"}
+          title={isEditing ? "Editar Turno" : "Crear Nuevo Turno"}
+          description={isEditing ? "Modifica los datos del turno sin reescribir toda la información desde cero." : "Configura los horarios y detalles del nuevo turno."}
+          submitText={loading ? (isEditing ? "Guardando..." : "Creando...") : (isEditing ? "Guardar Cambios" : "Crear Turno")}
           onSubmit={handleSubmit}
           onCancel={() => onSuccess?.()}
         >
           {error && (
             <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm font-medium">
               {error}
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
+              {success}
             </div>
           )}
 

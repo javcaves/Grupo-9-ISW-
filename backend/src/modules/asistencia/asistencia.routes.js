@@ -46,6 +46,13 @@ router.delete(
     AsistenciaCtrl.eliminarAsistencia
 );
 
+router.patch(
+    "/:id_asistencia/finalizar",
+    authenticateJwt,
+    checkRole(rolesGestion),
+    AsistenciaCtrl.finalizarAsistencia
+);
+
 // RF-ASISTENCIA-5
 router.get(
     "/proyecto/:id_proyecto/historial",

@@ -1,7 +1,7 @@
 // layouts/turnoCard.jsx
 import { Card } from '../components/Card.jsx';
 
-export const TurnoCard = ({ turno, onEdit }) => {
+export const TurnoCard = ({ turno, onEdit, onGenerarQr }) => {
   const badgeActivo = (
     <span
       className="px-2.5 py-1 text-xs font-semibold rounded-full border"
@@ -71,19 +71,31 @@ export const TurnoCard = ({ turno, onEdit }) => {
           </div>
         </div>
 
-        {/* Botón modificar */}
-        <button
-          onClick={() => onEdit(turno)}
-          className="w-full mt-auto py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
-          style={{
-            color:      "var(--turno-btn-text)",
-            background: "var(--turno-btn-bg)",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--turno-btn-bg-hover)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "var(--turno-btn-bg)"; }}
-        >
-          ✏️ Modificar Datos
-        </button>
+        <div className="mt-auto space-y-2">
+          <button
+            onClick={() => onGenerarQr?.(turno)}
+            className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
+            style={{
+              color: "#fff",
+              background: "linear-gradient(135deg,#7c3aed,#3b82f6)",
+            }}
+          >
+            📱 Generar QR de Asistencia
+          </button>
+
+          <button
+            onClick={() => onEdit(turno)}
+            className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
+            style={{
+              color:      "var(--turno-btn-text)",
+              background: "var(--turno-btn-bg)",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--turno-btn-bg-hover)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--turno-btn-bg)"; }}
+          >
+            ✏️ Modificar Datos
+          </button>
+        </div>
 
       </div>
     </Card>

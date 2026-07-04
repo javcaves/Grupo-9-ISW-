@@ -61,6 +61,18 @@ export const eliminarAsistencia = async (req, res) => {
     }
 };
 
+export const finalizarAsistencia = async (req, res) => {
+    try {
+        const { id_asistencia } = req.params;
+        const [resultado, err] = await AsistenciaService.finalizarAsistenciaService(id_asistencia);
+        if (err) return handleErrorClient(res, 400, "No se pudo cerrar la jornada", err);
+
+        return handleSuccess(res, 200, "Jornada cerrada correctamente", resultado);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error al cerrar la jornada", error.message);
+    }
+};
+
 export const listarHistorial = async (req, res) => {
     try {
         const { id_proyecto } = req.params;
