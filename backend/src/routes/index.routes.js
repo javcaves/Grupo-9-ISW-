@@ -15,6 +15,7 @@ import AsignacionRoutes from '../modules/asignacion/asignacion.routes.js';
 
 // MÓDULO DE INVENTARIO
 import ItemsRoutes from '../modules/items/items.routes.js';
+import NotificacionesRouter from '../modules/notificaciones/notificacion.routes.js';
 
 // MÓDULO DE PROYECTOS
 import ProyectoRoutes from '../modules/proyecto/proyecto.routes.js';
@@ -56,6 +57,7 @@ router.use('/asignacion', AsignacionRoutes);
 
 // INVENTARIO
 router.use('/items', ItemsRoutes); 
+router.use('/notificaciones', NotificacionesRouter);
 
 // RECURSOS HUMANOS (RRHH)
 router.use('/usuarios', UsuarioRoutes);

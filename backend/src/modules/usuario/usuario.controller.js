@@ -2,7 +2,7 @@ import * as UsuarioService from './usuario.service.js';
 import * as PowerService from '../power/power.service.js';
 
 import {
-    usuarioQueryValidation,
+    usuarioQuerySearchValidation,
     usuarioCreateValidation,
     usuarioUpdateValidation,
     usuarioIdValidation
@@ -19,7 +19,10 @@ import { handleSuccess, handleErrorClient, handleErrorServer } from '../../handl
  */
 export const buscarUsuarios = async (req, res) => {
     try {
-        const [resultados, err] = await UsuarioService.obtenerTodosActivos();
+        const { error, value } = usuarioQuerySearchValidation.validate(req.query);
+        if (error) return handleErrorClient(res, 400, 'error de validacion', error.message);
+
+        const [resultados, err] = await UsuarioService.obtenerTodosActivos(value);
         if (err) return handleErrorClient(res, 400, "Error al buscar usuarios", err);
         return handleSuccess(res, 200, 'usuarios obtenidos de forma exitosa', resultados);
     } catch (error) {

@@ -17,7 +17,6 @@ export const crearProyecto = async (req, res) => {
             return handleErrorClient(res, 400, 'error de validacion', error.message);
         }
 
-        // CORREGIDO: Se cambiaron las variables fantasmas por value y req.user
         const [nuevoProyecto, err] = await ProyectoService.crearProyecto(value, req.user);
         if (err) return handleErrorClient(res, 400, 'error al crear proyecto', err);
 
@@ -44,7 +43,6 @@ export const obtenerTodosProyectos = async (req, res) => {
 
 export const obtenerMisProyectos = async (req, res) => {
     try {
-
         console.log("USER:", req.user);
 
         const [proyectos, err] =
@@ -91,7 +89,6 @@ export const obtenerProyectosPorId = async (req, res) => {
 export const editarProyecto = async (req, res) => {
     try {
         const { error: idError, value: idValue } = proyectoIdValidation.validate(req.params);
-        // CORREGIDO: Se cambió error.message por idError.message
         if (idError) return handleErrorClient(res, 400, 'error, id invalido', idError.message);
         
         const { error, value } = proyectoUpdateValidation.validate(req.body);
@@ -100,7 +97,6 @@ export const editarProyecto = async (req, res) => {
         }
 
         const [actualizado, err] = await ProyectoService.editarProyecto(idValue.id_proyecto, value, req.user);
-        // CORREGIDO: Se cambió error.message por err
         if (err) return handleErrorClient(res, 400, 'error al editar proyecto', err);
 
         return handleSuccess(res, 200, 'proyecto actualizado de forma exitosa', actualizado);
@@ -113,7 +109,6 @@ export const editarProyecto = async (req, res) => {
  * 3. Eliminar proyecto (Solo Admin/Root)
  * DELETE /proyectos/:id
  */
-// CORREGIDO: Se cambió la firma para que reciba (req, res) correspondientes a Express
 export const eliminarProyecto = async (req, res) => {
     try {
         const { error, value } = proyectoIdValidation.validate(req.params);
@@ -123,7 +118,6 @@ export const eliminarProyecto = async (req, res) => {
         const [resultado, err] = await ProyectoService.eliminarProyecto(value.id_proyecto, req.user);
         if (err) return handleErrorClient(res, 404, 'error al eliminar', err);
 
-        // CORREGIDO: Se cambió la variable fantasma 'proyecto' por 'resultado'
         return handleSuccess(res, 200, 'proyecto eliminado de forma exitosa', resultado);
     } catch (error) {
         return handleErrorServer(res, 500, 'error de servidor', error.message);
