@@ -7,6 +7,7 @@ import TurnosView                     from "./TurnosView";
 import { Table }                      from "../../../components/Table";
 import { Card }                       from "../../../components/Card";
 import { ProyectoUsuarioService }     from "../../../api/proyecto_usuario.service";
+import NuevoPersonalModal             from "../../../components/modals/NuevoPersonalModal";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
 
 const TABS = [
@@ -16,12 +17,11 @@ const TABS = [
   { key: "turnos",      label: "Turno"             },
 ];
 
-export default function RegistroPersonalView({ proyecto, onVolver }) {
+export default function RegistroPersonalView({ proyecto, onVolver, rolEjecutor }) {
   const [tabActiva, setTab] = useState("personal");
 
   return (
     <>
-      {/* Encabezado del registro */}
       <div className="mb-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-[var(--tab-inactive-text)] opacity-60 mb-0.5">
           Gestor de Proyectos
@@ -37,7 +37,6 @@ export default function RegistroPersonalView({ proyecto, onVolver }) {
         )}
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-[14px] flex-wrap mb-6">
         {onVolver && (
           <button
@@ -82,8 +81,7 @@ export default function RegistroPersonalView({ proyecto, onVolver }) {
         })}
       </div>
 
-      {/* Contenido del tab activo */}
-      {tabActiva === "personal"    && <PersonalTab     proyecto={proyecto} />}
+      {tabActiva === "personal"    && <PersonalTab     proyecto={proyecto} rolEjecutor={rolEjecutor} />}
       {tabActiva === "actividades" && <ActividadesView proyecto={proyecto} />}
       {tabActiva === "inventario"  && <InventarioView  proyecto={proyecto} />}
       {tabActiva === "turnos"      && <TurnosView      proyecto={proyecto} />}
@@ -91,9 +89,6 @@ export default function RegistroPersonalView({ proyecto, onVolver }) {
   );
 }
 
-/* ─────────────────────────────────────────────
-   PersonalTab
-───────────────────────────────────────────── */
 const COLUMNAS_PERSONAL = [
   {
     key:   "nombre",
@@ -105,16 +100,8 @@ const COLUMNAS_PERSONAL = [
       </span>
     ),
   },
-  {
-    key:   "rut",
-    label: "RUT",
-    icon:  "fa-id-card",
-  },
-  {
-    key:   "email",
-    label: "Email",
-    icon:  "fa-envelope",
-  },
+  { key: "rut", label: "RUT", icon: "fa-id-card" },
+  { key: "email", label: "Email", icon: "fa-envelope" },
   {
     key:   "rol",
     label: "Rol",
@@ -138,16 +125,16 @@ const COLUMNAS_PERSONAL = [
   { key: "actions", label: "Acciones" },
 ];
 
-function PersonalTab({ proyecto }) {
-  const [usuarios, setUsuarios] = useState([]);
-  const [loading,  setLoading]  = useState(true);
+function PersonalTab({ proyecto, rolEjecutor }) {
+  const [usuarios, setUsuarios]           = useState([]);
+  const [loading,  setLoading]            = useState(true);
+  const [modalAgregarAbierto, setModalAgregarAbierto] = useState(false);
 
   async function cargarDatos() {
     if (!proyecto?.id_proyecto) return;
     setLoading(true);
     try {
       const data = await ProyectoUsuarioService.listarUsuarios(proyecto.id_proyecto);
-      console.log("Data de ProyectoUsuarioService:", data);
       setUsuarios(data?.data ?? data ?? []);
     } catch {
       setUsuarios([]);
@@ -158,7 +145,6 @@ function PersonalTab({ proyecto }) {
 
   useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
 
-  // ── Stats derivadas ───────────────────────────────────────────
   const totalPersonal = usuarios.length;
   const supervisores  = usuarios.filter((u) => u.rol === "SUPERVISOR").length;
   const activos       = usuarios.filter((u) => u.activo).length;
@@ -191,6 +177,14 @@ function PersonalTab({ proyecto }) {
     },
   ];
 
+  const acciones = [
+    {
+      text:      "+ Agregar Personal",
+      className: "bg-indigo-600 text-white",
+      onClick:   () => setModalAgregarAbierto(true),
+    },
+  ];
+
   const tablaContenido = loading ? (
     <div className="flex items-center justify-center py-16">
       <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
@@ -206,55 +200,64 @@ function PersonalTab({ proyecto }) {
   );
 
   return (
-    <LayoutContent
-      header={{
-        title:    "Registro de Personal",
-        subtitle: proyecto?.nombre_proy ?? "Personal asignado al proyecto",
-      }}
-      stats={
-        <>
-          {statsCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <Card
-                key={index}
-                hoverable
-                className="rounded-[28px] overflow-hidden relative min-h-[170px]"
-                decorator={
-                  <div
-                    className="absolute top-[-20px] right-[-20px] w-[110px] h-[110px] rounded-full"
-                    style={{ backgroundColor: "var(--card-decorator-bg)" }}
-                  />
-                }
-              >
-                <div className="relative z-10 flex flex-col h-full">
-                  <span style={{ color: "var(--card-label-text)" }} className="font-semibold text-[1rem]">
-                    {card.title}
-                  </span>
-                  <h2 className="text-[3rem] leading-none font-bold mt-5" style={{ color: "var(--card-number-text)" }}>
-                    {card.number}
-                  </h2>
-                  <div className="flex items-center gap-2 mt-5 text-sm" style={{ color: "var(--card-detail-text)" }}>
+    <>
+      <LayoutContent
+        header={{
+          title:    "Registro de Personal",
+          subtitle: proyecto?.nombre_proy ?? "Personal asignado al proyecto",
+        }}
+        actions={acciones}
+        stats={
+          <>
+            {statsCards.map((card, index) => {
+              const Icon = card.icon;
+              return (
+                <Card
+                  key={index}
+                  hoverable
+                  className="rounded-[28px] overflow-hidden relative min-h-[170px]"
+                  decorator={
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: "var(--card-icon-wrapper-bg)", color: "var(--card-icon-wrapper-text)" }}
-                    >
-                      <Icon size={14} />
+                      className="absolute top-[-20px] right-[-20px] w-[110px] h-[110px] rounded-full"
+                      style={{ backgroundColor: "var(--card-decorator-bg)" }}
+                    />
+                  }
+                >
+                  <div className="relative z-10 flex flex-col h-full">
+                    <span style={{ color: "var(--card-label-text)" }} className="font-semibold text-[1rem]">
+                      {card.title}
+                    </span>
+                    <h2 className="text-[3rem] leading-none font-bold mt-5" style={{ color: "var(--card-number-text)" }}>
+                      {card.number}
+                    </h2>
+                    <div className="flex items-center gap-2 mt-5 text-sm" style={{ color: "var(--card-detail-text)" }}>
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: "var(--card-icon-wrapper-bg)", color: "var(--card-icon-wrapper-text)" }}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <span>{card.detail}</span>
                     </div>
-                    <span>{card.detail}</span>
                   </div>
-                </div>
-              </Card>
-            );
-          })}
-        </>
-      }
-      table={tablaContenido}
-    />
+                </Card>
+              );
+            })}
+          </>
+        }
+        table={tablaContenido}
+      />
+
+      <NuevoPersonalModal
+        isOpen={modalAgregarAbierto}
+        onClose={() => setModalAgregarAbierto(false)}
+        idProyecto={proyecto?.id_proyecto}
+        rolEjecutor={rolEjecutor}
+        onSuccess={cargarDatos}
+      />
+    </>
   );
 }
-
-/* ── Subcomponentes ──────────────────────────────────────────── */
 
 function RolBadge({ rol }) {
   const map = {

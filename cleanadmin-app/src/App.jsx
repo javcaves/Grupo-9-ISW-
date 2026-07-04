@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import RoleRouter from "./routes/RoleRouter";
+import { NotificacionesProvider } from "./context/NotificacionesContext";
 
 // Guardián para rutas privadas
 function PrivateRoute({ children }) {
@@ -40,11 +41,8 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-
-          {/* Ruta raíz */}
           <Route path="/" element={<RootRedirect />} />
 
-          {/* Login */}
           <Route
             path="/login"
             element={
@@ -59,17 +57,14 @@ export default function App() {
             path="/*"
             element={
               <PrivateRoute>
-                <RoleRouter />
+                <NotificacionesProvider>   {/* <-- nuevo */}
+                  <RoleRouter />
+                </NotificacionesProvider>  {/* <-- nuevo */}
               </PrivateRoute>
             }
           />
 
-          {/* Fallback */}
-          <Route
-            path="*"
-            element={<Navigate to="/" replace />}
-          />
-
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

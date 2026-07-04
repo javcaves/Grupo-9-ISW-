@@ -48,33 +48,33 @@ export default function ProyectosView() {
 
   // ENCARGADO → directo al proyecto
   if (ROLES_DIRECTO.includes(rol)) {
-    if (!proyectoSeleccionado) {
-      return (
-        <div className="p-6 text-center text-sm text-gray-400">
-          No tienes un proyecto asignado actualmente.
-        </div>
-      );
-    }
-    return <RegistroPersonalView proyecto={proyectoSeleccionado} onVolver={null} />;
-  }
-
-  // ROOT / ADMIN / SUPERVISOR → selector de proyecto
-  if (ROLES_SELECTOR.includes(rol)) {
-    if (!proyectoSeleccionado) {
-      return (
-        <ProyectoHome
-          rol={rol}
-          onSeleccionarProyecto={(p) => setProyecto(p)}
-        />
-      );
-    }
+  if (!proyectoSeleccionado) {
     return (
-      <RegistroPersonalView
-        proyecto={proyectoSeleccionado}
-        onVolver={() => setProyecto(null)}
+      <div className="p-6 text-center text-sm text-gray-400">
+        No tienes un proyecto asignado actualmente.
+      </div>
+    );
+  }
+  return <RegistroPersonalView proyecto={proyectoSeleccionado} onVolver={null} rolEjecutor={rol} />;
+}
+
+if (ROLES_SELECTOR.includes(rol)) {
+  if (!proyectoSeleccionado) {
+    return (
+      <ProyectoHome
+        rol={rol}
+        onSeleccionarProyecto={(p) => setProyecto(p)}
       />
     );
   }
+  return (
+    <RegistroPersonalView
+      proyecto={proyectoSeleccionado}
+      onVolver={() => setProyecto(null)}
+      rolEjecutor={rol}
+    />
+  );
+}
 
   return null;
 }

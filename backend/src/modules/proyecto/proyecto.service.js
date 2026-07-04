@@ -13,17 +13,9 @@
 
 import { AppDataSource } from '../../config/ConfigDB.js';
 import { In } from 'typeorm';
-/**
- * Valida si un empleado ya está en otro proyecto activo
- */
 
 const proyectoRepository = AppDataSource.getRepository('Proyecto');
 const usuarioProyectoRepository = AppDataSource.getRepository('ProyectoUsuario');
-
-
-// --- MÉTODOS ---
-
-// src/modules/proyecto/proyecto.service.js
 
 /**
  * 1. Crear Proyecto
@@ -35,7 +27,7 @@ export const crearProyecto = async (data, ejecutor) => {
         }
 
         const nuevoProyecto = proyectoRepository.create({
-            nombre_proy: data.nombre, // 🌟 Mapeo correcto para POST
+            nombre_proy: data.nombre,
             min_emp: data.min_emp,
             max_emp: data.max_emp,
             ubicacion: data.ubicacion,
@@ -53,7 +45,7 @@ export const crearProyecto = async (data, ejecutor) => {
 };
 
 /**
- * 2. Obtener todos los proyectos del sistema
+ * 2. Obtener todos los proyectos del sistema (con personal enriquecido)
  */
 export const obtenerTodosProyectos = async () => {
     try {
@@ -61,7 +53,8 @@ export const obtenerTodosProyectos = async () => {
             where: { activo: true },
             order: { id_proyecto: 'ASC' }
         });
-        return [proyectos, null];
+        const enriquecidos = await enriquecerProyectosConPersonal(proyectos);
+        return [enriquecidos, null];
     } catch (error) {
         return [null, error.message];
     }
@@ -70,18 +63,15 @@ export const obtenerTodosProyectos = async () => {
 /**
  * 3. Obtener proyectos según rol (ADMIN ve todo, otros ven solo su asignación)
  */
-export const obtenerProyectosPorUsuario = async (usuario) => { // 🌟 CORREGIDO: Ahora recibe 'usuario'
+export const obtenerProyectosPorUsuario = async (usuario) => {
     try {
-        console.log("👤 [ProyectoService] Usuario recibido:", usuario);
         if (['ROOT', 'ADMIN'].includes(usuario.rol)) {
-            console.log("🧠 Usuario ADMIN/ROOT, devolviendo todos los proyectos");
             return await obtenerTodosProyectos();
         }
 
         const misProyectos = await usuarioProyectoRepository.find({
             where: { id_usuario: usuario.id_usuario || usuario.id, activo: true }
         });
-        console.log("📦 Mis proyectos RAW:", misProyectos);
 
         if (misProyectos.length === 0) {
             return [[], null];
@@ -89,14 +79,13 @@ export const obtenerProyectosPorUsuario = async (usuario) => { // 🌟 CORREGIDO
 
         const misIds = misProyectos.map(p => p.id_proyecto);
 
-        console.log("🧾 IDs de proyectos:", misIds);
-
         const proyectos = await proyectoRepository.find({
             where: { id_proyecto: In(misIds), activo: true },
             order: { id_proyecto: 'ASC' }
         });
 
-        return [proyectos, null];
+        const enriquecidos = await enriquecerProyectosConPersonal(proyectos);
+        return [enriquecidos, null];
     } catch (error) {
         console.error("❌ ERROR EN obtenerProyectosPorUsuario");
         console.error(error);
@@ -109,16 +98,12 @@ export const obtenerProyectosPorUsuario = async (usuario) => { // 🌟 CORREGIDO
  */
 export const obtenerProyectosPorId = async (id, usuario) => {
     try {
-        console.log("🔎 [ProyectoService] ID recibido:", id);
-        console.log("👤 [ProyectoService] Usuario:", usuario);
-        // 🌟 CORREGIDO: Se cambió 'find' por 'findOne' para manejar el objeto directo
         const proyecto = await proyectoRepository.findOne({
             where: { id_proyecto: parseInt(id), activo: true }
         });
 
         if (!proyecto) throw new Error('proyecto no encontrado');
 
-        // 🌟 CORREGIDO: Sintaxis correcta de negación lógica
         if (!['ROOT', 'ADMIN'].includes(usuario.rol)) {
             const pertenece = await usuarioProyectoRepository.findOne({
                 where: { id_proyecto: parseInt(id), id_usuario: usuario.id_usuario || usuario.id, activo: true }
@@ -147,13 +132,10 @@ export const editarProyecto = async (id_proyecto, data, ejecutor) => {
 
         if (!proyecto) throw new Error('proyecto no encontrado');
 
-        // 🌟 CORREGIDO PARA EL PUT: 
-        // Si desde el JSON viene 'nombre', lo asignamos manualmente a 'nombre_proy' antes de guardar
         if (data.nombre !== undefined) {
             proyecto.nombre_proy = data.nombre;
         }
 
-        // El resto de los campos planos se pueden asignar con normalidad
         Object.assign(proyecto, {
             min_emp: data.min_emp,
             max_emp: data.max_emp,
@@ -179,7 +161,6 @@ export const eliminarProyecto = async (id, ejecutor) => {
             throw new Error("solo administradores pueden eliminar proyectos");
         }
 
-        // 🌟 CORREGIDO: Cambiado de find a findOne
         const proyecto = await proyectoRepository.findOne({
             where: { id_proyecto: parseInt(id) }
         });
@@ -193,4 +174,70 @@ export const eliminarProyecto = async (id, ejecutor) => {
     } catch (error) {
         return [null, error.message];
     }
+};
+
+/**
+ * Enriquece una lista de proyectos con:
+ * - cantidad_empleados: conteo real de vínculos activos con Usuario.rol === 'EMPLEADO'
+ * - supervisores: lista de supervisores activos del proyecto, cada uno con
+ *   proyectos_asignados (conteo GLOBAL de proyectos activos en los que participa,
+ *   no solo dentro de este listado)
+ */
+const enriquecerProyectosConPersonal = async (proyectos) => {
+    if (proyectos.length === 0) return proyectos;
+
+    const ids = proyectos.map((p) => p.id_proyecto);
+
+    const vinculos = await usuarioProyectoRepository
+        .createQueryBuilder("pu")
+        .innerJoin("Usuario", "u", "u.id_usuario = pu.id_usuario")
+        .select([
+            "pu.id_proyecto AS id_proyecto",
+            "u.id_usuario AS id_usuario",
+            "u.nombre AS nombre",
+            "u.apellido AS apellido",
+            "u.rol AS rol",
+        ])
+        .where("pu.id_proyecto IN (:...ids)", { ids })
+        .andWhere("pu.activo = true")
+        .getRawMany();
+
+    const empleadosPorProyecto    = new Map();
+    const supervisoresPorProyecto = new Map();
+    const idsSupervisores         = new Set();
+
+    for (const v of vinculos) {
+        if (v.rol === "EMPLEADO") {
+            empleadosPorProyecto.set(v.id_proyecto, (empleadosPorProyecto.get(v.id_proyecto) ?? 0) + 1);
+        }
+        if (v.rol === "SUPERVISOR") {
+            const lista = supervisoresPorProyecto.get(v.id_proyecto) ?? [];
+            lista.push({ id_usuario: v.id_usuario, nombre: v.nombre, apellido: v.apellido });
+            supervisoresPorProyecto.set(v.id_proyecto, lista);
+            idsSupervisores.add(v.id_usuario);
+        }
+    }
+
+    let totalesPorSupervisor = new Map();
+    if (idsSupervisores.size > 0) {
+        const totales = await usuarioProyectoRepository
+            .createQueryBuilder("pu")
+            .select("pu.id_usuario", "id_usuario")
+            .addSelect("COUNT(DISTINCT pu.id_proyecto)", "total")
+            .where("pu.id_usuario IN (:...ids)", { ids: [...idsSupervisores] })
+            .andWhere("pu.activo = true")
+            .groupBy("pu.id_usuario")
+            .getRawMany();
+
+        totalesPorSupervisor = new Map(totales.map((t) => [Number(t.id_usuario), Number(t.total)]));
+    }
+
+    return proyectos.map((p) => ({
+        ...p,
+        cantidad_empleados: empleadosPorProyecto.get(p.id_proyecto) ?? 0,
+        supervisores: (supervisoresPorProyecto.get(p.id_proyecto) ?? []).map((s) => ({
+            ...s,
+            proyectos_asignados: totalesPorSupervisor.get(s.id_usuario) ?? 0,
+        })),
+    }));
 };

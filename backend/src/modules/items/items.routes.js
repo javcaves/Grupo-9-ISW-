@@ -26,17 +26,17 @@ router.get('/', authenticateJwt, ItemsCtrl.listarItems);
 router.put('/proyecto/:id_proyecto/auditar', authenticateJwt, checkRole(['ROOT','SUPERVISOR', 'ENCARGADO']), ItemsCtrl.auditarInventarioProyecto);
 
 // ================= RUTAS DE ITEMS - ESCRITURA =================
-// El Supervisor es el único facultado para crear, modificar y eliminar ítems del catálogo
-router.post('/', authenticateJwt, checkRole(['ROOT','SUPERVISOR']), ItemsCtrl.createItem);
-router.put('/:id', authenticateJwt, checkRole(['ROOT','SUPERVISOR']), ItemsCtrl.updateItem);
-router.delete('/:id', authenticateJwt, checkRole(['ROOT','SUPERVISOR']), ItemsCtrl.deleteItem);
+// El Supervisor (y ADMIN) son los facultados para crear, modificar y eliminar ítems del catálogo
+router.post('/', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR']), ItemsCtrl.createItem);
+router.put('/:id', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR']), ItemsCtrl.updateItem);
+router.delete('/:id', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR']), ItemsCtrl.deleteItem);
 
 // ================= RUTAS DE MOVIMIENTOS - ESCRITURA =================
 // Ambos roles pueden registrar flujos regulares de movimientos
 router.post('/movimientos', authenticateJwt, checkRole(['ROOT','SUPERVISOR', 'ENCARGADO']), ItemsCtrl.registrarMovimiento);
 
-// Solo el Supervisor puede resolver (aprobar/rechazar) las solicitudes de ítems nuevos
-router.patch('/movimientos/:id_mov/resolver', authenticateJwt, checkRole(['ROOT','SUPERVISOR']), ItemsCtrl.resolverSolicitud);
+// El Supervisor (y ADMIN) pueden resolver (aprobar/rechazar) las solicitudes de ítems nuevos
+router.patch('/movimientos/:id_mov/resolver', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR']), ItemsCtrl.resolverSolicitud);
 
 // Eliminación de movimientos (la restricción de tiempo de 1 semana se controla internamente en el service)
 router.delete('/movimientos/:id_mov', authenticateJwt, checkRole(['ROOT','SUPERVISOR', 'ENCARGADO']), ItemsCtrl.removeMovimiento);

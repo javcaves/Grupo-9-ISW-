@@ -71,19 +71,53 @@ export const crearUsuario = async(data, ejecutor)=>{
         return [guardado, null];
 
     }catch(error){
-        console.log("error en crearUsuarioService", error);
-        return[null, "error interno del servidor"];
+        console.error("error en crearUsuarioService", error);
+        return[null, error.message];
     }
 }
 //busqueda**************
-export const obtenerTodosActivos = async () => {
+export const obtenerTodosActivos = async (filtros = {}) => {
     try {
         const userRepo = AppDataSource.getRepository("Usuario");
-        const usuarios = await userRepo.find({ 
-            where: { activo: true }
+        const puRepo   = AppDataSource.getRepository("ProyectoUsuario");
+
+        const baseWhere = { activo: true };
+        if (filtros.rol) baseWhere.rol = filtros.rol;
+        if (filtros.rut) baseWhere.rut = ILike(`%${filtros.rut}%`);
+
+        const where = filtros.nombre
+            ? [
+                { ...baseWhere, nombre:   ILike(`%${filtros.nombre}%`) },
+                { ...baseWhere, apellido: ILike(`%${filtros.nombre}%`) },
+              ]
+            : baseWhere;
+
+        const usuarios = await userRepo.find({ where });
+
+        // Conteo de proyectos EN_CURSO por usuario, uniendo hasta la tabla proyecto
+        const conteos = await puRepo
+            .createQueryBuilder("pu")
+            .innerJoin("proyecto", "p", "p.id_proyecto = pu.id_proyecto")
+            .select("pu.id_usuario", "id_usuario")
+            .addSelect("COUNT(DISTINCT pu.id_proyecto)", "total")
+            .where("pu.activo = true")
+            .andWhere("p.estado = :estado", { estado: "EN_CURSO" })
+            .groupBy("pu.id_usuario")
+            .getRawMany();
+
+        const mapaConteos = new Map(
+            conteos.map((c) => [Number(c.id_usuario), Number(c.total)])
+        );
+
+        const resultados = usuarios.map((u) => {
+            delete u.password;
+            return {
+                ...u,
+                proyectos_en_curso: mapaConteos.get(u.id_usuario) ?? 0,
+            };
         });
-        usuarios.forEach(u => delete u.password);
-        return [usuarios, null];
+
+        return [resultados, null];
     } catch (error) {
         console.log("error en obtenerTodosActivos", error);
         return [null, "error interno del servidor"];
