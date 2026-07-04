@@ -4,17 +4,6 @@ import LayoutContent from '../../layouts/LayoutContent';
 
 export default function InventariosView() {
   const { content } = ADMIN_CONFIG.inventarios;
-<<<<<<< HEAD
-  return (
-    <LayoutContent
-      header={{ title: content.title, subtitle: content.subtitle }}
-      actions={content.actions}
-    />
-
-  );
-
-} 
-=======
 
   return (
     <LayoutContent 
@@ -23,4 +12,3 @@ export default function InventariosView() {
     />
   );
 }
->>>>>>> main
