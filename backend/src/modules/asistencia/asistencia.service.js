@@ -209,6 +209,15 @@ export const eliminarAsistenciaTurnoService = async (id_asistencia) => {
     return [{ message: "Asistencia eliminada con éxito. Los registros históricos se preservan deshabilitados." }, null];
 };
 
+export const finalizarAsistenciaService = async (id_asistencia) => {
+    const asistencia = await asistenciaRepo.findOne({ where: { id_asistencia, activo: true } });
+    if (!asistencia) return [null, "La asistencia especificada no existe o ya está cerrada."];
+
+    await asistenciaRepo.update(id_asistencia, { activo: false });
+
+    return [{ message: "Jornada cerrada correctamente." }, null];
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RF-ASISTENCIA-5: Consultar e Historial (Pasado / Auditoría de RRHH)
 // ─────────────────────────────────────────────────────────────────────────────

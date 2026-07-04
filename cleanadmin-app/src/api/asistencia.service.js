@@ -30,6 +30,12 @@ export const AsistenciaService = {
     return response.data ?? response;
   },
 
+  /** PATCH /asistencia/:id_asistencia/finalizar */
+  async finalizar(idAsistencia) {
+    const response = await api.patch(`/asistencia/${idAsistencia}/finalizar`);
+    return response.data ?? response;
+  },
+
   /** GET /asistencia/proyecto/:id_proyecto/historial */
   async historial(idProyecto) {
     const response = await api.get(`/asistencia/proyecto/${idProyecto}/historial`);

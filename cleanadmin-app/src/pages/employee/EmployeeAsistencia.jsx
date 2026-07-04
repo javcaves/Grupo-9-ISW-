@@ -4,6 +4,7 @@ import { Card } from "../../components/Card";
 import { AuthService } from "../../api/auth.service";
 import { AsistenciaService } from "../../api/asistencia.service";
 import QRScannerModal from "../../components/qr/QRScannerModal";
+import QRGenerator from "../../components/qr/QRGenerator";
 
 export default function EmployeeAsistencia() {
   const location = useLocation();
@@ -21,6 +22,8 @@ export default function EmployeeAsistencia() {
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [tipoMarcaje, setTipoMarcaje] = useState(null);
+  const [qrToken, setQrToken] = useState(null);
+  const [qrExp, setQrExp] = useState(null);
 
   useEffect(() => {
     async function cargarDatos() {
@@ -71,6 +74,10 @@ export default function EmployeeAsistencia() {
               estado:   registroDb.estado       ?? "EN_ESPERA",
             });
 
+            const asistenciaData = registroDb.asistencia;
+            setQrToken(asistenciaData?.token ?? null);
+            setQrExp(asistenciaData?.token_expira ?? null);
+
             const tInfo = registroDb.asistencia?.turno;
             setCurrentShift({
               nombre: tInfo?.nombre                        ?? "Turno Operativo",
@@ -85,6 +92,8 @@ export default function EmployeeAsistencia() {
           } else {
             // FALLBACK: sin registro, usamos datos del turno recuperado
             setCurrentRecord({ checkIn: "--", checkOut: "Pendiente", estado: "FUERA_DE_HORARIO" });
+            setQrToken(null);
+            setQrExp(null);
             setCurrentShift({
               nombre: objetoTurnoAux?.nombre                        ?? "Turno General",
               start:  objetoTurnoAux?.hora_ingreso?.substring(0, 5) ?? "--:--",
@@ -252,6 +261,22 @@ async function registrarQR(datosQR) {
       {/* REGISTRO QR */}
       {activeShiftId && (
         <Card title="Escanear Código QR de Punto de Control" icon="fa-qrcode">
+          {qrToken && (
+            <div className="mb-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
+              <div className="mb-3 text-center">
+                <p className="text-sm font-semibold text-violet-700">Código QR activo para la jornada</p>
+                <p className="text-xs text-violet-600 mt-1">Compártelo o úsalo para registrar la asistencia.</p>
+              </div>
+              <div className="flex justify-center">
+                <QRGenerator
+                  token={qrToken}
+                  proyecto={currentShift?.nombre}
+                  turno={currentShift?.nombre}
+                  exp={qrExp}
+                />
+              </div>
+            </div>
+          )}
           <div className="space-y-3">
             <button
               onClick={() => abrirScanner("ENTRADA")}
