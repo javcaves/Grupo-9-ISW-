@@ -75,6 +75,9 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
     <>
       {proyectos.map((proyecto) => {
         const badge = ESTADO_BADGE[proyecto.estado] ?? { label: proyecto.estado, cls: "bg-gray-100 text-gray-500" };
+        const cantidadEmpleados = proyecto.cantidad_empleados ?? 0;
+        const supervisores = proyecto.supervisores ?? [];
+
         return (
           <Card
             key={proyecto.id_proyecto}
@@ -131,9 +134,25 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
               </span>
 
               <h2 className="text-[1.6rem] leading-tight font-bold mt-2" style={{ color: "var(--card-number-text)" }}>
-                {proyecto.min_emp}–{proyecto.max_emp}
-                <span className="text-sm font-normal opacity-50 ml-1">empleados</span>
+                {cantidadEmpleados}
+                <span className="text-sm font-normal opacity-50 ml-1">
+                  empleado{cantidadEmpleados !== 1 ? "s" : ""}
+                </span>
               </h2>
+
+              {supervisores.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {supervisores.map((s) => (
+                    <span
+                      key={s.id_usuario}
+                      className="text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full"
+                      title={`${s.nombre} ${s.apellido ?? ""} — ${s.proyectos_asignados} proyecto(s) activo(s)`}
+                    >
+                      {s.nombre} · {s.proyectos_asignados}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center justify-between mt-auto pt-4">
                 <div className="flex items-center gap-2 text-sm" style={{ color: "var(--card-detail-text)" }}>

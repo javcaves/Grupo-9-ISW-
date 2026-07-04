@@ -4,6 +4,8 @@ import LayoutContent            from "../../../layouts/LayoutContent";
 import { Card }                 from "../../../components/Card";
 import { Table }                from "../../../components/Table";
 import { ItemsService }         from "../../../api/items.service";
+import RegistrarMovimientoModal from "../../../components/modals/RegistrarMovimientoModal";
+import CrearItemProyectoModal   from "../../../components/modals/CrearItemProyectoModal";
 import { FaBoxesStacked, FaTriangleExclamation, FaArrowRightArrowLeft, FaCircleCheck } from "react-icons/fa6";
 
 const COLUMNAS_ITEMS = [
@@ -65,6 +67,8 @@ export default function InventarioView({ proyecto }) {
   const [movimientos, setMovimientos] = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [vistaActiva, setVistaActiva] = useState("items"); // "items" | "movimientos" | "bajo-stock"
+  const [modalMovimientoAbierto, setModalMovimientoAbierto] = useState(false);
+  const [modalCrearItemAbierto, setModalCrearItemAbierto]   = useState(false);
 
   async function cargarDatos() {
     if (!proyecto?.id_proyecto) return;
@@ -125,7 +129,12 @@ export default function InventarioView({ proyecto }) {
     {
       text:      "Registrar Movimiento",
       className: "bg-indigo-600 text-white",
-      onClick:   () => console.log("TODO: modal registrar movimiento"),
+      onClick:   () => setModalMovimientoAbierto(true),
+    },
+    {
+      text:      "Crear Item",
+      className: "bg-emerald-600 text-white",
+      onClick:   () => setModalCrearItemAbierto(true),
     },
   ];
 
@@ -245,51 +254,68 @@ export default function InventarioView({ proyecto }) {
   );
 
   return (
-    <LayoutContent
-      header={{
-        title:    "Inventario del Proyecto",
-        subtitle: proyecto?.nombre_proy ?? "Stock de materiales asignados",
-      }}
-      actions={acciones}
-      stats={
-        <>
-          {statsCards.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Card
-                key={card.title}
-                hoverable
-                className="rounded-[28px] overflow-hidden relative min-h-[170px]"
-                decorator={
-                  <div
-                    className="absolute top-[-20px] right-[-20px] w-[110px] h-[110px] rounded-full"
-                    style={{ backgroundColor: "var(--card-decorator-bg)" }}
-                  />
-                }
-              >
-                <div className="relative z-10 flex flex-col h-full">
-                  <span style={{ color: "var(--card-label-text)" }} className="font-semibold text-[1rem]">
-                    {card.title}
-                  </span>
-                  <h2 className="text-[3rem] leading-none font-bold mt-5" style={{ color: "var(--card-number-text)" }}>
-                    {card.number}
-                  </h2>
-                  <div className="flex items-center gap-2 mt-5 text-sm" style={{ color: "var(--card-detail-text)" }}>
+    <>
+      <LayoutContent
+        header={{
+          title:    "Inventario del Proyecto",
+          subtitle: proyecto?.nombre_proy ?? "Stock de materiales asignados",
+        }}
+        actions={acciones}
+        stats={
+          <>
+            {statsCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <Card
+                  key={card.title}
+                  hoverable
+                  className="rounded-[28px] overflow-hidden relative min-h-[170px]"
+                  decorator={
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: "var(--card-icon-wrapper-bg)", color: "var(--card-icon-wrapper-text)" }}
-                    >
-                      <Icon size={14} />
+                      className="absolute top-[-20px] right-[-20px] w-[110px] h-[110px] rounded-full"
+                      style={{ backgroundColor: "var(--card-decorator-bg)" }}
+                    />
+                  }
+                >
+                  <div className="relative z-10 flex flex-col h-full">
+                    <span style={{ color: "var(--card-label-text)" }} className="font-semibold text-[1rem]">
+                      {card.title}
+                    </span>
+                    <h2 className="text-[3rem] leading-none font-bold mt-5" style={{ color: "var(--card-number-text)" }}>
+                      {card.number}
+                    </h2>
+                    <div className="flex items-center gap-2 mt-5 text-sm" style={{ color: "var(--card-detail-text)" }}>
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: "var(--card-icon-wrapper-bg)", color: "var(--card-icon-wrapper-text)" }}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <span>{card.detail}</span>
                     </div>
-                    <span>{card.detail}</span>
                   </div>
-                </div>
-              </Card>
-            );
-          })}
-        </>
-      }
-      table={tablaContenido}
-    />
+                </Card>
+              );
+            })}
+          </>
+        }
+        table={tablaContenido}
+      />
+
+      <RegistrarMovimientoModal
+        isOpen={modalMovimientoAbierto}
+        onClose={() => setModalMovimientoAbierto(false)}
+        proyecto={proyecto}
+        items={items}
+        actualizarLista={cargarDatos}
+      />
+
+      <CrearItemProyectoModal
+        isOpen={modalCrearItemAbierto}
+        onClose={() => setModalCrearItemAbierto(false)}
+        proyecto={proyecto}
+        actualizarLista={cargarDatos}
+      />
+    </>
   );
 }

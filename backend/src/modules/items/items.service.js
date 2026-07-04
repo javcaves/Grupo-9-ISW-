@@ -17,6 +17,7 @@ import { AppDataSource } from '../../config/ConfigDB.js';
 import { Item } from '../../entity/item.entity.js';
 import { ItemProyecto } from '../../entity/itemProyecto.entity.js';
 import { MovimientoInventario } from '../../entity/movimientoInventario.entity.js';
+import * as NotificacionService from '../notificaciones/notificacion.service.js';
 
 const itemRepo = () => AppDataSource.getRepository(Item);
 const itemProyectoRepo = () => AppDataSource.getRepository(ItemProyecto);
@@ -133,8 +134,9 @@ export const registrarMovimiento = async (data) => {
     const errorCantidad = validarCantidadPositiva(data.cantidad);
     if (errorCantidad) return [null, errorCantidad];
 
+    let resultado;
     try {
-        return await AppDataSource.transaction(async (manager) => {
+        resultado = await AppDataSource.transaction(async (manager) => {
             const repoItem = manager.getRepository(Item);
             const repoItemProj = manager.getRepository(ItemProyecto);
             const repoMov = manager.getRepository(MovimientoInventario);
@@ -210,12 +212,21 @@ export const registrarMovimiento = async (data) => {
         console.error('Error en registrarMovimiento:', error);
         return [null, 'Error interno al registrar el movimiento.'];
     }
+
+    const [guardado, err] = resultado;
+    if (!err && guardado?.tipo_movimiento === 'SOLICITUD') {
+        const [, errNotif] = await NotificacionService.notificarSolicitudPendiente(guardado);
+        if (errNotif) console.error('error al notificar solicitud pendiente:', errNotif);
+    }
+
+    return resultado;
 };
 
 // ================= RESOLVER SOLICITUD =================
 export const resolverSolicitud = async (id_mov, dataResolucion) => {
+    let resultado;
     try {
-        return await AppDataSource.transaction(async (manager) => {
+        resultado = await AppDataSource.transaction(async (manager) => {
             const repoMov = manager.getRepository(MovimientoInventario);
             const repoItem = manager.getRepository(Item);
             const repoItemProj = manager.getRepository(ItemProyecto);
@@ -290,6 +301,14 @@ export const resolverSolicitud = async (id_mov, dataResolucion) => {
         console.error('Error en resolverSolicitud:', error);
         return [null, 'Error interno al resolver la solicitud.'];
     }
+
+    const [actualizado, err] = resultado;
+    if (!err) {
+        const [, errNotif] = await NotificacionService.notificarResolucionSolicitud(actualizado);
+        if (errNotif) console.error('error al notificar resolucion de solicitud:', errNotif);
+    }
+
+    return resultado;
 };
 
 // ================= ACTUALIZAR INVENTARIO =================

@@ -115,7 +115,7 @@ export default function ProyectoFormModal({ isOpen, onClose, modo, proyecto, onS
         const idProyecto = creado?.id_proyecto ?? creado?.data?.id_proyecto;
 
         if (!idProyecto) {
-          throw new Error("El proyecto se creó pero no se pudo obtener su ID para asignar supervisores.");
+          throw new Error("El proyecto se creó pero no se pudo obtener su ID para asignar jefe de proyecto.");
         }
 
         // El backend valida "supervisores" en el schema pero el service lo ignora,
@@ -123,7 +123,7 @@ export default function ProyectoFormModal({ isOpen, onClose, modo, proyecto, onS
         const asignaciones = supervisoresSel.map((idUsuario) =>
           ProyectoUsuarioService.asignarUsuario(idProyecto, {
             id_usuario: idUsuario,
-            rol: "SUPERVISOR",
+            rol_proy: "SUPERVISOR",
           })
         );
 
@@ -255,7 +255,7 @@ export default function ProyectoFormModal({ isOpen, onClose, modo, proyecto, onS
         {!esEdicion && (
           <SelectorUsuariosPorCargo
             cargo="SUPERVISOR"
-            etiqueta="Supervisores"
+            etiqueta="Jefe(s) de proyecto"
             seleccionados={supervisoresSel}
             onToggle={toggleSupervisor}
           />
