@@ -4,19 +4,25 @@ import { FormContainer } from '../Formulario';
 import { AsignacionService } from '../../api/asignacion.service';
 
 export default function AsignarTarea({ isOpen, onClose, tareasPendientes, empleados, actualizarLista }) {
-  const [formData, setFormData] = useState({ id_tarea:'', id_empleado: '', tipoAsignacion: 'PROGRAMADA' });
+  const [formData, setFormData] = useState({ id_tarea:'', id_empleado: '', tipo_asignacion: 'PROGRAMADA' });
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const datosProcesados = {
+      ...formData,
+      id_tarea: parseInt(formData.id_tarea, 10),
+      id_empleado: parseInt(formData.id_empleado, 10)
+    };
+    console.log("DATOS ENVIADOS A BACKEND:", datosProcesados);
     try {
-      await AsignacionService.crear(formData);
+      await AsignacionService.crear(datosProcesados);
       
       alert("¡Empleado asignado a la tarea con éxito!");
       actualizarLista();
       onClose();
-      setFormData({ id_tarea: '', id_empleado: '', tipoAsignacion: 'PROGRAMADA' });
+      setFormData({ id_tarea: '', id_empleado: '', tipo_asignacion: 'PROGRAMADA' });
     } catch (error) {
       console.error("Error al asignar la tarea:",error);
     }
@@ -37,7 +43,7 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, emplea
             <select name="id_tarea" value={formData.id_tarea} onChange={handleChange} required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="">Seleccione una tarea...</option>
-              {tareasPendientes?.map(tarea => (
+              {tareasPendientes?.filter(tarea => tarea.estado === 'PLANIFICADA').map(tarea => (
                 <option key={tarea.id_tarea} value={tarea.id_tarea}>{tarea.actividad?.descripcion_esp || "Sin nombre"} | {tarea.fecha} - {tarea.hora}</option>
               ))}
             </select>
@@ -55,7 +61,7 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, emplea
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Asignación</label>
-            <select name="tipoAsignacion" value={formData.tipoAsignacion} onChange={handleChange}
+            <select name="tipo_asignacion" value={formData.tipo_asignacion} onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="PROGRAMADA">Programada</option>
               <option value="REASIGNADA">Reasignada</option>

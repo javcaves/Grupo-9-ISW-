@@ -75,16 +75,23 @@ export default function ActividadesView({ proyecto }) {
         TareaService.listar().catch(() => []),
         UsuarioService.listar().catch(() => []),
       ]);
+      setListaCategorias(resCat?.data ?? resCat ?? []);
 
-      console.log("Actividades Service: ", resAct);
-      setListaCategorias(resCat?.data       ?? resCat  ?? []);
-      setListaActividades(
-        (resAct?.data ?? resAct ?? [])
-          .filter(a => a.proyecto?.id_proyecto === proyecto?.id_proyecto)
+      const actividadesCrudas = resAct?.data ?? resAct ?? [];
+      const actividadesFiltradas = actividadesCrudas.filter(
+        a => a.proyecto?.id_proyecto === proyecto?.id_proyecto
       );
-      setListaTareasPendientes(resTar?.data ?? resTar  ?? []);
-      setListaEmpleados(resEmp?.data        ?? resEmp  ?? []);
-    } catch (err) {
+      setListaActividades(actividadesFiltradas);
+      const idsActividadesProyecto = actividadesFiltradas.map(a => a.id_act);
+
+      const tareasCrudas = resTar?.data ?? resTar ?? [];
+      const tareasFiltradas = tareasCrudas.filter(
+        t => idsActividadesProyecto.includes(t.actividad?.id_act)
+      );
+      setListaTareasPendientes(tareasFiltradas);
+
+      setListaEmpleados(resEmp?.data ?? resEmp ?? []);
+      } catch (err) {
       console.error("ActividadesView cargarDatos:", err);
     } finally {
       setLoading(false);
@@ -181,6 +188,7 @@ export default function ActividadesView({ proyecto }) {
         onClose={() => setAbrirActividad(false)}
         categorias={listaCategorias}
         actualizarLista={cargarDatos}
+        idProyecto={proyecto?.id_proyecto}
       />
       <ProgramarTarea
         isOpen={abrirProgramar}
