@@ -54,7 +54,7 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, emplea
             <select name="id_empleado" value={formData.id_empleado} onChange={handleChange} required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="">Selecciona empleado...</option>
-              {empleados?.map(emp => (
+              {empleados?.filter(emp => emp.rol === 'EMPLEADO').map(emp => (
                 <option key={emp.id_usuario} value={emp.id_usuario}>{emp.nombre} {emp.apellido }</option>
               ))}
             </select>

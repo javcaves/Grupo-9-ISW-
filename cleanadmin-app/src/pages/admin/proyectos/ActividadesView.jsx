@@ -9,7 +9,7 @@ import AsignarTarea             from "../../../components/modals/AsignarTarea";
 import { CategoriaService }     from "../../../api/categorias.service";
 import { ActividadesService }   from "../../../api/actividades.service";
 import { TareaService }         from "../../../api/tareas.service";
-import { UsuarioService }       from "../../../api/usuario.service";
+import { ProyectoUsuarioService }       from "../../../api/proyecto_usuario.service";
 import { FaClipboardCheck, FaCalendarCheck, FaListCheck, FaRotate } from "react-icons/fa6";
 
 const COLUMNAS_ACTIVIDADES = [
@@ -69,29 +69,35 @@ export default function ActividadesView({ proyecto }) {
   async function cargarDatos() {
     setLoading(true);
     try {
+      const idProy = proyecto?.id_proyecto;
+
       const [resCat, resAct, resTar, resEmp] = await Promise.all([
         CategoriaService.listar().catch(() => []),
         ActividadesService.listar().catch(() => []),
         TareaService.listar().catch(() => []),
-        UsuarioService.listar().catch(() => []),
+        idProy ? ProyectoUsuarioService.listarUsuarios(idProy).catch(() => []) : Promise.resolve([])
       ]);
+
       setListaCategorias(resCat?.data ?? resCat ?? []);
 
       const actividadesCrudas = resAct?.data ?? resAct ?? [];
       const actividadesFiltradas = actividadesCrudas.filter(
-        a => a.proyecto?.id_proyecto === proyecto?.id_proyecto
+        a => a.proyecto?.id_proyecto === idProy
       );
       setListaActividades(actividadesFiltradas);
-      const idsActividadesProyecto = actividadesFiltradas.map(a => a.id_act);
 
+      const idsActividadesProyecto = actividadesFiltradas.map(a => a.id_act);
       const tareasCrudas = resTar?.data ?? resTar ?? [];
       const tareasFiltradas = tareasCrudas.filter(
         t => idsActividadesProyecto.includes(t.actividad?.id_act)
       );
       setListaTareasPendientes(tareasFiltradas);
 
-      setListaEmpleados(resEmp?.data ?? resEmp ?? []);
-      } catch (err) {
+      const empleadosCrudos = resEmp?.data ?? resEmp ?? [];
+      const empleadosMapeados = empleadosCrudos.map(item => item.usuario ? item.usuario : item);
+      setListaEmpleados(empleadosMapeados);
+
+    } catch (err) {
       console.error("ActividadesView cargarDatos:", err);
     } finally {
       setLoading(false);
