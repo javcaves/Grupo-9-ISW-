@@ -4,20 +4,23 @@ import { FormContainer } from '../Formulario';
 import { TareaService } from '../../api/tareas.service';
 
 export default function ProgramarTarea({ isOpen, onClose, actividades, actualizarLista }) {
-  const [formData, setFormData] = useState({ id_actividad: '', fecha: '', hora: '', comentario: '', estado: 'PLANIFICADA' });
+  const [formData, setFormData] = useState({ id_act: '', fecha: '', hora: '', comentario: ''});
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const datosProcesados = { ...formData };
+    datosProcesados.id_act = parseInt(datosProcesados.id_act, 10);
+    
+    console.log("DATOS ENVIADOS A BACKEND:", datosProcesados);
     try {
-      await TareaService.crear(formData);
+      await TareaService.crear(datosProcesados);
       
       alert("¡Tarea programada con éxito!");
       actualizarLista();
       onClose();
-
-      setFormData({ id_actividad: '', fecha: '', hora: '', comentario: '', estado: 'PLANIFICADA' });
+      setFormData({ id_act: '', fecha: '', hora: '', comentario: ''});
     } catch (error) {
       console.error("Error al programar la tarea", error);
     }
@@ -34,7 +37,7 @@ export default function ProgramarTarea({ isOpen, onClose, actividades, actualiza
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Actividad a realizar</label>
-            <select name="id_actividad" value={formData.id_actividad} onChange={handleChange} required
+            <select name="id_act" value={formData.id_act} onChange={handleChange} required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="">Selecciona actividad...</option>
               {actividades?.map(act => <option key={act.id_act} value={act.id_act}>{act.descripcion_esp}</option>)}
