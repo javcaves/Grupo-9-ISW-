@@ -196,24 +196,28 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     }
   };
 
-  const handleConfirmDelete = async () =>{
-    setLoading(true);
-    try{
-      const response = await fetch(`/api/usuarios/${selectedUser.id}`, {
-        method : 'DELETE'
-      });
-
-      if (!response.ok) throw new Error('error al eliminar');
-
-      await cargarDatos();
-      setIsModalOpen(false);
-    } catch (error){
-      console.error('error', error);
-    } finally{
-      setLoading(false);
-    }
+  const handleActualizarLista = async () => {
+    await cargarDatos();
+    setIsModalOpen(false);
   };
 
+  const handleEliminarUsuario = async (id) => {
+    setLoading(true);
+    try {
+        const response = await fetch(`/api/usuarios/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) throw new Error('Error al eliminar');
+        
+        return true; // Indica que se eliminó correctamente
+    } catch (error) {
+        console.error('Error:', error);
+        return false;
+    } finally {
+        setLoading(false);
+    }
+  };
 
   useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
 
@@ -337,14 +341,14 @@ function PersonalTab({ proyecto, rolEjecutor }) {
         loading = {loading}
       />
 
-      <Eliminar
+     <Eliminar
         isOpen={isModalOpen && modalMode === 'delete'}
-        onClose = {() => setIsModalOpen(false)}
-        onConfirm ={handleConfirmDelete}
-        itemName = {selectedUser?.nombre}
-        itemType = "usuario"
-        loading = {loading}
-      />
+        onClose={() => setIsModalOpen(false)}
+        tituloElemento={selectedUser?.nombre || "Usuario"} 
+        idElemento={selectedUser?.id}                     
+        servicioEliminar={handleEliminarUsuario}             
+        actualizarLista={handleActualizarLista}              
+    />
     </>
   );
 }
