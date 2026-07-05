@@ -335,7 +335,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
         loading = {loading}
       />
 
-      <DeleteModal
+      <Eliminar
         isOpen={isModalOpen && modalMode === 'delete'}
         onClose = {() => setIsModalOpen(false)}
         onConfirm ={handleConfirmDelete}
