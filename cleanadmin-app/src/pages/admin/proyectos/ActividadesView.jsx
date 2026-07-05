@@ -4,13 +4,11 @@ import LayoutContent            from "../../../layouts/LayoutContent";
 import { Card }                 from "../../../components/Card";
 import { Table }                from "../../../components/Table";
 import CrearActividad           from "../../../components/modals/CrearActividad";
-import ProgramarTarea           from "../../../components/modals/ProgramarTarea";
-import AsignarTarea             from "../../../components/modals/AsignarTarea";
+import EditarActividad          from "../../../components/modals/EditarActividad";
+import ConfirmarEliminacion     from "../../../components/modals/Eliminar";
 import { CategoriaService }     from "../../../api/categorias.service";
 import { ActividadesService }   from "../../../api/actividades.service";
-import { TareaService }         from "../../../api/tareas.service";
-import { ProyectoUsuarioService }       from "../../../api/proyecto_usuario.service";
-import { FaClipboardCheck, FaCalendarCheck, FaListCheck, FaRotate } from "react-icons/fa6";
+import { FaClipboardCheck, FaListCheck, FaCalendarDay, FaRotate } from "react-icons/fa6";
 
 const COLUMNAS_ACTIVIDADES = [
   {
@@ -38,12 +36,6 @@ const COLUMNAS_ACTIVIDADES = [
     ),
   },
   {
-    key:   "proyecto",
-    label: "Proyecto",
-    icon:  "fa-building",
-    render: (val) => val?.nombre_proy ?? "—",
-  },
-  {
     key:   "activo",
     label: "Estado",
     render: (val) => (
@@ -56,46 +48,36 @@ const COLUMNAS_ACTIVIDADES = [
 ];
 
 export default function ActividadesView({ proyecto }) {
-  const [listaCategorias,       setListaCategorias]       = useState([]);
-  const [listaActividades,      setListaActividades]      = useState([]);
-  const [listaTareasPendientes, setListaTareasPendientes] = useState([]);
-  const [listaEmpleados,        setListaEmpleados]        = useState([]);
-  const [loading,               setLoading]               = useState(true);
+  const [listaCategorias,  setListaCategorias]  = useState([]);
+  const [listaActividades, setListaActividades] = useState([]);
+  const [loading,          setLoading]          = useState(true);
 
+  // Controladores de Modales
   const [abrirActividad, setAbrirActividad] = useState(false);
-  const [abrirProgramar, setAbrirProgramar] = useState(false);
-  const [abrirAsignar,   setAbrirAsignar]   = useState(false);
+  const [abrirEditarAct, setAbrirEditarAct] = useState(false);
+  const [actividadAEditar, setActividadAEditar] = useState(null);
+  const [abrirEliminarAct, setAbrirEliminarAct] = useState(false);
+  const [actividadAEliminar, setActividadAEliminar] = useState(null);
 
   async function cargarDatos() {
     setLoading(true);
     try {
       const idProy = proyecto?.id_proyecto;
+      if (!idProy) return;
 
-      const [resCat, resAct, resTar, resEmp] = await Promise.all([
+      const [resCat, resAct] = await Promise.all([
         CategoriaService.listar().catch(() => []),
         ActividadesService.listar().catch(() => []),
-        TareaService.listar().catch(() => []),
-        idProy ? ProyectoUsuarioService.listarUsuarios(idProy).catch(() => []) : Promise.resolve([])
       ]);
 
       setListaCategorias(resCat?.data ?? resCat ?? []);
 
+      // Filtramos exclusivamente las actividades de este proyecto
       const actividadesCrudas = resAct?.data ?? resAct ?? [];
       const actividadesFiltradas = actividadesCrudas.filter(
         a => a.proyecto?.id_proyecto === idProy
       );
       setListaActividades(actividadesFiltradas);
-
-      const idsActividadesProyecto = actividadesFiltradas.map(a => a.id_act);
-      const tareasCrudas = resTar?.data ?? resTar ?? [];
-      const tareasFiltradas = tareasCrudas.filter(
-        t => idsActividadesProyecto.includes(t.actividad?.id_act)
-      );
-      setListaTareasPendientes(tareasFiltradas);
-
-      const empleadosCrudos = resEmp?.data ?? resEmp ?? [];
-      const empleadosMapeados = empleadosCrudos.map(item => item.usuario ? item.usuario : item);
-      setListaEmpleados(empleadosMapeados);
 
     } catch (err) {
       console.error("ActividadesView cargarDatos:", err);
@@ -109,21 +91,18 @@ export default function ActividadesView({ proyecto }) {
   // ── Stats derivadas ───────────────────────────────────────────────────────
   const totalActividades  = listaActividades.length;
   const actRecurrentes    = listaActividades.filter(a => a.recurrencia && a.recurrencia !== "UNICA").length;
-  const totalTareas       = listaTareasPendientes.length;
-  const tareasFinalizadas = listaTareasPendientes.filter(t => t.estado === "FINALIZADA").length;
-  const tareasPendientes  = totalTareas - tareasFinalizadas;
+  const actUnicas         = listaActividades.filter(a => a.recurrencia === "UNICA").length;
+  const totalCategorias   = listaCategorias.length;
 
   const statsCards = [
-    { title: "Actividades Activas",  number: totalActividades,  icon: FaClipboardCheck, detail: totalActividades  === 0 ? "Sin actividades aún"      : `${actRecurrentes} recurrentes`                                      },
-    { title: "Tareas Programadas",   number: totalTareas,       icon: FaCalendarCheck,  detail: totalTareas       === 0 ? "Sin tareas programadas"    : `${tareasPendientes} pendientes`                                     },
-    { title: "Procesos Finalizados", number: tareasFinalizadas, icon: FaListCheck,      detail: totalTareas       === 0 ? "Sin datos aún"             : `${Math.round((tareasFinalizadas / totalTareas) * 100)}% completado` },
-    { title: "Categorías",           number: listaCategorias.length, icon: FaRotate,   detail: listaCategorias.length === 0 ? "Sin categorías"        : "Tipos de actividad"                                                 },
+    { title: "Actividades Base",  number: totalActividades,  icon: FaClipboardCheck, detail: totalActividades  === 0 ? "Sin actividades aún" : "Catálogo del proyecto" },
+    { title: "Recurrentes",       number: actRecurrentes,    icon: FaRotate,         detail: actRecurrentes    === 0 ? "Sin rutinas" : "Tareas periódicas" },
+    { title: "Ejecución Única",   number: actUnicas,         icon: FaCalendarDay,    detail: actUnicas         === 0 ? "Sin actividades únicas" : "Eventos puntuales" },
+    { title: "Categorías",        number: totalCategorias,   icon: FaListCheck,      detail: totalCategorias   === 0 ? "Sin categorías" : "Clasificaciones globales" },
   ];
 
   const acciones = [
     { text: "Crear Actividad Base", className: "bg-indigo-600 text-white", onClick: () => setAbrirActividad(true) },
-    { text: "Programar Tarea",      className: "bg-indigo-600 text-white", onClick: () => setAbrirProgramar(true) },
-    { text: "Asignar Tarea",        className: "bg-indigo-600 text-white", onClick: () => setAbrirAsignar(true)   },
   ];
 
   const tablaContenido = loading ? (
@@ -135,8 +114,14 @@ export default function ActividadesView({ proyecto }) {
       columns={COLUMNAS_ACTIVIDADES}
       data={listaActividades}
       emptyMessage="No hay actividades registradas para este proyecto."
-      onEdit={(item)   => console.log("Editar actividad:", item)}
-      onDelete={(item) => console.log("Eliminar actividad:", item)}
+      onEdit={(item) => {
+        setActividadAEditar(item);
+        setAbrirEditarAct(true);
+      }}
+      onDelete={(item) => {
+        setActividadAEliminar(item);
+        setAbrirEliminarAct(true);
+      }}
     />
   );
 
@@ -144,8 +129,8 @@ export default function ActividadesView({ proyecto }) {
     <>
       <LayoutContent
         header={{
-          title:    "Actividades del Proyecto",
-          subtitle: proyecto?.nombre_proy ?? "Seguimiento de tareas y actividades",
+          title:    "Catálogo de Actividades",
+          subtitle: "Configuración de actividades base del proyecto",
         }}
         actions={acciones}
         stats={
@@ -189,26 +174,42 @@ export default function ActividadesView({ proyecto }) {
         table={tablaContenido}
       />
 
-      <CrearActividad
-        isOpen={abrirActividad}
-        onClose={() => setAbrirActividad(false)}
-        categorias={listaCategorias}
-        actualizarLista={cargarDatos}
-        idProyecto={proyecto?.id_proyecto}
-      />
-      <ProgramarTarea
-        isOpen={abrirProgramar}
-        onClose={() => setAbrirProgramar(false)}
-        actividades={listaActividades}
-        actualizarLista={cargarDatos}
-      />
-      <AsignarTarea
-        isOpen={abrirAsignar}
-        onClose={() => setAbrirAsignar(false)}
-        tareasPendientes={listaTareasPendientes}
-        empleados={listaEmpleados}
-        actualizarLista={cargarDatos}
-      />
+      {abrirActividad && (
+        <CrearActividad
+          isOpen={abrirActividad}
+          onClose={() => setAbrirActividad(false)}
+          categorias={listaCategorias}
+          actualizarLista={cargarDatos}
+          idProyecto={proyecto?.id_proyecto}
+        />
+      )}
+
+      {abrirEditarAct && (
+        <EditarActividad
+          isOpen={abrirEditarAct}
+          onClose={() => {
+            setAbrirEditarAct(false);
+            setActividadAEditar(null);
+          }}
+          categorias={listaCategorias}
+          actualizarLista={cargarDatos}
+          actividadActual={actividadAEditar}
+        />
+      )}
+
+      {abrirEliminarAct && (
+        <ConfirmarEliminacion
+          isOpen={abrirEliminarAct}
+          onClose={() => {
+            setAbrirEliminarAct(false);
+            setActividadAEliminar(null);
+          }}
+          tituloElemento={actividadAEliminar?.descripcion_esp}
+          idElemento={actividadAEliminar?.id_act}
+          servicioEliminar={ActividadesService.eliminar} 
+          actualizarLista={cargarDatos}
+        />
+      )}
     </>
   );
 }
