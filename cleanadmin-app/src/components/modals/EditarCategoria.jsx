@@ -11,7 +11,7 @@ export default function EditarCategoria({ isOpen, onClose, categoriaSeleccionada
       setFormData({
         nombre: categoriaSeleccionada.nombre || '',
         descripcion: categoriaSeleccionada.descripcion || '',
-        requiereCertificacion: categoriaSeleccionada.requiereCertificacion ? 'true' : 'false'
+        requiereCertificacion: categoriaSeleccionada.requiere_calificacion ? 'true' : 'false'
       });
     }
   }, [categoriaSeleccionada, isOpen]);
@@ -21,15 +21,17 @@ export default function EditarCategoria({ isOpen, onClose, categoriaSeleccionada
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await CategoriaService.actualizar(categoriaSeleccionada?.id, {
-          ...formData,
-          requiereCertificacion: formData.requiereCertificacion === 'true'
+      await CategoriaService.actualizar(categoriaSeleccionada?.id_cat, {
+          nombre: formData.nombre,
+          descripcion: formData.descripcion,
+          requiere_calificacion: formData.requiereCertificacion === 'true'
       });
       alert("¡Categoría actualizada con éxito!");
       actualizarLista();
       onClose();
     } catch (error) {
       console.error("Error al actualizar:", error);
+      alert(`No se pudo actualizar la categoría:\n\n${error.message}`);
     }
   };
 

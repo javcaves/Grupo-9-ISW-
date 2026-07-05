@@ -8,8 +8,8 @@ export const CategoriaService = {
   // CONSULTAS
   // ==========================
 
-  listar(params = {}) {
-    return api.get("/categorias", params);
+  listar(incluirInactivas = false) {
+    return api.get("/categorias", incluirInactivas ? { incluirInactivas: "true" } : {});
   },
 
   obtener(id) {

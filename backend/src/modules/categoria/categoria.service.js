@@ -21,9 +21,9 @@ export const crearCategoria = async (data) => {
 };
 
 // ----- Busqueda -----
-export const obtenerTodas = async () => {
+export const obtenerTodas = async (incluirInactivas = false) => {
     const catRepo = AppDataSource.getRepository("Categoria");
-    return await catRepo.find({ where: { activo: true } });
+    return await catRepo.find({ where: incluirInactivas ? {} : { activo: true } });
 };
 
 export const obtenerPorId = async (id) => {
