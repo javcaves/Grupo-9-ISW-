@@ -10,6 +10,8 @@ import { Card }                       from "../../../components/Card";
 import { ProyectoUsuarioService }     from "../../../api/proyecto_usuario.service";
 import NuevoPersonalModal             from "../../../components/modals/NuevoPersonalModal";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
+import UserModal from "../../../components/modals/UserModal";
+import Eliminar from "../../../components/modals/Eliminar";
 
 const TABS = [
   { key: "personal",    label: "Registro Personal" },
@@ -179,7 +181,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     try{
       const response = await fetch(`/api/usuarios/${selectedUser.id}`, {
         method : 'PUT',
-        headers : {'Content-Type' : application/json},
+        headers : {'Content-Type' : 'application/json'},
         body: JSON.stringify(FormData)
       });
 
@@ -326,8 +328,8 @@ function PersonalTab({ proyecto, rolEjecutor }) {
         onSuccess={cargarDatos}
       />
 
-      <userModal 
-        isOpen={isModalOpen && modalMode === 'edit' || modalMode === 'view'}
+      <UserModal 
+        isOpen={isModalOpen && (modalMode === 'edit' || modalMode === 'view')}
         onClose = {() => setIsModalOpen(false)}
         mode = {modalMode}
         user = {selectedUser}
