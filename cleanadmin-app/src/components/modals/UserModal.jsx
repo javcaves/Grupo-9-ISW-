@@ -34,7 +34,7 @@ export default function UserModal({
                 apellido: user.apellido || '',
                 rut: user.rut || '',
                 email: user.email || '',
-                username: username || '',
+                username: user.username || '',
                 rol: user.rol || '',
                 numero: user.numero || '',
                 observacion: user.observacion || '',
