@@ -5,9 +5,11 @@ import { Table }                from "../../components/Table";
 import NuevaCategoria           from "../../components/modals/NuevaCategoria";
 import EditarCategoria          from "../../components/modals/EditarCategoria";
 import ConfirmarEliminacion     from "../../components/modals/Eliminar";
+import GestionarCalificaciones  from "../../components/modals/GestionarCalificaciones";
 import { CategoriaService }     from "../../api/categorias.service";
+import { UsuarioService }       from "../../api/usuario.service";
 
-function construirColumnas(onReactivar) {
+function construirColumnas(onReactivar, onGestionarCalificaciones) {
   return [
     {
       key: "nombre",
@@ -25,10 +27,21 @@ function construirColumnas(onReactivar) {
       key: "requiere_calificacion",
       label: "Calificación Requerida",
       icon: "fa-star",
-      render: (val) => (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-amber-50 text-amber-600" : "bg-gray-100 text-gray-500"}`}>
-          {val ? "Sí requiere" : "No requiere"}
-        </span>
+      render: (val, item) => (
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-amber-50 text-amber-600" : "bg-gray-100 text-gray-500"}`}>
+            {val ? "Sí requiere" : "No requiere"}
+          </span>
+          {val && (
+            <button
+              onClick={() => onGestionarCalificaciones(item)}
+              title="Gestionar personal calificado"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+            >
+              Gestionar Personal
+            </button>
+          )}
+        </div>
       ),
     },
     {
@@ -57,6 +70,7 @@ function construirColumnas(onReactivar) {
 
 export default function CategoriasView() {
   const [listaCategorias, setListaCategorias] = useState([]);
+  const [empleados,        setEmpleados]        = useState([]);
   const [loading,          setLoading]          = useState(true);
   const [mostrarInactivas, setMostrarInactivas] = useState(false);
 
@@ -65,12 +79,18 @@ export default function CategoriasView() {
   const [categoriaAEditar,   setCategoriaAEditar]   = useState(null);
   const [abrirEliminar, setAbrirEliminar] = useState(false);
   const [categoriaAEliminar, setCategoriaAEliminar] = useState(null);
+  const [abrirCalificaciones, setAbrirCalificaciones] = useState(false);
+  const [categoriaCalificaciones, setCategoriaCalificaciones] = useState(null);
 
   async function cargarDatos() {
     setLoading(true);
     try {
-      const res = await CategoriaService.listar(mostrarInactivas).catch(() => []);
-      setListaCategorias(res?.data ?? res ?? []);
+      const [resCat, resEmp] = await Promise.all([
+        CategoriaService.listar(mostrarInactivas).catch(() => []),
+        UsuarioService.buscar({ rol: "EMPLEADO" }).catch(() => []),
+      ]);
+      setListaCategorias(resCat?.data ?? resCat ?? []);
+      setEmpleados(resEmp?.data ?? resEmp ?? []);
     } catch (err) {
       console.error("CategoriasView cargarDatos:", err);
     } finally {
@@ -91,7 +111,10 @@ export default function CategoriasView() {
     }
   }
 
-  const COLUMNAS_CATEGORIAS = construirColumnas(handleReactivar);
+  const COLUMNAS_CATEGORIAS = construirColumnas(handleReactivar, (categoria) => {
+    setCategoriaCalificaciones(categoria);
+    setAbrirCalificaciones(true);
+  });
 
   const acciones = [
     {
@@ -155,6 +178,15 @@ export default function CategoriasView() {
           idElemento={categoriaAEliminar?.id_cat}
           servicioEliminar={CategoriaService.eliminar}
           actualizarLista={cargarDatos}
+        />
+      )}
+
+      {abrirCalificaciones && (
+        <GestionarCalificaciones
+          isOpen={abrirCalificaciones}
+          onClose={() => { setAbrirCalificaciones(false); setCategoriaCalificaciones(null); }}
+          categoria={categoriaCalificaciones}
+          empleados={empleados}
         />
       )}
     </>
