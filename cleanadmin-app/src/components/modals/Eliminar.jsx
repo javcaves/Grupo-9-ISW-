@@ -18,6 +18,7 @@ export default function ConfirmarEliminacion({
       onClose();
     } catch (error) {
       console.error("Error al eliminar el elemento:", error);
+      alert(`No se pudo completar la operación:\n\n${error.message}`);
     }
   };
 

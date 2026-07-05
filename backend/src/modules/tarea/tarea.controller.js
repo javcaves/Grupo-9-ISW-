@@ -28,7 +28,7 @@ export const programar = async (req, res) => {
         const { error, value } = tareaCreateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
 
-        const id_programador = req.user.id; // Extraído del JWT
+        const id_programador = req.user.id_usuario; // Extraído del JWT
         
         const [nueva, err] = await TareaService.programarTarea(value, id_programador);
         if (err) return handleErrorClient(res, 400, "Error de negocio", err);
