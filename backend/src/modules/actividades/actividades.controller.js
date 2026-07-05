@@ -6,7 +6,8 @@ import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handl
 
 export const listarCatalogo = async (req, res) => {
     try {
-        const lista = await ActividadesService.obtenerTodosActivos();
+        const incluirInactivas = req.query.incluirInactivas === "true";
+        const lista = await ActividadesService.obtenerTodosActivos(incluirInactivas);
         return handleSuccess(res, 200, "Catálogo de actividades obtenido", lista);
     } catch (error) {
         return handleErrorServer(res, 500, "Error al obtener el catálogo de actividades", error.message);
@@ -113,6 +114,20 @@ export const eliminarDelCatalogo = async (req, res) => {
     try {
         const { id } = req.params;
         const [resultado, err] = await ActividadesService.eliminarDelCatalogo(id);
+
+        if (err) return handleErrorClient(res, 400, "Operación denegada", err);
+        return handleSuccess(res, 200, "Operación exitosa", resultado);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
+    }
+};
+
+// ----- Reactivacion -----
+
+export const reactivarActividadController = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [resultado, err] = await ActividadesService.reactivarActividad(id);
 
         if (err) return handleErrorClient(res, 400, "Operación denegada", err);
         return handleSuccess(res, 200, "Operación exitosa", resultado);

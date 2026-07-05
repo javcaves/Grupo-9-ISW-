@@ -63,8 +63,5 @@ export const obtenerEmpleadosPorCategoria = async (id_cat) => {
         relations: { empleado: true, categoria: true } 
     });
 
-    if (!calificaciones || calificaciones.length === 0) {
-        return [null, "No se encontraron empleados activos con esta calificación."];
-    }
-    return [calificaciones, null];
+    return [calificaciones ?? [], null];
 };

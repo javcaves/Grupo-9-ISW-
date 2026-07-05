@@ -22,7 +22,7 @@ export default function NuevaCategoria({ isOpen, onClose, actualizarLista }) {
         setFormData({ nombre: '', descripcion: '', requiereCertificacion: 'false' });
         } catch (error) {
             console.error("Error de conexión:", error);
-            alert("Error al guardar la categoría");
+            alert(`No se pudo guardar la categoría:\n\n${error.message}`);
         }
     };
 

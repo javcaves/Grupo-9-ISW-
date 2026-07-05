@@ -9,23 +9,21 @@ export default function EliminarTarea({ isOpen, onClose, tareaSeleccionada, actu
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // 1. Validación de seguridad en el frontend
+    // Validación de seguridad en el frontend
     if (comentario.trim().length < 5) {
       alert("La justificación debe tener al menos 5 caracteres.");
       return;
     }
 
     try {
-      // 2. Regla de negocio: Si ya está en proceso, pasa a INCOMPLETA. Si no, se CANCELA.
+      // Si ya está en proceso, pasa a INCOMPLETA. Si no, se CANCELA.
       const estadoFinal = tareaSeleccionada?.estado === "EN_PROCESO" ? "INCOMPLETA" : "CANCELADA";
 
-      // 3. Estructura exacta para cumplir con Joi
       const payload = {
         estado: estadoFinal,
         comentario: comentario
       };
-      
-      // 4. Llamada al servicio (que ahora envía los datos limpios)
+
       await TareaService.cancelar(tareaSeleccionada?.id_tarea, payload);
 
       alert(`¡La tarea ha sido marcada como ${estadoFinal} con éxito!`);

@@ -21,4 +21,7 @@ router.put('/:id', authenticateJwt, checkRole(rolesPermitidos), ActividadesCtrl.
 // ----- Rutas de eliminacion -----
 router.delete('/:id', authenticateJwt, checkRole(rolesPermitidos), ActividadesCtrl.eliminarDelCatalogo); // Soft Delete (Desactivar del catálogo)
 
+// ----- Rutas de reactivacion -----
+router.patch('/:id/reactivar', authenticateJwt, checkRole(rolesPermitidos), ActividadesCtrl.reactivarActividadController);
+
 export default router;

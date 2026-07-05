@@ -23,7 +23,7 @@ export const otorgar = async (req, res) => {
         const { error, value } = calificacionCreateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
 
-        const id_otorga = req.user.id;
+        const id_otorga = req.user.id_usuario;
         
         const [nueva, err] = await CalificacionService.otorgarCalificacion(value, id_otorga);
         if (err) return handleErrorClient(res, 400, "Error de negocio", err);

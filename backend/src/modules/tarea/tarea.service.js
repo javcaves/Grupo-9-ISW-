@@ -27,7 +27,7 @@ export const obtenerTodas = async () => {
         relations: {
             actividad: true,
             programador: true,
-            asignaciones: { empleado: true } // Empleado asignado
+            asignaciones: { empleado: true }
         },
         order: {
             fecha: "ASC",
@@ -140,12 +140,17 @@ export async function obtenerMisTareas(idEmpleado) {
 
             actividad: asignacion.tarea.actividad,
 
-            equipo: asignacion.tarea.asignaciones.map(companero => ({
-                id_usuario: companero.empleado.id_usuario,
-                nombre: companero.empleado.nombre,
-                apellido: companero.empleado.apellido,
-                rol: companero.empleado.rol,
-            })),
+            // Solo la asignación vigente de cada tarea (la más reciente por hora_asignacion).
+            // Sin este filtro, tras una reasignación seguirían apareciendo empleados que ya no están a cargo de la tarea.
+            equipo: [asignacion.tarea.asignaciones].flat()
+                .sort((a, b) => new Date(b.hora_asignacion) - new Date(a.hora_asignacion))
+                .slice(0, 1)
+                .map(companero => ({
+                    id_usuario: companero.empleado.id_usuario,
+                    nombre: companero.empleado.nombre,
+                    apellido: companero.empleado.apellido,
+                    rol: companero.empleado.rol,
+                })),
         },
 
     }));
