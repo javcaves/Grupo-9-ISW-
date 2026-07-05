@@ -101,8 +101,13 @@ export const usuarioCreateValidation = Joi.object({
         "any.required": "el apellido es obligatorio"
     }),
     rut: Joi.string()
-    .min(8)
-    .max(15)
+    .custom((value, helpers) => {
+        if (!validarRut(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    }, 'RUT chileno válido')
+    .required()
     .messages({
         "string.empty": "el rut no puede estar vacio",
         "string.min": "el rut debe tener al menos 8 caracteres",
@@ -158,8 +163,12 @@ export const usuarioUpdateValidation = Joi.object({
     .pattern(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/)
     .optional(),
     rut: Joi.string()
-    .min(8)
-    .max(15)
+    .custom((value, helpers) => {
+        if (!validarRut(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    }, 'RUT chileno válido')
     .optional(),
     email: Joi.string()
     .email()
