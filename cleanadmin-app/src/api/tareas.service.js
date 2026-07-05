@@ -62,11 +62,9 @@ export const TareaService = {
   /**
    * Cancela una tarea con justificación.
    */
-  async cancelar(idTarea, comentario) {
+  async cancelar(idTarea, payload) {
     // Cambiado a 'comentario' para hacer match exacto con el validador y modelo del backend
-    const response = await api.patch(`${URL}/${idTarea}/cancelar`, {
-      comentario,
-    });
+    const response = await api.patch(`${URL}/${idTarea}/cancelar`,payload);
     return response.data ?? response;
   },
 

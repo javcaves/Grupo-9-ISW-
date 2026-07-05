@@ -41,7 +41,14 @@ export const asignarTarea = async (data, id_asignador) => {
         hora_asignacion: new Date()
     });
 
-    return [await asignRepo.save(nueva), null];
+    await asignRepo.save(nueva);
+    
+    if (tarea.estado === "PLANIFICADA") {
+        tarea.estado = "ASIGNADA";
+        await tareaRepo.save(tarea);
+    }
+
+    return [nueva, null];
 };
 
 // ----- Buacar -----

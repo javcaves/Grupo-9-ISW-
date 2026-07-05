@@ -2,6 +2,7 @@
 import { useState, useEffect }       from "react";
 import LayoutContent                  from "../../../layouts/LayoutContent";
 import ActividadesView                from "./ActividadesView";
+import TareasView from "./TareasView";
 import InventarioView                 from "./InventarioView";
 import TurnosView                     from "./TurnosView";
 import { Table }                      from "../../../components/Table";
@@ -13,6 +14,7 @@ import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6
 const TABS = [
   { key: "personal",    label: "Registro Personal" },
   { key: "actividades", label: "Actividades"       },
+  { key: "tareas",      label: "Tareas" },
   { key: "inventario",  label: "Inventario"        },
   { key: "turnos",      label: "Turno"             },
 ];
@@ -83,6 +85,7 @@ export default function RegistroPersonalView({ proyecto, onVolver, rolEjecutor }
 
       {tabActiva === "personal"    && <PersonalTab     proyecto={proyecto} rolEjecutor={rolEjecutor} />}
       {tabActiva === "actividades" && <ActividadesView proyecto={proyecto} />}
+      {tabActiva === "tareas"      && <TareasView      proyecto={proyecto} />}
       {tabActiva === "inventario"  && <InventarioView  proyecto={proyecto} />}
       {tabActiva === "turnos"      && <TurnosView      proyecto={proyecto} />}
     </>
