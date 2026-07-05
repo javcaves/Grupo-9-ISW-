@@ -10,7 +10,7 @@ export default function UserModal({
     loading = false,
     variant = 'center'
 }) {
-    const [FormData, setFormData] = useState({
+    const [formData, setFormData] = useState({
         nombre: '',
         apellido: '',
         rut: '',
