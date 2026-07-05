@@ -10,7 +10,7 @@ import { CategoriaService }     from "../../../api/categorias.service";
 import { ActividadesService }   from "../../../api/actividades.service";
 import { FaClipboardCheck, FaListCheck, FaCalendarDay, FaRotate } from "react-icons/fa6";
 
-const COLUMNAS_ACTIVIDADES = [
+const COLUMNAS_ACTIVIDADES_BASE = [
   {
     key:   "descripcion_esp",
     label: "Actividad",
@@ -35,22 +35,40 @@ const COLUMNAS_ACTIVIDADES = [
       </span>
     ),
   },
-  {
-    key:   "activo",
-    label: "Estado",
-    render: (val) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
-        {val ? "Activa" : "Inactiva"}
-      </span>
-    ),
-  },
-  { key: "actions", label: "Acciones" },
 ];
+
+function construirColumnas(onReactivar) {
+  return [
+    ...COLUMNAS_ACTIVIDADES_BASE,
+    {
+      key:   "activo",
+      label: "Estado",
+      render: (val, item) => (
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+            {val ? "Activa" : "Inactiva"}
+          </span>
+          {!val && (
+            <button
+              onClick={() => onReactivar(item)}
+              title="Reactivar actividad"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
+            >
+              Reactivar
+            </button>
+          )}
+        </div>
+      ),
+    },
+    { key: "actions", label: "Acciones" },
+  ];
+}
 
 export default function ActividadesView({ proyecto }) {
   const [listaCategorias,  setListaCategorias]  = useState([]);
   const [listaActividades, setListaActividades] = useState([]);
   const [loading,          setLoading]          = useState(true);
+  const [mostrarInactivas, setMostrarInactivas] = useState(false);
 
   // Controladores de Modales
   const [abrirActividad, setAbrirActividad] = useState(false);
@@ -67,7 +85,7 @@ export default function ActividadesView({ proyecto }) {
 
       const [resCat, resAct] = await Promise.all([
         CategoriaService.listar().catch(() => []),
-        ActividadesService.listar().catch(() => []),
+        ActividadesService.listar(mostrarInactivas).catch(() => []),
       ]);
 
       setListaCategorias(resCat?.data ?? resCat ?? []);
@@ -86,7 +104,20 @@ export default function ActividadesView({ proyecto }) {
     }
   }
 
-  useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
+  useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto, mostrarInactivas]);
+
+  async function handleReactivar(actividad) {
+    try {
+      await ActividadesService.reactivar(actividad.id_act);
+      alert("¡Actividad reactivada con éxito!");
+      cargarDatos();
+    } catch (error) {
+      console.error("Error al reactivar la actividad:", error);
+      alert(`No se pudo reactivar:\n\n${error.message}`);
+    }
+  }
+
+  const COLUMNAS_ACTIVIDADES = construirColumnas(handleReactivar);
 
   // ── Stats derivadas ───────────────────────────────────────────────────────
   const totalActividades  = listaActividades.length;
@@ -102,6 +133,11 @@ export default function ActividadesView({ proyecto }) {
   ];
 
   const acciones = [
+    {
+      text: mostrarInactivas ? "Ocultar Inactivas" : "Ver Inactivas",
+      className: "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
+      onClick: () => setMostrarInactivas(v => !v),
+    },
     { text: "Crear Actividad Base", className: "bg-indigo-600 text-white", onClick: () => setAbrirActividad(true) },
   ];
 

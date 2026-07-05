@@ -21,10 +21,10 @@ export const crearActividad = async(data) => {
 };
 
 // ----- Busqueda -----
-export const obtenerTodosActivos = async () => {
+export const obtenerTodosActivos = async (incluirInactivas = false) => {
     const actRepo = AppDataSource.getRepository("Actividad");
     return await actRepo.find({ 
-        where: { activo: true },
+        where: incluirInactivas ? {} : { activo: true },
         relations: {
             categoria: true,
             proyecto: true
@@ -126,11 +126,28 @@ export const eliminarDelCatalogo = async (id) => {
 
     await actRepo.update(parseInt(id), { activo: false });
     
-    // cambia el estado a cancelada
-    await tareaRepo.update(
-        { actividad: { id_act: parseInt(id) }, estado: "PLANIFICADA" }, 
-        { estado: "CANCELADA", comentario: "Actividad base eliminada del catálogo." }
-    );
+    // cambia el estado a cancelada (tanto las que aún no tenían empleado como las ya asignadas;
+    // las EN_PROCESO ya están bloqueadas arriba y las FINALIZADA/CANCELADA no corresponde tocarlas)
+    await tareaRepo
+        .createQueryBuilder()
+        .update("ProgramarTarea")
+        .set({ estado: "CANCELADA", comentario: "Actividad base eliminada del catálogo." })
+        .where("id_act = :id AND estado IN (:...estados)", { id: parseInt(id), estados: ["PLANIFICADA", "ASIGNADA"] })
+        .execute();
 
     return [{ message: "Desactivación y cancelación en cascada completadas con éxito" }, null];
+};
+
+// ----- Reactivar -----
+
+export const reactivarActividad = async (id) => {
+    const actRepo = AppDataSource.getRepository("Actividad");
+
+    const actividad = await actRepo.findOne({ where: { id_act: parseInt(id) } });
+    if (!actividad) return [null, "Actividad no encontrada."];
+
+    if (actividad.activo) return [null, "La actividad ya se encuentra activa."];
+
+    await actRepo.update(parseInt(id), { activo: true });
+    return [{ message: "Actividad reactivada con éxito" }, null];
 };
