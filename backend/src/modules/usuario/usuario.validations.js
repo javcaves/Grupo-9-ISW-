@@ -37,8 +37,12 @@ export const usuarioQueryValidation = Joi.object({
         "number.positive": "el id debe ser un numero positivo"
     }),
     rut: Joi.string()
-    .min(8)
-    .max(15)
+    .custom((value, helpers) => {
+        if (!validarRut(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    }, 'RUT chileno válido')
     .messages({
         "string.empty": "el rut no puede estar vacio",
         "string.min": "el rut debe tener al menos 8 caracteres",

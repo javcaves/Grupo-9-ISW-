@@ -133,6 +133,33 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   const [loading,  setLoading]            = useState(true);
   const [modalAgregarAbierto, setModalAgregarAbierto] = useState(false);
 
+  //funciones para estados de usuario
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [modalMode, setModalMode] = useState(null); // edit, delete, view
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  //const [isLoading, setIsLoading] = useState(false);
+  
+  //funcion para editar
+  const handleEditUser = (item) => {
+    setSelectedUser(item);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  }
+
+  //funcion para eliminar
+  const handleDeleteUser = (item) => {
+    setSelectedUser(item);
+    setModalMode('delete');
+    setIsModalOpen(true);
+  }
+
+  //funcion para ver
+  const handleViewUser = (item) => {
+    setSelectedUser(item);
+    setModalMode('view');
+    setIsModalOpen(true);
+  }
+
   async function cargarDatos() {
     if (!proyecto?.id_proyecto) return;
     setLoading(true);
@@ -144,7 +171,47 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     } finally {
       setLoading(false);
     }
-  }
+  };
+
+  //funcion para guardar cambios
+  const handleSaveUser = async(FormData) =>{
+    setLoading(true);
+    try{
+      const response = await fetch(`/api/usuarios/${selectedUser.id}`, {
+        method : 'PUT',
+        headers : {'Content-Type' : application/json},
+        body: JSON.stringify(FormData)
+      });
+
+      if (!response.ok) throw new Error('error al actualizar');
+
+      await cargarDatos();
+      setIsModalOpen(false);
+    } catch (error){
+      console.error('error', error);
+    } finally{
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () =>{
+    setLoading(true);
+    try{
+      const response = await fetch(`/api/usuarios/${selectedUser.id}`, {
+        method : 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('error al eliminar');
+
+      await cargarDatos();
+      setIsModalOpen(false);
+    } catch (error){
+      console.error('error', error);
+    } finally{
+      setLoading(false);
+    }
+  };
+
 
   useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
 
@@ -197,8 +264,8 @@ function PersonalTab({ proyecto, rolEjecutor }) {
       columns={COLUMNAS_PERSONAL}
       data={usuarios}
       emptyMessage="No hay personal asignado a este proyecto."
-      onEdit={(item)   => console.log("Editar usuario:", item)}
-      onDelete={(item) => console.log("Eliminar usuario:", item)}
+      onEdit={handleEditUser}
+      onDelete={handleDeleteUser}
     />
   );
 
@@ -257,6 +324,24 @@ function PersonalTab({ proyecto, rolEjecutor }) {
         idProyecto={proyecto?.id_proyecto}
         rolEjecutor={rolEjecutor}
         onSuccess={cargarDatos}
+      />
+
+      <userModal 
+        isOpen={isModalOpen && modalMode === 'edit' || modalMode === 'view'}
+        onClose = {() => setIsModalOpen(false)}
+        mode = {modalMode}
+        user = {selectedUser}
+        onSave = {handleSaveUser}
+        loading = {loading}
+      />
+
+      <DeleteModal
+        isOpen={isModalOpen && modalMode === 'delete'}
+        onClose = {() => setIsModalOpen(false)}
+        onConfirm ={handleConfirmDelete}
+        itemName = {selectedUser?.nombre}
+        itemType = "usuario"
+        loading = {loading}
       />
     </>
   );
