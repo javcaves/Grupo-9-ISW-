@@ -26,7 +26,8 @@ export const obtenerTodas = async () => {
     return await tareaRepo.find({ 
         relations: {
             actividad: true,
-            programador: true // Incluido para saber quién planificó la tarea globalmente
+            programador: true,
+            asignaciones: { empleado: true } // Empleado asignado
         },
         order: {
             fecha: "ASC",
@@ -83,7 +84,7 @@ export const cancelarTarea = async (id, data) => {
     const tarea = await tareaRepo.findOne({ where: { id_tarea: id } });
 
     if (!tarea) return [null, "Tarea no encontrada"];
-    if (tarea.estado === "EN_PROCESO") return [null, "No se puede cancelar una tarea que está EN_PROCESO."];
+    if (tarea.estado === "EN_PROCESO" && data.estado !== "INCOMPLETA") return [null, "No se puede cancelar una tarea que está EN_PROCESO, solo marcrla como INCOMPLETA"];
 
     tarea.estado = data.estado; 
     tarea.comentario = data.comentario;

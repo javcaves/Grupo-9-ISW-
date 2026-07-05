@@ -19,7 +19,7 @@ export const ProgramarTarea = new EntitySchema({
         },
         estado: {
             type: "enum",
-            enum: ["PLANIFICADA", "EN_PROCESO", "FINALIZADA", "INCOMPLETA", "CANCELADA"],
+            enum: ["PLANIFICADA", "EN_PROCESO", "FINALIZADA", "INCOMPLETA", "CANCELADA","ASIGNADA"],
             default: "PLANIFICADA",
         },
         comentario: {
