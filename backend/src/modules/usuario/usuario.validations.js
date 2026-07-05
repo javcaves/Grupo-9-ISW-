@@ -2,6 +2,30 @@ import Joi from "joi";
 
 const ROLES_PERMITIDOS = ["ROOT", "ADMIN", "ENCARGADO", "SUPERVISOR", "EMPLEADO", "SIN_ASIG"];
 
+//validacion de rut
+const validarRut = (rut) =>{
+    if (!rut) return false;
+    const rutLimpio = rut.replace(/\./g, '').replace(/-/g, '');
+    const cuerpo = rutLimpio.slice(0, -1);
+    const dv = rutLimpio.slice(-1).toUpperCase();
+
+    if (cuerpo.legth < 7 || cuerpo.legth > 8) return false;
+
+    let suma = 0;
+    let multiplo = 2;
+
+    for (let i = cuerpo.legth - 1; i >= 0; i--){
+        suma += parseInt(cuerpo[i]) * multiplo;
+        multiplo = multiplo === 7 ? 2 : multiplo + 1;
+    }
+
+    const dvEsperado = 11 - (suma % 11);
+    const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+
+    return dv === dvCalculado;
+}
+
+
 //validaciones de query para busqueda
 export const usuarioQueryValidation = Joi.object({
     id_usuario: Joi.number()
