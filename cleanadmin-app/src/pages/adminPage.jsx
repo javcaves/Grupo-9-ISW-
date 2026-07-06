@@ -10,18 +10,21 @@ import ProyectosView  from "./admin/ProyectosView";
 import PersonalView   from "./admin/PersonalView";
 import InventariosView from "./admin/InventariosView";
 import CategoriasView from "./admin/CategoriasView";
+import ReportesView from "./admin/ReportesView";
 
 // Módulos que todavía usan tabs hardcodeadas del TopBar
 const TABS_CONFIG = {
   personal:      ADMIN_CONFIG.personal?.topBar?.tabs      ?? [],
   inventarios:   ADMIN_CONFIG.inventarios?.topBar?.tabs   ?? [],
   categorias:    ADMIN_CONFIG.categorias?.topBar?.tabs    ?? [],
+  reportes:      ADMIN_CONFIG.reportes?.topBar?.tabs      ?? [],
 };
 
 const TOPBAR_CONFIG = {
   personal:    ADMIN_CONFIG.personal?.topBar    ?? {},
   inventarios: ADMIN_CONFIG.inventarios?.topBar ?? {},
   categorias:  ADMIN_CONFIG.categorias?.topBar  ?? {},
+  reportes:    ADMIN_CONFIG.reportes?.topBar    ?? {},
 };
 
 export default function AdminPage() {
@@ -65,6 +68,7 @@ export default function AdminPage() {
           {activeMenu === "personal"    && <PersonalView   activeTab={activeTab} />}
           {activeMenu === "inventarios" && <InventariosView activeTab={activeTab} />}
           {activeMenu === "categorias"  && <CategoriasView  activeTab={activeTab} />}
+          {activeMenu === "reportes" && <ReportesView />}
         </div>
       </main>
     </div>
