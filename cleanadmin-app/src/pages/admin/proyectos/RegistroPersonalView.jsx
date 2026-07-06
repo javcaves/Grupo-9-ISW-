@@ -9,9 +9,8 @@ import { Table }                      from "../../../components/Table";
 import { Card }                       from "../../../components/Card";
 import { ProyectoUsuarioService }     from "../../../api/proyecto_usuario.service";
 import NuevoPersonalModal             from "../../../components/modals/NuevoPersonalModal";
+import HojaDeVida                     from "../../../components/modals/HojaDeVida";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
-import UserModal from "../../../components/modals/UserModal";
-import Eliminar from "../../../components/modals/Eliminar";
 
 const TABS = [
   { key: "personal",    label: "Registro Personal" },
@@ -94,73 +93,52 @@ export default function RegistroPersonalView({ proyecto, onVolver, rolEjecutor }
   );
 }
 
-const COLUMNAS_PERSONAL = [
-  {
-    key:   "nombre",
-    label: "Nombre",
-    icon:  "fa-user",
-    render: (_, u) => (
-      <span className="font-semibold text-slate-700">
-        {u.nombre} {u.apellido}
-      </span>
-    ),
-  },
-  { key: "rut", label: "RUT", icon: "fa-id-card" },
-  { key: "email", label: "Email", icon: "fa-envelope" },
-  {
-    key:   "rol",
-    label: "Rol",
-    icon:  "fa-tag",
-    render: (val) => <RolBadge rol={val} />,
-  },
-  {
-    key:   "activo",
-    label: "Estado",
-    icon:  "fa-circle",
-    render: (val) => (
-      <span
-        className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
-          val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-        }`}
-      >
-        {val ? "Activo" : "Inactivo"}
-      </span>
-    ),
-  },
-  { key: "actions", label: "Acciones" },
-];
+function construirColumnasPersonal() {
+  return [
+    {
+      key:   "nombre",
+      label: "Nombre",
+      icon:  "fa-user",
+      render: (_, u) => (
+        <span className="font-semibold text-slate-700">
+          {u.nombre} {u.apellido}
+        </span>
+      ),
+    },
+    { key: "rut", label: "RUT", icon: "fa-id-card" },
+    { key: "email", label: "Email", icon: "fa-envelope" },
+    {
+      key:   "rol",
+      label: "Rol",
+      icon:  "fa-tag",
+      render: (val) => <RolBadge rol={val} />,
+    },
+    {
+      key:   "activo",
+      label: "Estado",
+      icon:  "fa-circle",
+      render: (val) => (
+        <span
+          className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+            val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
+          }`}
+        >
+          {val ? "Activo" : "Inactivo"}
+        </span>
+      ),
+    },
+    { key: "actions", label: "Acciones" },
+  ];
+}
 
 function PersonalTab({ proyecto, rolEjecutor }) {
   const [usuarios, setUsuarios]           = useState([]);
   const [loading,  setLoading]            = useState(true);
   const [modalAgregarAbierto, setModalAgregarAbierto] = useState(false);
+  const [abrirHojaDeVida, setAbrirHojaDeVida] = useState(false);
+  const [empleadoHojaDeVida, setEmpleadoHojaDeVida] = useState(null);
 
-  //funciones para estados de usuario
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [modalMode, setModalMode] = useState(null); // edit, delete, view
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  //const [isLoading, setIsLoading] = useState(false);
-  
-  //funcion para editar
-  const handleEditUser = (item) => {
-    setSelectedUser(item);
-    setModalMode('edit');
-    setIsModalOpen(true);
-  }
-
-  //funcion para eliminar
-  const handleDeleteUser = (item) => {
-    setSelectedUser(item);
-    setModalMode('delete');
-    setIsModalOpen(true);
-  }
-
-  //funcion para ver
-  const handleViewUser = (item) => {
-    setSelectedUser(item);
-    setModalMode('view');
-    setIsModalOpen(true);
-  }
+  const COLUMNAS_PERSONAL = construirColumnasPersonal();
 
   async function cargarDatos() {
     if (!proyecto?.id_proyecto) return;
@@ -173,51 +151,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  //funcion para guardar cambios
-  const handleSaveUser = async(FormData) =>{
-    setLoading(true);
-    try{
-      const response = await fetch(`/api/usuarios/${selectedUser.id}`, {
-        method : 'PUT',
-        headers : {'Content-Type' : 'application/json'},
-        body: JSON.stringify(FormData)
-      });
-
-      if (!response.ok) throw new Error('error al actualizar');
-
-      await cargarDatos();
-      setIsModalOpen(false);
-    } catch (error){
-      console.error('error', error);
-    } finally{
-      setLoading(false);
-    }
-  };
-
-  const handleActualizarLista = async () => {
-    await cargarDatos();
-    setIsModalOpen(false);
-  };
-
-  const handleEliminarUsuario = async (id) => {
-    setLoading(true);
-    try {
-        const response = await fetch(`/api/usuarios/${id}`, {
-            method: 'DELETE'
-        });
-        
-        if (!response.ok) throw new Error('Error al eliminar');
-        
-        return true; // Indica que se eliminó correctamente
-    } catch (error) {
-        console.error('Error:', error);
-        return false;
-    } finally {
-        setLoading(false);
-    }
-  };
+  }
 
   useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
 
@@ -270,8 +204,18 @@ function PersonalTab({ proyecto, rolEjecutor }) {
       columns={COLUMNAS_PERSONAL}
       data={usuarios}
       emptyMessage="No hay personal asignado a este proyecto."
-      onEdit={handleEditUser}
-      onDelete={handleDeleteUser}
+      extraActions={[
+        {
+          icon: "fa-chart-line",
+          title: "Ver hoja de vida",
+          show: (u) => u.rol === "EMPLEADO",
+          onClick: (u) => { setEmpleadoHojaDeVida(u); setAbrirHojaDeVida(true); },
+          hoverBg: "#dbeafe",
+          hoverText: "#2563eb",
+        },
+      ]}
+      onEdit={(item)   => console.log("Editar usuario:", item)}
+      onDelete={(item) => console.log("Eliminar usuario:", item)}
     />
   );
 
@@ -332,23 +276,13 @@ function PersonalTab({ proyecto, rolEjecutor }) {
         onSuccess={cargarDatos}
       />
 
-      <UserModal 
-        isOpen={isModalOpen && (modalMode === 'edit' || modalMode === 'view')}
-        onClose = {() => setIsModalOpen(false)}
-        mode = {modalMode}
-        user = {selectedUser}
-        onSave = {handleSaveUser}
-        loading = {loading}
-      />
-
-     <Eliminar
-        isOpen={isModalOpen && modalMode === 'delete'}
-        onClose={() => setIsModalOpen(false)}
-        tituloElemento={selectedUser?.nombre || "Usuario"} 
-        idElemento={selectedUser?.id}                     
-        servicioEliminar={handleEliminarUsuario}             
-        actualizarLista={handleActualizarLista}              
-    />
+      {abrirHojaDeVida && (
+        <HojaDeVida
+          isOpen={abrirHojaDeVida}
+          onClose={() => { setAbrirHojaDeVida(false); setEmpleadoHojaDeVida(null); }}
+          empleado={empleadoHojaDeVida}
+        />
+      )}
     </>
   );
 }
