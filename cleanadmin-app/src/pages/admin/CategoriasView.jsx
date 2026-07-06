@@ -9,7 +9,7 @@ import GestionarCalificaciones  from "../../components/modals/GestionarCalificac
 import { CategoriaService }     from "../../api/categorias.service";
 import { UsuarioService }       from "../../api/usuario.service";
 
-function construirColumnas(onReactivar, onGestionarCalificaciones) {
+function construirColumnas() {
   return [
     {
       key: "nombre",
@@ -27,41 +27,19 @@ function construirColumnas(onReactivar, onGestionarCalificaciones) {
       key: "requiere_calificacion",
       label: "Calificación Requerida",
       icon: "fa-star",
-      render: (val, item) => (
-        <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-amber-50 text-amber-600" : "bg-gray-100 text-gray-500"}`}>
-            {val ? "Sí requiere" : "No requiere"}
-          </span>
-          {val && (
-            <button
-              onClick={() => onGestionarCalificaciones(item)}
-              title="Gestionar personal calificado"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
-            >
-              Gestionar Personal
-            </button>
-          )}
-        </div>
+      render: (val) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-amber-50 text-amber-600" : "bg-gray-100 text-gray-500"}`}>
+          {val ? "Sí requiere" : "No requiere"}
+        </span>
       ),
     },
     {
       key: "activo",
       label: "Estado",
-      render: (val, item) => (
-        <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
-            {val ? "Activa" : "Inactiva"}
-          </span>
-          {!val && (
-            <button
-              onClick={() => onReactivar(item)}
-              title="Reactivar categoría"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
-            >
-              Reactivar
-            </button>
-          )}
-        </div>
+      render: (val) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+          {val ? "Activa" : "Inactiva"}
+        </span>
       ),
     },
     { key: "actions", label: "Acciones" },
@@ -111,10 +89,7 @@ export default function CategoriasView() {
     }
   }
 
-  const COLUMNAS_CATEGORIAS = construirColumnas(handleReactivar, (categoria) => {
-    setCategoriaCalificaciones(categoria);
-    setAbrirCalificaciones(true);
-  });
+  const COLUMNAS_CATEGORIAS = construirColumnas();
 
   const acciones = [
     {
@@ -134,6 +109,25 @@ export default function CategoriasView() {
       columns={COLUMNAS_CATEGORIAS}
       data={listaCategorias}
       emptyMessage="No hay categorías registradas."
+      deleteTitle="Desactivar categoría"
+      extraActions={[
+        {
+          icon: "fa-user-check",
+          title: "Gestionar personal calificado",
+          show: (item) => item.requiere_calificacion,
+          onClick: (categoria) => { setCategoriaCalificaciones(categoria); setAbrirCalificaciones(true); },
+          hoverBg: "#ccfbf1",
+          hoverText: "#0d9488",
+        },
+        {
+          icon: "fa-rotate-left",
+          title: "Reactivar categoría",
+          show: (item) => !item.activo,
+          onClick: handleReactivar,
+          hoverBg: "#dcfce7",
+          hoverText: "#16a34a",
+        },
+      ]}
       onEdit={(item) => {
         setCategoriaAEditar(item);
         setAbrirEditar(true);
