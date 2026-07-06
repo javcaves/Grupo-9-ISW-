@@ -44,5 +44,10 @@ export const ProgramarTarea = new EntitySchema({
             type: "one-to-many",
             inverseSide: "tarea",
         },
+        evaluaciones: {
+            target: "EvaluacionDesempeno",
+            type: "one-to-many",
+            inverseSide: "tarea",
+        },
     },
 });

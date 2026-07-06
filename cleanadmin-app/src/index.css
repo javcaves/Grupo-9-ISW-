@@ -10,3 +10,20 @@
     overflow-x: hidden; /* Evita scroll horizontal accidental */
   }
 }
+
+/* Scrollbar delgada y discreta para contenedores con overflow */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--table-border, #d1d5db) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--table-border, #d1d5db);
+  border-radius: 999px;
+}

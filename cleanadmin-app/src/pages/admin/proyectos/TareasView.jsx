@@ -6,10 +6,20 @@ import { Table } from "../../../components/Table";
 import ProgramarTarea from "../../../components/modals/ProgramarTarea";
 import AsignarTarea from "../../../components/modals/AsignarTarea";
 import EliminarTarea from "../../../components/modals/EliminarTarea";
+import EvaluarDesempeno from "../../../components/modals/EvaluarDesempeno";
 import { ActividadesService } from "../../../api/actividades.service";
 import { TareaService } from "../../../api/tareas.service";
 import { ProyectoUsuarioService } from "../../../api/proyecto_usuario.service";
 import { FaListUl, FaCircleCheck, FaSpinner, FaTriangleExclamation } from "react-icons/fa6";
+
+// Requisito para poder evaluar: que haya un empleado asignado a la tarea
+function empleadoActualDe(tarea) {
+  const asignaciones = tarea?.asignaciones ?? [];
+  if (!asignaciones.length) return null;
+  return [...asignaciones].sort(
+    (a, b) => new Date(b.hora_asignacion) - new Date(a.hora_asignacion)
+  )[0]?.empleado ?? null;
+}
 
 export default function TareasView({ proyecto }) {
   const [actividadesProyecto, setActividadesProyecto] = useState([]);
@@ -22,6 +32,8 @@ export default function TareasView({ proyecto }) {
   const [abrirAsignar, setAbrirAsignar] = useState(false);
   const [abrirCancelar, setAbrirCancelar] = useState(false);
   const [tareaSeleccionada, setTareaSeleccionada] = useState(null);
+  const [abrirEvaluar, setAbrirEvaluar] = useState(false);
+  const [evaluacionObjetivo, setEvaluacionObjetivo] = useState(null); // { tarea, empleado }
 
   async function cargarDatos() {
     setLoading(true);
@@ -110,20 +122,14 @@ export default function TareasView({ proyecto }) {
       label: "Empleado Asignado",
       icon: "fa-user",
       render: (_, tarea) => {
-        const asignaciones = tarea.asignaciones ?? [];
-        const asignacionActual = asignaciones.length
-          ? [...asignaciones].sort((a, b) => new Date(b.hora_asignacion) - new Date(a.hora_asignacion))[0]
-          : null;
-        const empleado = asignacionActual?.empleado;
+        const empleado = empleadoActualDe(tarea);
 
         if (!empleado) {
           return <span className="text-gray-400 text-sm font-medium italic">Sin asignar</span>;
         }
 
         return (
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-slate-700 text-sm">{empleado.nombre} {empleado.apellido}</span>
-          </div>
+          <span className="font-semibold text-slate-700 text-sm">{empleado.nombre} {empleado.apellido}</span>
         );
       },
     },
@@ -141,7 +147,7 @@ export default function TareasView({ proyecto }) {
       key: "estado",
       label: "Estado",
       icon: "fa-flag",
-      render: (val) => {
+      render: (val, tarea) => {
         const styles = {
           PLANIFICADA: "bg-slate-100 text-slate-600",
           ASIGNADA: "bg-blue-50 text-blue-600",
@@ -152,9 +158,19 @@ export default function TareasView({ proyecto }) {
         };
         const badgeStyle = styles[val] || "bg-gray-100 text-gray-600";
         return (
-          <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase ${badgeStyle}`}>
-            {val ? val.replace("_", " ") : "DESCONOCIDO"}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wider uppercase ${badgeStyle}`}>
+              {val ? val.replace("_", " ") : "DESCONOCIDO"}
+            </span>
+            {tarea.comentario && (
+              <span
+                title={`Justificación: ${tarea.comentario}`}
+                className="w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:bg-violet-50 hover:text-violet-600 transition-colors"
+              >
+                <i className="fas fa-circle-info text-[11px]" />
+              </span>
+            )}
+          </div>
         );
       },
     },
@@ -170,6 +186,28 @@ export default function TareasView({ proyecto }) {
       columns={COLUMNAS_TAREAS}
       data={tareasPendientes}
       emptyMessage="No hay tareas programadas para este proyecto."
+      editTitle="Asignar / Reasignar empleado"
+      deleteTitle="Cancelar tarea"
+      extraActions={[
+        {
+          icon: "fa-star",
+          title: "Evaluar desempeño en esta tarea",
+          show: (tarea) => {
+            const empleado = empleadoActualDe(tarea);
+            if (!empleado) return false;
+            const yaEvaluado = (tarea.evaluaciones ?? []).some(
+              (ev) => ev.activo && ev.empleado?.id_usuario === empleado.id_usuario
+            );
+            return !yaEvaluado;
+          },
+          onClick: (tarea) => {
+            setEvaluacionObjetivo({ tarea, empleado: empleadoActualDe(tarea) });
+            setAbrirEvaluar(true);
+          },
+          hoverBg: "#fef3c7",
+          hoverText: "#d97706",
+        },
+      ]}
       onEdit={(item) => {
         setTareaSeleccionada(item);
         setAbrirAsignar(true);
@@ -254,6 +292,16 @@ export default function TareasView({ proyecto }) {
           isOpen={abrirCancelar}
           onClose={() => { setAbrirCancelar(false); setTareaSeleccionada(null); }}
           tareaSeleccionada={tareaSeleccionada}
+          actualizarLista={cargarDatos}
+        />
+      )}
+
+      {abrirEvaluar && (
+        <EvaluarDesempeno
+          isOpen={abrirEvaluar}
+          onClose={() => { setAbrirEvaluar(false); setEvaluacionObjetivo(null); }}
+          tarea={evaluacionObjetivo?.tarea}
+          empleado={evaluacionObjetivo?.empleado}
           actualizarLista={cargarDatos}
         />
       )}

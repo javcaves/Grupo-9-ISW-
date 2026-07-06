@@ -37,27 +37,16 @@ const COLUMNAS_ACTIVIDADES_BASE = [
   },
 ];
 
-function construirColumnas(onReactivar) {
+function construirColumnas() {
   return [
     ...COLUMNAS_ACTIVIDADES_BASE,
     {
       key:   "activo",
       label: "Estado",
-      render: (val, item) => (
-        <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
-            {val ? "Activa" : "Inactiva"}
-          </span>
-          {!val && (
-            <button
-              onClick={() => onReactivar(item)}
-              title="Reactivar actividad"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
-            >
-              Reactivar
-            </button>
-          )}
-        </div>
+      render: (val) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+          {val ? "Activa" : "Inactiva"}
+        </span>
       ),
     },
     { key: "actions", label: "Acciones" },
@@ -117,7 +106,7 @@ export default function ActividadesView({ proyecto }) {
     }
   }
 
-  const COLUMNAS_ACTIVIDADES = construirColumnas(handleReactivar);
+  const COLUMNAS_ACTIVIDADES = construirColumnas();
 
   // ── Stats derivadas ───────────────────────────────────────────────────────
   const totalActividades  = listaActividades.length;
@@ -150,6 +139,17 @@ export default function ActividadesView({ proyecto }) {
       columns={COLUMNAS_ACTIVIDADES}
       data={listaActividades}
       emptyMessage="No hay actividades registradas para este proyecto."
+      deleteTitle="Desactivar actividad"
+      extraActions={[
+        {
+          icon: "fa-rotate-left",
+          title: "Reactivar actividad",
+          show: (item) => !item.activo,
+          onClick: handleReactivar,
+          hoverBg: "#dcfce7",
+          hoverText: "#16a34a",
+        },
+      ]}
       onEdit={(item) => {
         setActividadAEditar(item);
         setAbrirEditarAct(true);
