@@ -10,6 +10,7 @@ import { authenticateJwt } from '../middlewares/auth.middleware.js';
 import ActividadesRoutes from '../modules/actividades/actividades.routes.js';
 import CategoriasRoutes from '../modules/categoria/categoria.routes.js';
 import CalificacionRoutes from '../modules/calificacion/calificacion.routes.js';
+import EvaluacionRoutes from '../modules/evaluacion/evaluacion.routes.js';
 import TareasRoutes from '../modules/tarea/tarea.routes.js';
 import AsignacionRoutes from '../modules/asignacion/asignacion.routes.js';
 
@@ -65,5 +66,6 @@ router.use('/asistencia', AsistenciaRoutes);
 router.use('/turno', TurnoRoutes);
 router.use('/power', PowerRoutes); 
 router.use('/calificaciones', CalificacionRoutes);
+router.use('/evaluaciones', EvaluacionRoutes);
 
 export default router;
