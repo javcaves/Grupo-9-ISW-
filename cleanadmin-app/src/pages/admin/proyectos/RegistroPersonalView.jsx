@@ -9,6 +9,7 @@ import { Table }                      from "../../../components/Table";
 import { Card }                       from "../../../components/Card";
 import { ProyectoUsuarioService }     from "../../../api/proyecto_usuario.service";
 import NuevoPersonalModal             from "../../../components/modals/NuevoPersonalModal";
+import VincularPersonalModal          from "../../../components/modals/VincularPersonalModal";
 import HojaDeVida                     from "../../../components/modals/HojaDeVida";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
 
@@ -135,6 +136,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   const [usuarios, setUsuarios]           = useState([]);
   const [loading,  setLoading]            = useState(true);
   const [modalAgregarAbierto, setModalAgregarAbierto] = useState(false);
+  const [modalVincularAbierto, setModalVincularAbierto] = useState(false);
   const [abrirHojaDeVida, setAbrirHojaDeVida] = useState(false);
   const [empleadoHojaDeVida, setEmpleadoHojaDeVida] = useState(null);
 
@@ -188,6 +190,11 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   ];
 
   const acciones = [
+    {
+      text:      "Vincular Existente",
+      className: "bg-white border border-indigo-200 text-indigo-600",
+      onClick:   () => setModalVincularAbierto(true),
+    },
     {
       text:      "+ Agregar Personal",
       className: "bg-indigo-600 text-white",
@@ -273,6 +280,15 @@ function PersonalTab({ proyecto, rolEjecutor }) {
         onClose={() => setModalAgregarAbierto(false)}
         idProyecto={proyecto?.id_proyecto}
         rolEjecutor={rolEjecutor}
+        onSuccess={cargarDatos}
+      />
+
+      <VincularPersonalModal
+        isOpen={modalVincularAbierto}
+        onClose={() => setModalVincularAbierto(false)}
+        idProyecto={proyecto?.id_proyecto}
+        rolEjecutor={rolEjecutor}
+        usuariosVinculados={usuarios}
         onSuccess={cargarDatos}
       />
 

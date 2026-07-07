@@ -26,7 +26,6 @@ import ProyectoUsuarioRoutes from '../modules/proyecto/proyecto_usuario.routes.j
 import UsuarioRoutes from '../modules/usuario/usuario.routes.js';
 import AsistenciaRoutes from '../modules/asistencia/asistencia.routes.js';
 import TurnoRoutes from '../modules/turno/turno.routes.js';
-import PowerRoutes from '../modules/power/power.routes.js';
 
 // DASHBOARD
 import DashboardRoutes from '../modules/dashboard/dashboard.routes.js';
@@ -67,7 +66,6 @@ router.use('/notificaciones', NotificacionesRouter);
 router.use('/usuarios', UsuarioRoutes);
 router.use('/asistencia', AsistenciaRoutes);
 router.use('/turno', TurnoRoutes);
-router.use('/power', PowerRoutes); 
 router.use('/calificaciones', CalificacionRoutes);
 router.use('/evaluaciones', EvaluacionRoutes);
 

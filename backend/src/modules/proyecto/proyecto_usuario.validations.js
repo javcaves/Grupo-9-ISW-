@@ -1,16 +1,18 @@
 import Joi from "joi";
 
-const ROLES_PROYECTO = ["ENCARGADO", "SUPERVISOR", "EMPLEADO"];
+export const ROLES_PROYECTO = ["ENCARGADO", "SUPERVISOR", "EMPLEADO"];
 
 //validaciones de asignacion
 export const proyecto_usuarioAsignarValidation = Joi.object({
     id_usuario: Joi.number()
     .integer()
     .positive()
+    .required()
     .messages({
         "number.base": "el id debe ser un numero",
         "number.integer": "el id debe ser un numero entero",
-        "number.positive": "el id debe ser un numero positivo"
+        "number.positive": "el id debe ser un numero positivo",
+        "any.required": "el id de usuario es obligatorio"
     }),
     rol_proy: Joi.string()
     .valid(...ROLES_PROYECTO)

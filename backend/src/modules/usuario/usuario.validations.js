@@ -149,7 +149,6 @@ export const usuarioCreateValidation = Joi.object({
         "string.pattern.base": "el numero debe ser en formato chilenoS"
     }),
     observacion: Joi.string().max(500).optional(),
-    powers: Joi.array().items(Joi.string()).optional(),
     search: Joi.string().max(100).optional(),
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).default(10).optional()
@@ -190,8 +189,7 @@ export const usuarioUpdateValidation = Joi.object({
     .pattern(/^\+?569[0-9]{8}$/)
     .optional(),
     activo: Joi.boolean().optional(),
-    observacion: Joi.string().max(500).optional(),
-    powers: Joi.array().items(Joi.string()).optional()
+    observacion: Joi.string().max(500).optional()
 }).min(1).messages({
     'object.min': 'debe enviar al menos 1 campo para actualizar'
 });

@@ -26,6 +26,7 @@ export default function SelectorUsuariosPorCargo({
   campoVinculacion = "proyectos_en_curso", // nombre del campo que trae el conteo
   etiqueta,                     // texto del label, ej: "Supervisores"
   minimo = 1,
+  excluirIds = [],               // ids que no deben listarse (ya vinculados a este proyecto)
 }) {
   const [usuarios, setUsuarios]     = useState([]);
   const [cargando, setCargando]     = useState(false);
@@ -45,27 +46,39 @@ export default function SelectorUsuariosPorCargo({
       .finally(() => setCargando(false));
   }, [cargo]);
 
-  const usuariosFiltrados = busqueda.trim()
-    ? usuarios.filter((u) =>
-        (u.nombre ?? u.nombre_completo ?? "").toLowerCase().includes(busqueda.toLowerCase())
-      )
+  const usuariosDisponibles = excluirIds.length
+    ? usuarios.filter((u) => !excluirIds.includes(u.id_usuario))
     : usuarios;
+
+  const usuariosFiltrados = busqueda.trim()
+    ? usuariosDisponibles.filter((u) => {
+        const texto = busqueda.toLowerCase();
+        const nombreCompleto = `${u.nombre ?? u.nombre_completo ?? ""} ${u.apellido ?? ""}`.toLowerCase();
+        const rut = (u.rut ?? "").toLowerCase();
+        return nombreCompleto.includes(texto) || rut.includes(texto);
+      })
+    : usuariosDisponibles;
 
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        {etiqueta ?? `Usuarios (${cargo})`} <span className="text-red-500">*</span>{" "}
-        <span className="text-xs font-normal text-gray-400">
-          (mínimo {minimo})
-        </span>
+        {etiqueta ?? `Usuarios (${cargo})`}{" "}
+        {minimo > 0 && (
+          <>
+            <span className="text-red-500">*</span>{" "}
+            <span className="text-xs font-normal text-gray-400">
+              (mínimo {minimo})
+            </span>
+          </>
+        )}
       </label>
 
-      {usuarios.length > 5 && (
+      {usuariosDisponibles.length > 5 && (
         <input
           type="text"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar por nombre..."
+          placeholder="Buscar por nombre o RUT..."
           className="w-full mb-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       )}
@@ -75,7 +88,11 @@ export default function SelectorUsuariosPorCargo({
       {cargando ? (
         <p className="text-sm text-gray-400">Cargando...</p>
       ) : usuariosFiltrados.length === 0 ? (
-        <p className="text-sm text-gray-400">No hay usuarios con cargo {cargo} disponibles.</p>
+        <p className="text-sm text-gray-400">
+          {usuariosDisponibles.length === 0 && usuarios.length > 0
+            ? `Todos los usuarios con cargo ${cargo} ya están vinculados a este proyecto.`
+            : `No hay usuarios con cargo ${cargo} disponibles.`}
+        </p>
       ) : (
         <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
           {usuariosFiltrados.map((u) => {
@@ -92,7 +109,15 @@ export default function SelectorUsuariosPorCargo({
                     onChange={() => onToggle(u.id_usuario)}
                     className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span>{u.nombre ?? u.nombre_completo ?? `Usuario #${u.id_usuario}`}</span>
+                  <span className="flex flex-col">
+                    <span>
+                      {u.nombre ?? u.nombre_completo ?? `Usuario #${u.id_usuario}`}
+                      {u.apellido ? ` ${u.apellido}` : ""}
+                    </span>
+                    {u.rut && (
+                      <span className="text-xs text-gray-400">{u.rut}</span>
+                    )}
+                  </span>
                 </span>
 
                 {typeof vinculaciones === "number" && (

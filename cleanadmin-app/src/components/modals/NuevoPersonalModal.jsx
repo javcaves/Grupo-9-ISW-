@@ -59,7 +59,7 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
       return "El número debe tener formato chileno, ej: +56912345678.";
     }
 
-    if (!form.password || form.password.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+    if (!form.password || form.password.length < 6 || form.password.length > 8) return "La contraseña debe tener entr 6 y 8 caracteres.";
     if (!form.observacion.trim()) return "La observación es obligatoria.";
     return null;
   };
@@ -206,7 +206,7 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
             value={form.password}
             onChange={(e) => actualizarCampo("password", e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Entre 6 y 8 caracteres"
           />
         </div>
 
