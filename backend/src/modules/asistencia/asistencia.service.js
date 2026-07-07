@@ -268,9 +268,18 @@ export const obtenerMisAsistenciasProyectoService = async (
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RF-ASISTENCIA-6 & RF-ASISTENCIA-9: Registrar Asistencia (Empleado Web)
+//
+// IMPORTANTE (fix seguridad):
+// - El token NUNCA debe llegar aquí desde una pantalla que el propio empleado
+//   controle: solo es válido si viene de leer el QR que el encargado muestra
+//   en su dispositivo. Este service no puede verificar "quién mostró el QR",
+//   así que la barrera real de presencia física es la geolocalización de
+//   abajo, que ahora SÍ bloquea (antes solo advertía).
+// - `tipo` distingue marca de ENTRADA (EN_ESPERA -> PRESENTE/ATRASO) de
+//   SALIDA (PRESENTE/ATRASO -> RETIRADO, registra hora_egreso).
 // ─────────────────────────────────────────────────────────────────────────────
 export const marcarAsistenciaEmpleadoService = async (id_empleado, data) => {
-    const { token, latitud_emp, longitud_emp } = data;
+    const { token, latitud_emp, longitud_emp, tipo = "ENTRADA" } = data;
     const ahora = new Date();
     const horaActualStr = ahora.toTimeString().slice(0, 5); // "HH:MM"
 
@@ -287,45 +296,70 @@ export const marcarAsistenciaEmpleadoService = async (id_empleado, data) => {
         where: { id_asistencia: asistencia.id_asistencia, id_empleado, activo: true }
     });
     if (!registro) return [null, "No tienes permitido marcar asistencia en este turno específico."];
-    if (registro.estado !== "EN_ESPERA") return [null, "Ya registraste tu marca de asistencia para la jornada actual."];
 
-    // 3. Validación de Geolocalización (RF-ASISTENCIA-9)
-    const proyecto = await proyectoRepo.findOne({ where: { id_proyecto: asistencia.proyecto.id_proyecto } });
-    
-    // Asumiendo que guardas latitud y longitud separadas en tu entidad proyecto o parseas ubicación
-    // Ejemplo si guardas "lat,lng" o similar. Pongamos una simulación estándar de coordenadas fijas
-    const [proyLat, proyLng] = proyecto.ubicacion ? proyecto.ubicacion.split(",").map(Number) : [0,0];
-    const radioPermitidoMeters = 200; // Configurable por proyecto o constante de empresa
-    
-    let geoVerificada = true;
-    if (proyecto.ubicacion) {
-        const distancia = calcularDistanciaMetros(latitud_emp, longitud_emp, proyLat, proyLng);
-        if (distancia > radioPermitidoMeters) {
-            // Regla de contingencia: Si falla (VPN/NAT) se graba con advertencia
-            geoVerificada = false; 
+    // 3. Validar la transición de estado según el tipo de marcaje
+    if (tipo === "SALIDA") {
+        if (!["PRESENTE", "ATRASO"].includes(registro.estado)) {
+            return [null, "Debes registrar tu entrada antes de poder marcar la salida."];
+        }
+        if (registro.hora_egreso) {
+            return [null, "Ya registraste tu salida para la jornada actual."];
+        }
+    } else {
+        if (registro.estado !== "EN_ESPERA") {
+            return [null, "Ya registraste tu marca de entrada para la jornada actual."];
         }
     }
 
-    // 4. Calcular Estado Automático basado en el Margen de Tolerancia (Por defecto 10 min)
-    const margenToleranciaMin = 10; 
-    const minActual = convertirAMinutos(horaActualStr);
-    const minIngresoTurno = convertirAMinutos(asistencia.turno.hora_ingreso);
+    // 4. Validación de Geolocalización (RF-ASISTENCIA-9)
+    // El proyecto guarda "ubicacion" como dirección de texto libre (ej: "Santiago, Chile"),
+    // NO como coordenadas — por eso se usan columnas numéricas dedicadas (latitud/longitud).
+    const proyecto = await proyectoRepo.findOne({ where: { id_proyecto: asistencia.proyecto.id_proyecto } });
 
-    if (minActual <= (minIngresoTurno + margenToleranciaMin)) {
-        registro.estado = "PRESENTE";
-    } else {
-        registro.estado = "ATRASO";
+    const tieneCoordenadas =
+        proyecto.latitud !== null && proyecto.latitud !== undefined &&
+        proyecto.longitud !== null && proyecto.longitud !== undefined;
+
+    if (!tieneCoordenadas) {
+        // Fail-safe: si el proyecto no tiene coordenadas configuradas, no hay forma
+        // de verificar presencia física, así que se rechaza en vez de asumir válido.
+        return [null, "El proyecto no tiene coordenadas configuradas; no es posible validar la ubicación. Contacta a un administrador."];
     }
 
-    registro.hora_ingreso = horaActualStr + ":00";
-    registro.geo_verificada = geoVerificada;
+    const radioPermitidoMeters = proyecto.radio_geocerca ?? 200;
+    const distancia = calcularDistanciaMetros(
+        Number(latitud_emp), Number(longitud_emp),
+        Number(proyecto.latitud), Number(proyecto.longitud)
+    );
+
+    if (distancia > radioPermitidoMeters) {
+        return [null, `Estás a ${Math.round(distancia)} m del proyecto (máximo permitido: ${radioPermitidoMeters} m). No es posible registrar la asistencia fuera de la faena.`];
+    }
+
+    // 5. Aplicar el marcaje
+    if (tipo === "SALIDA") {
+        registro.hora_egreso = horaActualStr + ":00";
+        registro.estado = "RETIRADO";
+    } else {
+        // Estado automático basado en el margen de tolerancia (por defecto 10 min)
+        const margenToleranciaMin = 10;
+        const minActual = convertirAMinutos(horaActualStr);
+        const minIngresoTurno = convertirAMinutos(asistencia.turno.hora_ingreso);
+
+        registro.estado = minActual <= (minIngresoTurno + margenToleranciaMin) ? "PRESENTE" : "ATRASO";
+        registro.hora_ingreso = horaActualStr + ":00";
+    }
+
+    registro.geo_verificada = true;
     await asistenciaEmpleadoRepo.save(registro);
 
-    return [{ 
-        success: true, 
-        estado_asignado: registro.estado, 
-        geo_verificada,
-        mensaje: geoVerificada ? "Asistencia registrada correctamente." : "Registrado con advertencia: Ubicación fuera de rango o privada." 
+    return [{
+        success: true,
+        tipo,
+        estado_asignado: registro.estado,
+        geo_verificada: true,
+        distancia_metros: Math.round(distancia),
+        mensaje: tipo === "SALIDA" ? "Salida registrada correctamente." : "Asistencia registrada correctamente."
     }, null];
 };
 
@@ -439,10 +473,23 @@ export async function obtenerMiAsistenciaActual(idEmpleado, idTurno) {
                 registro.asistencia.turno.hora_fin_colacion = asignacionContrato.fin_colacion;
             }
 
+            // FIX SEGURIDAD: el token/QR nunca debe llegar al cliente del empleado.
+            // Solo debe existir en la pantalla de control del encargado. Si viajara
+            // aquí, cualquiera podría leerlo desde el Network tab y compartirlo.
+            const registroSinToken = {
+                ...registro,
+                asistencia: registro.asistencia
+                    ? (() => {
+                          const { token, token_expira, ...asistenciaSegura } = registro.asistencia;
+                          return asistenciaSegura;
+                      })()
+                    : registro.asistencia,
+            };
+
             return {
                 success: true,
                 code: "MARCA_EXISTENTE",
-                data: registro
+                data: registroSinToken
             };
         }
 

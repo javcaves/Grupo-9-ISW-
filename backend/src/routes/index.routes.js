@@ -28,6 +28,9 @@ import AsistenciaRoutes from '../modules/asistencia/asistencia.routes.js';
 import TurnoRoutes from '../modules/turno/turno.routes.js';
 import PowerRoutes from '../modules/power/power.routes.js';
 
+// DASHBOARD
+import DashboardRoutes from '../modules/dashboard/dashboard.routes.js';
+
 const router = Router();
 
 // =============================================
@@ -67,5 +70,8 @@ router.use('/turno', TurnoRoutes);
 router.use('/power', PowerRoutes); 
 router.use('/calificaciones', CalificacionRoutes);
 router.use('/evaluaciones', EvaluacionRoutes);
+
+// ESTADISTICAS
+router.use('/dashboard',DashboardRoutes);
 
 export default router;

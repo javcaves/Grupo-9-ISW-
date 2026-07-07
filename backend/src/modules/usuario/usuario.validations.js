@@ -9,12 +9,13 @@ const validarRut = (rut) =>{
     const cuerpo = rutLimpio.slice(0, -1);
     const dv = rutLimpio.slice(-1).toUpperCase();
 
-    if (cuerpo.legth < 7 || cuerpo.legth > 8) return false;
+    if (cuerpo.length < 7 || cuerpo.length > 8) return false;
+    if (!/^[0-9]+$/.test(cuerpo)) return false;
 
     let suma = 0;
     let multiplo = 2;
 
-    for (let i = cuerpo.legth - 1; i >= 0; i--){
+    for (let i = cuerpo.length - 1; i >= 0; i--){
         suma += parseInt(cuerpo[i]) * multiplo;
         multiplo = multiplo === 7 ? 2 : multiplo + 1;
     }

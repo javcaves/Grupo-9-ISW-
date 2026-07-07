@@ -20,6 +20,9 @@ const FORM_VACIO = {
   min_emp: "",
   max_emp: "",
   ubicacion: "",
+  latitud: "",
+  longitud: "",
+  radio_geocerca: "",
   fecha_inicio: "",
   fecha_termino: "",
   estado: "EN_PREPARACION",
@@ -46,6 +49,9 @@ export default function ProyectoFormModal({ isOpen, onClose, modo, proyecto, onS
             min_emp: proyecto.min_emp ?? "",
             max_emp: proyecto.max_emp ?? "",
             ubicacion: proyecto.ubicacion ?? "",
+            latitud: proyecto.latitud ?? "",
+            longitud: proyecto.longitud ?? "",
+            radio_geocerca: proyecto.radio_geocerca ?? "",
             fecha_inicio: proyecto.fecha_inicio ? String(proyecto.fecha_inicio).slice(0, 10) : "",
             fecha_termino: proyecto.fecha_termino ? String(proyecto.fecha_termino).slice(0, 10) : "",
             estado: proyecto.estado ?? "EN_PREPARACION",
@@ -71,6 +77,19 @@ export default function ProyectoFormModal({ isOpen, onClose, modo, proyecto, onS
 
     if (!form.ubicacion.trim() || form.ubicacion.trim().length < 5) {
       return "La ubicación debe tener al menos 5 caracteres.";
+    }
+
+    const tieneLat = form.latitud !== "" && form.latitud !== null && form.latitud !== undefined;
+    const tieneLng = form.longitud !== "" && form.longitud !== null && form.longitud !== undefined;
+
+    if (tieneLat !== tieneLng) {
+      return "Debes ingresar latitud y longitud juntas (o dejar ambas vacías).";
+    }
+    if (tieneLat && (Number(form.latitud) < -90 || Number(form.latitud) > 90)) {
+      return "La latitud debe estar entre -90 y 90.";
+    }
+    if (tieneLng && (Number(form.longitud) < -180 || Number(form.longitud) > 180)) {
+      return "La longitud debe estar entre -180 y 180.";
     }
 
     if (form.min_emp === "" || form.max_emp === "") return "Debes indicar el rango de empleados.";
@@ -105,6 +124,9 @@ export default function ProyectoFormModal({ isOpen, onClose, modo, proyecto, onS
       fecha_inicio: form.fecha_inicio,
       estado: form.estado,
       ...(form.fecha_termino ? { fecha_termino: form.fecha_termino } : {}),
+      ...(form.latitud !== "" ? { latitud: Number(form.latitud) } : {}),
+      ...(form.longitud !== "" ? { longitud: Number(form.longitud) } : {}),
+      ...(form.radio_geocerca !== "" ? { radio_geocerca: Number(form.radio_geocerca) } : {}),
     };
 
     try {
@@ -216,6 +238,57 @@ export default function ProyectoFormModal({ isOpen, onClose, modo, proyecto, onS
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Ej: Santiago, Chile"
           />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Coordenadas de la faena (para validar asistencia por QR)
+            </label>
+            <a
+              href="https://www.google.com/maps"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-indigo-600 hover:underline"
+            >
+              Buscar en Google Maps
+            </a>
+          </div>
+          <p className="text-xs text-gray-500 mb-2">
+            Click derecho en el punto exacto de Google Maps → copiar las coordenadas y pegarlas aquí.
+            Si se dejan vacías, el marcaje de asistencia por QR se rechazará por seguridad.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              type="number"
+              step="any"
+              value={form.latitud}
+              onChange={(e) => actualizarCampo("latitud", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Latitud (ej: -36.827)"
+            />
+            <input
+              type="number"
+              step="any"
+              value={form.longitud}
+              onChange={(e) => actualizarCampo("longitud", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Longitud (ej: -73.050)"
+            />
+          </div>
+          <div className="mt-2">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Radio permitido en metros (opcional, default 200m)
+            </label>
+            <input
+              type="number"
+              min="10"
+              value={form.radio_geocerca}
+              onChange={(e) => actualizarCampo("radio_geocerca", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="200"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
