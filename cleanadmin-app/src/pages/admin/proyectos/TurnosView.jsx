@@ -5,6 +5,7 @@ import { Card }                 from "../../../components/Card";
 import { Modal }                from "../../../components/Modal";
 import { TurnoCard }            from "../../../layouts/turnoCard";
 import { FormularioTurno }      from "../../../layouts/form_turno";
+import { ColacionManager }      from "../../../layouts/ColacionManager";
 import { TurnoService }         from "../../../api/turno.service";
 import { AsistenciaService }    from "../../../api/asistencia.service";
 import QRGenerator from "../../../components/qr/QRGenerator";
@@ -15,6 +16,7 @@ export default function TurnosView({ proyecto }) {
   const [loading,     setLoading]     = useState(true);
   const [modalCrear,  setModalCrear]  = useState(false);
   const [turnoEditar, setTurnoEditar] = useState(null);
+  const [turnoColacionManager, setTurnoColacionManager] = useState(null);
   const [qrTurno, setQrTurno] = useState(null);
   const [qrToken, setQrToken] = useState(null);
   const [qrExp, setQrExp] = useState(null);
@@ -213,6 +215,7 @@ export default function TurnosView({ proyecto }) {
           turno={turno}
           onEdit={(t) => setTurnoEditar(t)}
           onGenerarQr={(t) => generarQrAsistencia(t)}
+          onManageColaciones={(t) => setTurnoColacionManager(t)}
         />
       ))}
     </div>
@@ -355,6 +358,18 @@ export default function TurnosView({ proyecto }) {
           idProyecto={proyecto?.id_proyecto}
           turno={turnoEditar}
           onSuccess={() => { setTurnoEditar(null); cargarDatos(); }}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={!!turnoColacionManager}
+        onClose={() => setTurnoColacionManager(null)}
+        title="Gestor de Horarios de Colación"
+        variant="wide"
+      >
+        <ColacionManager
+          turno={turnoColacionManager}
+          onSuccess={() => { setTurnoColacionManager(null); cargarDatos(); }}
         />
       </Modal>
     </>

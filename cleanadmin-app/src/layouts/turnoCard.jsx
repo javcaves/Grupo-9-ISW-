@@ -1,7 +1,7 @@
 // layouts/turnoCard.jsx
 import { Card } from '../components/Card.jsx';
 
-export const TurnoCard = ({ turno, onEdit, onGenerarQr }) => {
+export const TurnoCard = ({ turno, onEdit, onGenerarQr, onManageColaciones }) => {
   const badgeActivo = (
     <span
       className="px-2.5 py-1 text-xs font-semibold rounded-full border"
@@ -84,6 +84,13 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr }) => {
           </button>
 
           <button
+            onClick={() => onManageColaciones?.(turno)}
+            className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none bg-amber-100 hover:bg-amber-200 text-amber-800"
+          >
+            🍔 Gestionar Colaciones
+          </button>
+
+          <button
             onClick={() => onEdit(turno)}
             className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
             style={{
@@ -101,3 +108,4 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr }) => {
     </Card>
   );
 };
+
