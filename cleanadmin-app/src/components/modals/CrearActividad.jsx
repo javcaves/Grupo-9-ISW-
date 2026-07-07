@@ -24,6 +24,7 @@ export default function CrearActividad({ isOpen, onClose, categorias, actualizar
       setFormData({ descripcion_esp: '', id_cat: '', recurrencia: 'DIARIA' });
     } catch (error) {
       console.error(error);
+      alert(`No se pudo crear la actividad:\n\n${error.message}`);
     }
   };
 
@@ -38,8 +39,10 @@ export default function CrearActividad({ isOpen, onClose, categorias, actualizar
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de Actividad</label>
-            <input type="text" name="descripcion_esp" value={formData.descripcion_esp} onChange={handleChange} required 
+            <input type="text" name="descripcion_esp" value={formData.descripcion_esp} onChange={handleChange} required
+              maxLength={255} placeholder="Ej: Inventario y conteo de herramientas en bodega"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <p className="text-xs text-gray-400 mt-1 text-right">{formData.descripcion_esp.length}/255 caracteres</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Categoría Asociada</label>
