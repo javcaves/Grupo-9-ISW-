@@ -28,6 +28,26 @@ const Proyecto = new EntitySchema({
             type:"text",
             nullable:false,
         },
+        // Coordenadas reales para validar geolocalización en el marcaje de asistencia.
+        // "ubicacion" de arriba es texto libre (ej: "Santiago, Chile") y NO se puede
+        // usar para calcular distancias — por eso estas columnas numéricas separadas.
+        latitud:{
+            type: "decimal",
+            precision: 10,
+            scale: 7,
+            nullable: true,
+        },
+        longitud:{
+            type: "decimal",
+            precision: 10,
+            scale: 7,
+            nullable: true,
+        },
+        radio_geocerca:{
+            type: "int",
+            nullable: true,
+            comment: "Radio permitido en metros para marcar asistencia. Si es null, se usa el default de 200m.",
+        },
         fecha_inicio:{
             type: "timestamp",
             nullable: false,

@@ -2,14 +2,9 @@ import { useState } from "react";
 
 import QRScanner from "./QRScanner";
 
-import { AsistenciaService } from "../../api/asistencia.service";
-
 export default function QRScannerModal({
 
     open,
-    idTurno,
-    tipo = "ENTRADA",
-
     onClose,
     onSuccess,
 
@@ -21,37 +16,17 @@ export default function QRScannerModal({
 
     if (!open) return null;
 
-    async function registrar(datosQR) {
+    async function manejarQREscaneado(datosQR) {
 
         try {
 
             setLoading(true);
             setError(null);
 
-            const respuesta = await AsistenciaService.marcar({
-
-                token: datosQR.token,
-
-                latitud_emp: datosQR.latitud,
-
-                longitud_emp: datosQR.longitud,
-
-                tipo,
-
-                id_turno: Number(idTurno),
-
-            });
-
-            if (!respuesta?.success) {
-
-                throw new Error(
-                    respuesta?.message ??
-                    "No fue posible registrar la asistencia."
-                );
-
-            }
-
-            onSuccess?.(respuesta);
+            // onSuccess es responsabilidad del padre: hace la llamada real a
+            // /asistencia/marcar. Si falla, debe lanzar (throw) el error para
+            // que se muestre acá.
+            await onSuccess?.(datosQR);
 
             onClose?.();
 
@@ -158,7 +133,7 @@ export default function QRScannerModal({
 
                             <QRScanner
 
-                                onSuccess={registrar}
+                                onSuccess={manejarQREscaneado}
 
                                 onCancel={onClose}
 

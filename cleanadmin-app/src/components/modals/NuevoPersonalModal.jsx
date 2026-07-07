@@ -4,10 +4,14 @@ import { Modal } from "../Modal";
 import { FormContainer } from "../Formulario";
 import { UsuarioService } from "../../api/usuario.service";
 import { ProyectoUsuarioService } from "../../api/proyecto_usuario.service";
+import { validarRut } from "../../utils/rut";
 
 // Quien ejecuta con estos roles puede elegir el cargo del nuevo ingreso.
 // Cualquier otro rol (ej. ENCARGADO) solo puede sumar EMPLEADO, sin preguntar.
 const ROLES_QUE_ELIGEN_CARGO = ["SUPERVISOR", "ADMIN", "ROOT"];
+
+// Mismo patrón que numero en usuario.validations.js (backend): +569XXXXXXXX
+const PATRON_NUMERO_CHILENO = /^\+?569[0-9]{8}$/;
 
 // TODO: no tengo usuarioCreateValidation (Joi) del backend — estos campos
 // están tomados de la entidad Usuario. Si el schema real difiere en nombres
@@ -42,11 +46,20 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
 
   const validar = () => {
     if (!form.rut.trim()) return "El RUT es obligatorio.";
+    if (!validarRut(form.rut.trim())) {
+      return "El RUT ingresado no es válido. Revisa el número y el dígito verificador (ej: 12345678-9).";
+    }
+
     if (!form.nombre.trim()) return "El nombre es obligatorio.";
     if (!form.apellido.trim()) return "El apellido es obligatorio.";
     if (!form.email.trim()) return "El email es obligatorio.";
+
     if (!form.numero.trim()) return "El número de contacto es obligatorio.";
-    if (!form.password || form.password.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+    if (!PATRON_NUMERO_CHILENO.test(form.numero.trim())) {
+      return "El número debe tener formato chileno, ej: +56912345678.";
+    }
+
+    if (!form.password || form.password.length < 6 || form.password.length > 8) return "La contraseña debe tener entr 6 y 8 caracteres.";
     if (!form.observacion.trim()) return "La observación es obligatoria.";
     return null;
   };
@@ -193,7 +206,7 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
             value={form.password}
             onChange={(e) => actualizarCampo("password", e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Entre 6 y 8 caracteres"
           />
         </div>
 

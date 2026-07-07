@@ -9,12 +9,13 @@ const validarRut = (rut) =>{
     const cuerpo = rutLimpio.slice(0, -1);
     const dv = rutLimpio.slice(-1).toUpperCase();
 
-    if (cuerpo.legth < 7 || cuerpo.legth > 8) return false;
+    if (cuerpo.length < 7 || cuerpo.length > 8) return false;
+    if (!/^[0-9]+$/.test(cuerpo)) return false;
 
     let suma = 0;
     let multiplo = 2;
 
-    for (let i = cuerpo.legth - 1; i >= 0; i--){
+    for (let i = cuerpo.length - 1; i >= 0; i--){
         suma += parseInt(cuerpo[i]) * multiplo;
         multiplo = multiplo === 7 ? 2 : multiplo + 1;
     }
@@ -148,7 +149,6 @@ export const usuarioCreateValidation = Joi.object({
         "string.pattern.base": "el numero debe ser en formato chilenoS"
     }),
     observacion: Joi.string().max(500).optional(),
-    powers: Joi.array().items(Joi.string()).optional(),
     search: Joi.string().max(100).optional(),
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).default(10).optional()
@@ -189,8 +189,7 @@ export const usuarioUpdateValidation = Joi.object({
     .pattern(/^\+?569[0-9]{8}$/)
     .optional(),
     activo: Joi.boolean().optional(),
-    observacion: Joi.string().max(500).optional(),
-    powers: Joi.array().items(Joi.string()).optional()
+    observacion: Joi.string().max(500).optional()
 }).min(1).messages({
     'object.min': 'debe enviar al menos 1 campo para actualizar'
 });

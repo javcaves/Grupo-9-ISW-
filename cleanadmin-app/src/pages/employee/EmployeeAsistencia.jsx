@@ -4,7 +4,6 @@ import { Card } from "../../components/Card";
 import { AuthService } from "../../api/auth.service";
 import { AsistenciaService } from "../../api/asistencia.service";
 import QRScannerModal from "../../components/qr/QRScannerModal";
-import QRGenerator from "../../components/qr/QRGenerator";
 
 export default function EmployeeAsistencia() {
   const location = useLocation();
@@ -22,8 +21,6 @@ export default function EmployeeAsistencia() {
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [tipoMarcaje, setTipoMarcaje] = useState(null);
-  const [qrToken, setQrToken] = useState(null);
-  const [qrExp, setQrExp] = useState(null);
 
   useEffect(() => {
     async function cargarDatos() {
@@ -74,10 +71,6 @@ export default function EmployeeAsistencia() {
               estado:   registroDb.estado       ?? "EN_ESPERA",
             });
 
-            const asistenciaData = registroDb.asistencia;
-            setQrToken(asistenciaData?.token ?? null);
-            setQrExp(asistenciaData?.token_expira ?? null);
-
             const tInfo = registroDb.asistencia?.turno;
             setCurrentShift({
               nombre: tInfo?.nombre                        ?? "Turno Operativo",
@@ -92,8 +85,6 @@ export default function EmployeeAsistencia() {
           } else {
             // FALLBACK: sin registro, usamos datos del turno recuperado
             setCurrentRecord({ checkIn: "--", checkOut: "Pendiente", estado: "FUERA_DE_HORARIO" });
-            setQrToken(null);
-            setQrExp(null);
             setCurrentShift({
               nombre: objetoTurnoAux?.nombre                        ?? "Turno General",
               start:  objetoTurnoAux?.hora_ingreso?.substring(0, 5) ?? "--:--",
@@ -125,44 +116,36 @@ export default function EmployeeAsistencia() {
 
 }
 
+// FIX: antes se leía datosQR.latitud/datosQR.longitud, pero useGeolocation.js
+// devuelve las claves con sufijo "_emp" (latitud_emp/longitud_emp). Como esas
+// propiedades no existían, siempre se enviaba undefined y el backend
+// rechazaba la petición por validación (campos requeridos) — el marcaje
+// nunca funcionaba, ni para entrada ni para salida.
+//
+// Además: QRScannerModal ya NO llama a la API por su cuenta (ver ese archivo);
+// esta es ahora la ÚNICA llamada real a /asistencia/marcar. Por eso lanzamos
+// el error (throw) en vez de hacer alert() acá: el modal lo captura y lo
+// muestra, evitando la doble-llamada con datos cruzados que había antes.
 async function registrarQR(datosQR) {
 
-    try {
+    const res = await AsistenciaService.marcar({
 
-        const res = await AsistenciaService.marcar({
+        token: datosQR.token,
 
-            token: datosQR.token,
+        latitud_emp: datosQR.latitud_emp,
 
-            latitud_emp: datosQR.latitud,
+        longitud_emp: datosQR.longitud_emp,
 
-            longitud_emp: datosQR.longitud,
+        tipo: tipoMarcaje,
 
-            tipo: tipoMarcaje
+    });
 
-        });
-
-        if (res?.success) {
-
-            alert("✅ " + (res.mensaje ?? "Asistencia registrada."));
-
-            setScannerOpen(false);
-
-            window.location.reload();
-
-            return;
-
-        }
-
+    if (!res?.success) {
         throw new Error(res?.message || "No fue posible registrar la asistencia.");
-
     }
 
-    catch (err) {
-
-        alert(err.message);
-
-    }
-
+    alert("✅ " + (res.mensaje ?? "Asistencia registrada."));
+    window.location.reload();
 }
 
   if (loading) {
@@ -258,25 +241,10 @@ async function registrarQR(datosQR) {
         </Card>
       )}
 
-      {/* REGISTRO QR */}
+      {/* REGISTRO QR — el empleado SOLO escanea, nunca genera ni ve el QR.
+          El QR vive únicamente en la pantalla de control del encargado. */}
       {activeShiftId && (
         <Card title="Escanear Código QR de Punto de Control" icon="fa-qrcode">
-          {qrToken && (
-            <div className="mb-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
-              <div className="mb-3 text-center">
-                <p className="text-sm font-semibold text-violet-700">Código QR activo para la jornada</p>
-                <p className="text-xs text-violet-600 mt-1">Compártelo o úsalo para registrar la asistencia.</p>
-              </div>
-              <div className="flex justify-center">
-                <QRGenerator
-                  token={qrToken}
-                  proyecto={currentShift?.nombre}
-                  turno={currentShift?.nombre}
-                  exp={qrExp}
-                />
-              </div>
-            </div>
-          )}
           <div className="space-y-3">
             <button
               onClick={() => abrirScanner("ENTRADA")}
@@ -293,7 +261,7 @@ async function registrarQR(datosQR) {
             </button>
 
             <button
-              onClick={() => ejecutarMarcaje("SALIDA")}
+              onClick={() => abrirScanner("SALIDA")}
               disabled={!tieneIngreso || tieneSalida || esEstadoBloqueado}
               className={`w-full rounded-xl py-4 text-white font-semibold transition-all shadow-sm text-sm ${
                 (!tieneIngreso || tieneSalida || esEstadoBloqueado)

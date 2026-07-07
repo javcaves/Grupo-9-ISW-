@@ -5,7 +5,7 @@ import { checkRole } from '../../middlewares/role.middleware.js';
 
 const router = Router();
 
-router.post('/:idProyecto/usuarios', authenticateJwt, checkRole(['ROOT', 'ADMIN', 'SUPERVISOR']), 
+router.post('/:idProyecto/usuarios', authenticateJwt, checkRole(['ROOT', 'ADMIN', 'SUPERVISOR', 'ENCARGADO']), 
     ProyectoUsuarioController.asignarUsuarioAProyecto
 );
 

@@ -5,6 +5,9 @@
  * @property {number} min_emp - Cantidad mínima de empleados requerida
  * @property {number} max_emp - Cantidad máxima de empleados permitida
  * @property {string} ubicacion - Dirección o geolocalización de la faena
+ * @property {number} [latitud] - Latitud numérica real, usada para validar geolocalización de asistencia
+ * @property {number} [longitud] - Longitud numérica real, usada para validar geolocalización de asistencia
+ * @property {number} [radio_geocerca] - Radio permitido en metros para marcar asistencia (default 200)
  * @property {string} fecha_inicio - Fecha de inicio programada (ISO string)
  * @property {string} fecha_termino - Fecha de término estimada (ISO string)
  * @property {('EN_PREPARACION'|'EN_CURSO'|'FINALIZADO')} estado - Estado operativo del proyecto
@@ -31,6 +34,9 @@ export const crearProyecto = async (data, ejecutor) => {
             min_emp: data.min_emp,
             max_emp: data.max_emp,
             ubicacion: data.ubicacion,
+            latitud: data.latitud ?? null,
+            longitud: data.longitud ?? null,
+            radio_geocerca: data.radio_geocerca ?? null,
             fecha_inicio: data.fecha_inicio,
             fecha_termino: data.fecha_termino,
             estado: data.estado || "EN_PREPARACION",
@@ -140,6 +146,9 @@ export const editarProyecto = async (id_proyecto, data, ejecutor) => {
             min_emp: data.min_emp,
             max_emp: data.max_emp,
             ubicacion: data.ubicacion,
+            latitud: data.latitud ?? proyecto.latitud,
+            longitud: data.longitud ?? proyecto.longitud,
+            radio_geocerca: data.radio_geocerca ?? proyecto.radio_geocerca,
             fecha_inicio: data.fecha_inicio,
             fecha_termino: data.fecha_termino,
             estado: data.estado

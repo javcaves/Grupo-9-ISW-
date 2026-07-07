@@ -17,8 +17,11 @@ export const registroIndividualUpdateValidation = Joi.object({
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
 
 // Validar el marcaje por token o QR del empleado (RF-ASISTENCIA-6)
+// `tipo` distingue marca de ENTRADA (default, retrocompatible) de SALIDA;
+// antes se perdía silenciosamente por stripUnknown:true al no estar declarado.
 export const empleadoRegistrarValidation = Joi.object({
     token: Joi.string().length(4).uppercase().required(),
     latitud_emp: Joi.number().required(),
-    longitud_emp: Joi.number().required()
+    longitud_emp: Joi.number().required(),
+    tipo: Joi.string().valid("ENTRADA", "SALIDA").optional().default("ENTRADA"),
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
