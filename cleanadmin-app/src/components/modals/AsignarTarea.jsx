@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { AsignacionService } from '../../api/asignacion.service';
+import { formatearFechaHora } from '../../utils/formatters';
 
 const ESTADOS_ASIGNABLES = ['PLANIFICADA', 'ASIGNADA', 'EN_PROCESO'];
 
@@ -92,7 +93,7 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, emplea
             >
               <option value="">Seleccione una tarea...</option>
               {tareasSeleccionables?.map(tarea => (
-                <option key={tarea.id_tarea} value={tarea.id_tarea}>{tarea.actividad?.descripcion_esp || "Sin nombre"} | {tarea.fecha} - {tarea.hora}</option>
+                <option key={tarea.id_tarea} value={tarea.id_tarea}>{tarea.actividad?.descripcion_esp || "Sin nombre"} | {formatearFechaHora(tarea.fecha, tarea.hora)}</option>
               ))}
             </select>
           </div>
