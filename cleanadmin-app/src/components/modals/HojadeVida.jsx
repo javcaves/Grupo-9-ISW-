@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../Modal";
 import { EvaluacionService } from "../../api/evaluacion.service";
+import { formatearTimestamp } from "../../utils/formatters";
 
 export default function HojaDeVida({ isOpen, onClose, empleado }) {
   const [evaluaciones, setEvaluaciones] = useState([]);
@@ -75,7 +76,7 @@ export default function HojaDeVida({ isOpen, onClose, empleado }) {
                       {ev.tarea?.actividad?.descripcion_esp || "Tarea sin nombre"}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(ev.fecha_evaluacion).toLocaleDateString()} · Evaluado por {ev.evaluador?.nombre} {ev.evaluador?.apellido}
+                      {formatearTimestamp(ev.fecha_evaluacion)} · Evaluado por {ev.evaluador?.nombre} {ev.evaluador?.apellido}
                     </p>
                     {ev.comentario && (
                       <p className="text-sm text-gray-600 mt-2 italic">"{ev.comentario}"</p>

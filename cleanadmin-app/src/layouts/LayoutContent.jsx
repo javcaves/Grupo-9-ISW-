@@ -4,6 +4,7 @@ import ButtonTemplate from '../components/Buttons';
 export default function LayoutContent({ 
   header, 
   stats, 
+  toolbar,
   table, 
   actions = [] 
 }) {
@@ -47,7 +48,7 @@ export default function LayoutContent({
         </div>
       )}
       
-      {/* Contenedor de la Tabla */}
+      {/* Contenedor de la Tabla*/}
       {table && (
         <div 
           className="table-wrapper rounded-2xl overflow-hidden border"
@@ -56,6 +57,11 @@ export default function LayoutContent({
             borderColor: 'var(--lc-table-border)'
           }}
         >
+          {toolbar && (
+            <div className="p-4" style={{ borderBottom: '1px solid var(--lc-table-border)' }}>
+              {toolbar}
+            </div>
+          )}
           {table}
         </div>
       )}
