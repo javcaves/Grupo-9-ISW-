@@ -1,8 +1,8 @@
-// pages/admin/proyectos/TareasView.jsx
 import { useState, useEffect } from "react";
 import LayoutContent from "../../../layouts/LayoutContent";
 import { Card } from "../../../components/Card";
 import { Table } from "../../../components/Table";
+import { ListToolbar } from "../../../components/ListToolbar";
 import ProgramarTarea from "../../../components/modals/ProgramarTarea";
 import AsignarTarea from "../../../components/modals/AsignarTarea";
 import EliminarTarea from "../../../components/modals/EliminarTarea";
@@ -10,6 +10,7 @@ import EvaluarDesempeno from "../../../components/modals/EvaluarDesempeno";
 import { ActividadesService } from "../../../api/actividades.service";
 import { TareaService } from "../../../api/tareas.service";
 import { ProyectoUsuarioService } from "../../../api/proyecto_usuario.service";
+import { formatearFechaHora } from "../../../utils/formatters";
 import { FaListUl, FaCircleCheck, FaSpinner, FaTriangleExclamation } from "react-icons/fa6";
 
 // Requisito para poder evaluar: que haya un empleado asignado a la tarea
@@ -34,6 +35,11 @@ export default function TareasView({ proyecto }) {
   const [tareaSeleccionada, setTareaSeleccionada] = useState(null);
   const [abrirEvaluar, setAbrirEvaluar] = useState(false);
   const [evaluacionObjetivo, setEvaluacionObjetivo] = useState(null); // { tarea, empleado }
+
+  // Búsqueda / filtro / orden de la lista
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
+  const [ordenDescendente, setOrdenDescendente] = useState(false);
 
   async function cargarDatos() {
     setLoading(true);
@@ -139,7 +145,7 @@ export default function TareasView({ proyecto }) {
       icon: "fa-clock",
       render: (_, tarea) => (
         <span className="text-sm text-gray-600 font-medium">
-          {tarea.hora ? `${tarea.fecha} • ${tarea.hora}` : "Indefinido"}
+          {tarea.hora ? formatearFechaHora(tarea.fecha, tarea.hora) : "Indefinido"}
         </span>
       ),
     },
@@ -177,6 +183,44 @@ export default function TareasView({ proyecto }) {
     { key: "actions", label: "Acciones" },
   ];
 
+  // ── Búsqueda + filtro + orden ───
+  const ESTADOS_TAREA = ["PLANIFICADA", "ASIGNADA", "EN_PROCESO", "FINALIZADA", "INCOMPLETA", "CANCELADA"];
+
+  const tareasFiltradas = tareasPendientes
+    .filter((t) => {
+      if (!busqueda.trim()) return true;
+      const texto = busqueda.trim().toLowerCase();
+      const empleado = empleadoActualDe(t);
+      const nombreActividad = t.actividad?.descripcion_esp?.toLowerCase() ?? "";
+      const nombreEmpleado = empleado ? `${empleado.nombre} ${empleado.apellido}`.toLowerCase() : "";
+      return nombreActividad.includes(texto) || nombreEmpleado.includes(texto);
+    })
+    .filter((t) => !filtroEstado || t.estado === filtroEstado)
+    .sort((a, b) => {
+      const fechaA = new Date(`${a.fecha}T${a.hora ?? "00:00"}`);
+      const fechaB = new Date(`${b.fecha}T${b.hora ?? "00:00"}`);
+      return ordenDescendente ? fechaB - fechaA : fechaA - fechaB;
+    });
+
+  const barraHerramientas = (
+    <ListToolbar
+      searchValue={busqueda}
+      onSearchChange={setBusqueda}
+      searchPlaceholder="Buscar por actividad o empleado..."
+      filters={[
+        {
+          label: "Estado",
+          allLabel: "Todos",
+          value: filtroEstado,
+          onChange: setFiltroEstado,
+          options: ESTADOS_TAREA.map((e) => ({ value: e, label: e.replace("_", " ") })),
+        },
+      ]}
+      sortLabel={ordenDescendente ? "Fecha: más lejana primero" : "Fecha: más próxima primero"}
+      onToggleSort={() => setOrdenDescendente((v) => !v)}
+    />
+  );
+
   const tablaContenido = loading ? (
     <div className="flex items-center justify-center py-16">
       <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
@@ -184,8 +228,12 @@ export default function TareasView({ proyecto }) {
   ) : (
     <Table
       columns={COLUMNAS_TAREAS}
-      data={tareasPendientes}
-      emptyMessage="No hay tareas programadas para este proyecto."
+      data={tareasFiltradas}
+      emptyMessage={
+        tareasPendientes.length === 0
+          ? "No hay tareas programadas para este proyecto."
+          : "Ninguna tarea coincide con la búsqueda o el filtro aplicado."
+      }
       editTitle="Asignar / Reasignar empleado"
       deleteTitle="Cancelar tarea"
       extraActions={[
@@ -227,6 +275,7 @@ export default function TareasView({ proyecto }) {
           subtitle: "Monitoreo y asignación de tareas operativas",
         }}
         actions={acciones}
+        toolbar={barraHerramientas}
         stats={
           <>
             {statsCards.map((card, index) => {

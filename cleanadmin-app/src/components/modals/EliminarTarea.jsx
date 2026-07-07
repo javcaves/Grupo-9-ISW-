@@ -32,9 +32,7 @@ export default function EliminarTarea({ isOpen, onClose, tareaSeleccionada, actu
       setComentario('');
     } catch (error) {
       console.error("Error al cancelar la tarea:", error);
-      // Extraemos el error del backend para mostrarlo en pantalla
-      const msj = error.response?.data?.message || error.message;
-      alert(`Error del servidor: ${msj}`);
+      alert(`Error del servidor: ${error.message}`);
     }
   };
 

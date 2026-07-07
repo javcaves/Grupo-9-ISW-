@@ -1,7 +1,7 @@
-// pages/admin/CategoriasView.jsx
 import { useState, useEffect }  from "react";
 import LayoutContent            from "../../layouts/LayoutContent";
 import { Table }                from "../../components/Table";
+import { ListToolbar }          from "../../components/ListToolbar";
 import NuevaCategoria           from "../../components/modals/NuevaCategoria";
 import EditarCategoria          from "../../components/modals/EditarCategoria";
 import ConfirmarEliminacion     from "../../components/modals/Eliminar";
@@ -60,6 +60,11 @@ export default function CategoriasView() {
   const [abrirCalificaciones, setAbrirCalificaciones] = useState(false);
   const [categoriaCalificaciones, setCategoriaCalificaciones] = useState(null);
 
+  // Búsqueda / filtro / orden de la lista
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroCalificacion, setFiltroCalificacion] = useState("");
+  const [ordenDescendente, setOrdenDescendente] = useState(false);
+
   async function cargarDatos() {
     setLoading(true);
     try {
@@ -91,6 +96,37 @@ export default function CategoriasView() {
 
   const COLUMNAS_CATEGORIAS = construirColumnas();
 
+  // ── Búsqueda + filtro + orden ───
+  const categoriasFiltradas = listaCategorias
+    .filter((c) => !busqueda.trim() || c.nombre?.toLowerCase().includes(busqueda.trim().toLowerCase()))
+    .filter((c) => !filtroCalificacion || String(c.requiere_calificacion) === filtroCalificacion)
+    .sort((a, b) => {
+      const cmp = (a.nombre ?? "").localeCompare(b.nombre ?? "");
+      return ordenDescendente ? -cmp : cmp;
+    });
+
+  const barraHerramientas = (
+    <ListToolbar
+      searchValue={busqueda}
+      onSearchChange={setBusqueda}
+      searchPlaceholder="Buscar categoría por nombre..."
+      filters={[
+        {
+          label: "Calificación",
+          allLabel: "Todas",
+          value: filtroCalificacion,
+          onChange: setFiltroCalificacion,
+          options: [
+            { value: "true", label: "Sí requiere" },
+            { value: "false", label: "No requiere" },
+          ],
+        },
+      ]}
+      sortLabel={ordenDescendente ? "Z → A" : "A → Z"}
+      onToggleSort={() => setOrdenDescendente((v) => !v)}
+    />
+  );
+
   const acciones = [
     {
       text: mostrarInactivas ? "Ocultar Inactivas" : "Ver Inactivas",
@@ -107,8 +143,12 @@ export default function CategoriasView() {
   ) : (
     <Table
       columns={COLUMNAS_CATEGORIAS}
-      data={listaCategorias}
-      emptyMessage="No hay categorías registradas."
+      data={categoriasFiltradas}
+      emptyMessage={
+        listaCategorias.length === 0
+          ? "No hay categorías registradas."
+          : "Ninguna categoría coincide con la búsqueda o el filtro aplicado."
+      }
       deleteTitle="Desactivar categoría"
       extraActions={[
         {
@@ -144,6 +184,7 @@ export default function CategoriasView() {
       <LayoutContent
         header={{ title: "Gestión de Categorías", subtitle: "Catálogo global de clasificaciones para actividades" }}
         actions={acciones}
+        toolbar={barraHerramientas}
         table={tablaContenido}
       />
 

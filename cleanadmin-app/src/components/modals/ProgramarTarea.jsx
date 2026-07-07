@@ -13,16 +13,16 @@ export default function ProgramarTarea({ isOpen, onClose, actividades, actualiza
     const datosProcesados = { ...formData };
     datosProcesados.id_act = parseInt(datosProcesados.id_act, 10);
     
-    console.log("DATOS ENVIADOS A BACKEND:", datosProcesados);
     try {
       await TareaService.crear(datosProcesados);
-      
+
       alert("¡Tarea programada con éxito!");
       actualizarLista();
       onClose();
       setFormData({ id_act: '', fecha: '', hora: '', comentario: ''});
     } catch (error) {
       console.error("Error al programar la tarea", error);
+      alert(`No se pudo programar la tarea:\n\n${error.message}`);
     }
   };
 
