@@ -1,8 +1,8 @@
-// pages/admin/proyectos/ActividadesView.jsx
 import { useState, useEffect }  from "react";
 import LayoutContent            from "../../../layouts/LayoutContent";
 import { Card }                 from "../../../components/Card";
 import { Table }                from "../../../components/Table";
+import { ListToolbar }          from "../../../components/ListToolbar";
 import CrearActividad           from "../../../components/modals/CrearActividad";
 import EditarActividad          from "../../../components/modals/EditarActividad";
 import ConfirmarEliminacion     from "../../../components/modals/Eliminar";
@@ -66,6 +66,11 @@ export default function ActividadesView({ proyecto }) {
   const [abrirEliminarAct, setAbrirEliminarAct] = useState(false);
   const [actividadAEliminar, setActividadAEliminar] = useState(null);
 
+  // Búsqueda / filtro / orden de la lista
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [ordenDescendente, setOrdenDescendente] = useState(false);
+
   async function cargarDatos() {
     setLoading(true);
     try {
@@ -108,7 +113,35 @@ export default function ActividadesView({ proyecto }) {
 
   const COLUMNAS_ACTIVIDADES = construirColumnas();
 
-  // ── Stats derivadas ───────────────────────────────────────────────────────
+  // ── Búsqueda + filtro + orden ───────────────────────────────────────────
+  const actividadesFiltradas = listaActividades
+    .filter((a) => !busqueda.trim() || a.descripcion_esp?.toLowerCase().includes(busqueda.trim().toLowerCase()))
+    .filter((a) => !filtroCategoria || a.categoria?.id_cat === parseInt(filtroCategoria, 10))
+    .sort((a, b) => {
+      const cmp = (a.descripcion_esp ?? "").localeCompare(b.descripcion_esp ?? "");
+      return ordenDescendente ? -cmp : cmp;
+    });
+
+  const barraHerramientas = (
+    <ListToolbar
+      searchValue={busqueda}
+      onSearchChange={setBusqueda}
+      searchPlaceholder="Buscar actividad por nombre..."
+      filters={[
+        {
+          label: "Categoría",
+          allLabel: "Todas",
+          value: filtroCategoria,
+          onChange: setFiltroCategoria,
+          options: listaCategorias.map((c) => ({ value: String(c.id_cat), label: c.nombre })),
+        },
+      ]}
+      sortLabel={ordenDescendente ? "Z → A" : "A → Z"}
+      onToggleSort={() => setOrdenDescendente((v) => !v)}
+    />
+  );
+
+  // ── Stats derivadas ──
   const totalActividades  = listaActividades.length;
   const actRecurrentes    = listaActividades.filter(a => a.recurrencia && a.recurrencia !== "UNICA").length;
   const actUnicas         = listaActividades.filter(a => a.recurrencia === "UNICA").length;
@@ -137,8 +170,12 @@ export default function ActividadesView({ proyecto }) {
   ) : (
     <Table
       columns={COLUMNAS_ACTIVIDADES}
-      data={listaActividades}
-      emptyMessage="No hay actividades registradas para este proyecto."
+      data={actividadesFiltradas}
+      emptyMessage={
+        listaActividades.length === 0
+          ? "No hay actividades registradas para este proyecto."
+          : "Ninguna actividad coincide con la búsqueda o el filtro aplicado."
+      }
       deleteTitle="Desactivar actividad"
       extraActions={[
         {
@@ -169,6 +206,7 @@ export default function ActividadesView({ proyecto }) {
           subtitle: "Configuración de actividades base del proyecto",
         }}
         actions={acciones}
+        toolbar={barraHerramientas}
         stats={
           <>
             {statsCards.map((card, index) => {

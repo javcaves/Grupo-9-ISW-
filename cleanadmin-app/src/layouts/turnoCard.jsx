@@ -86,6 +86,13 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr, tieneQrActivo = false })
           </button>
 
           <button
+            onClick={() => onManageColaciones?.(turno)}
+            className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none bg-amber-100 hover:bg-amber-200 text-amber-800"
+          >
+            🍔 Gestionar Colaciones
+          </button>
+
+          <button
             onClick={() => onEdit(turno)}
             className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
             style={{
@@ -103,3 +110,4 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr, tieneQrActivo = false })
     </Card>
   );
 };
+

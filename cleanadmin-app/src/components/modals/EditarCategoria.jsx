@@ -46,13 +46,17 @@ export default function EditarCategoria({ isOpen, onClose, categoriaSeleccionada
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-            <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required 
+            <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required
+              maxLength={100} placeholder="Ej: Gestión de Bodega"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+            <p className="text-xs text-gray-400 mt-1 text-right">{formData.nombre.length}/100 caracteres</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
             <textarea name="descripcion" value={formData.descripcion} onChange={handleChange} rows="3"
+              maxLength={255} placeholder="Ej: Actividades relacionadas al control de insumos y herramientas"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"></textarea>
+            <p className="text-xs text-gray-400 mt-1 text-right">{formData.descripcion.length}/255 caracteres</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Requisito de Certificación</label>
