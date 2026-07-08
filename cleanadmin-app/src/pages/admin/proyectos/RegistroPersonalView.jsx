@@ -22,6 +22,21 @@ const TABS = [
   { key: "turnos",      label: "Turno"             },
 ];
 
+// Quién puede desvincular a quién:
+// - SUPERVISOR solo lo desvincula un ADMIN (o ROOT).
+// - ENCARGADO lo desvincula ADMIN, ROOT o SUPERVISOR.
+// - EMPLEADO (o cualquier otro rol no listado) lo puede desvincular cualquiera.
+const JERARQUIA_DESVINCULACION = {
+  SUPERVISOR: ["ADMIN", "ROOT"],
+  ENCARGADO:  ["ADMIN", "ROOT", "SUPERVISOR"],
+};
+
+function puedeDesvincular(rolEjecutor, rolObjetivo) {
+  const permitidos = JERARQUIA_DESVINCULACION[rolObjetivo];
+  if (!permitidos) return true;
+  return permitidos.includes(rolEjecutor);
+}
+
 export default function RegistroPersonalView({ proyecto, onVolver, rolEjecutor }) {
   const [tabActiva, setTab] = useState("personal");
 
@@ -145,10 +160,12 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   const [modalEliminarAbierto, setModalEliminarAbierto] = useState(false);
   const [usuarioADesvincular, setUsuarioADesvincular]   = useState(null);
 
+  const [filtroRol, setFiltroRol] = useState("TODOS");
+
   const COLUMNAS_PERSONAL = construirColumnasPersonal();
 
   const getEstadoPersonal = () =>{
-    const currentCount = usuarios.length;
+    const currentCount = empleadosCount;
     const min = proyecto?.min_emp || 0;
     const max = proyecto?.max_emp || 0;
 
@@ -195,6 +212,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   const supervisores  = usuarios.filter((u) => u.rol === "SUPERVISOR").length;
   const activos       = usuarios.filter((u) => u.activo).length;
   const inactivos     = usuarios.filter((u) => !u.activo).length;
+  const empleadosCount = usuarios.filter((u) => u.rol === "EMPLEADO").length;
 
   const statsCards = [
     {
@@ -236,31 +254,69 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     },
   ];
 
+  const FILTROS_ROL = [
+    { key: "TODOS",      label: "Todos"      },
+    { key: "ENCARGADO",  label: "Encargado"  },
+    { key: "SUPERVISOR", label: "Supervisor" },
+    { key: "EMPLEADO",   label: "Empleado"   },
+  ];
+
+  const usuariosFiltrados = filtroRol === "TODOS"
+    ? usuarios
+    : usuarios.filter((u) => u.rol === filtroRol);
+
+  const filtroBar = (
+    <div className="flex items-center gap-2 mb-4 flex-wrap">
+      {FILTROS_ROL.map((f) => {
+        const activo = filtroRol === f.key;
+        return (
+          <button
+            key={f.key}
+            onClick={() => setFiltroRol(f.key)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+              activo
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            {f.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   const tablaContenido = loading ? (
     <div className="flex items-center justify-center py-16">
       <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
     </div>
   ) : (
-    <Table
-      columns={COLUMNAS_PERSONAL}
-      data={usuarios}
-      emptyMessage="No hay personal asignado a este proyecto."
-      extraActions={[
-        {
-          icon: "fa-chart-line",
-          title: "Ver hoja de vida",
-          show: (u) => u.rol === "EMPLEADO",
-          onClick: (u) => { setEmpleadoHojaDeVida(u); setAbrirHojaDeVida(true); },
-          hoverBg: "#dbeafe",
-          hoverText: "#2563eb",
-        },
-      ]}
-      onEdit={(item)   => console.log("Editar usuario:", item)}
-      onDelete={(item) => {
-        setUsuarioADesvincular(item);
-        setModalEliminarAbierto(true);
-      }}
-    />
+    <>
+      {filtroBar}
+      <Table
+        columns={COLUMNAS_PERSONAL}
+        data={usuariosFiltrados}
+        emptyMessage="No hay personal con este cargo en este proyecto."
+        extraActions={[
+          {
+            icon: "fa-chart-line",
+            title: "Ver hoja de vida",
+            show: (u) => u.rol === "EMPLEADO",
+            onClick: (u) => { setEmpleadoHojaDeVida(u); setAbrirHojaDeVida(true); },
+            hoverBg: "#dbeafe",
+            hoverText: "#2563eb",
+          },
+        ]}
+        onDelete={(item) => {
+          if (!puedeDesvincular(rolEjecutor, item.rol)) {
+            alert(`No tienes permisos para desvincular a un usuario con rol ${item.rol}.`);
+            return;
+          }
+          setUsuarioADesvincular(item);
+          setModalEliminarAbierto(true);
+        }}
+      />
+    </>
   );
 
   const status = getEstadoPersonal();
@@ -279,9 +335,9 @@ function PersonalTab({ proyecto, rolEjecutor }) {
          <div className="flex items-center gap-4 text-sm">
             <span>Minimo: <strong>{proyecto?.min_emp || 0}</strong></span>
             <span>Actual: <strong className={`
-              ${usuarios.length < (proyecto?.min_emp || 0) ? 'text-amber-600' : ''}
-              ${usuarios.length > (proyecto?.max_emp || 0) ? 'text-red-600' : ''}
-            `}> {usuarios.length}</strong></span>
+              ${empleadosCount < (proyecto?.min_emp || 0) ? 'text-amber-600' : ''}
+              ${empleadosCount > (proyecto?.max_emp || 0) ? 'text-red-600' : ''}
+            `}> {empleadosCount}</strong></span>
             <span>Máximo: <strong>{proyecto?.max_emp || 0}</strong></span>
          </div>
       </div>
@@ -367,6 +423,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
           servicioEliminar={(idUsuario) => ProyectoUsuarioService.desvincularUsuario(proyecto?.id_proyecto, idUsuario)}
           actualizarLista={cargarDatos}
           mensajeConfirmacion="Esta acción solo lo desvinculará de este proyecto. Seguirá activo en el sistema y en otros proyectos."
+          mensajeExito="¡Personal desvinculado del proyecto correctamente!"
         />
       )}
     </>

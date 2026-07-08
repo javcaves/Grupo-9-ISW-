@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import NotificacionBell from './notificaciones/NotificacionBell';
+import CambiarMiPasswordModal from './modals/CambiarMiPasswordModal';
 
 export default function UserMenu({ user, onLogout }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [modalPasswordAbierto, setModalPasswordAbierto] = useState(false);
   const menuRef = useRef(null);
 
   const {
@@ -120,6 +122,28 @@ export default function UserMenu({ user, onLogout }) {
               </button>
 
               <button
+                onClick={() => { setModalPasswordAbierto(true); setIsOpen(false); }}
+                className="w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl transition-all duration-200"
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: 'var(--bg-color)' }}
+                >
+                  <i
+                    className="fas fa-key text-xs"
+                    style={{ color: 'var(--text-secondary)' }}
+                  />
+                </div>
+
+                <span
+                  className="font-medium text-sm"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Cambiar contraseña
+                </span>
+              </button>
+
+              <button
                 onClick={onLogout}
                 className="w-full flex items-center gap-3 text-left text-sm text-red-600 hover:bg-red-50 px-3 py-2.5 rounded-xl transition-all duration-200"
               >
@@ -135,6 +159,11 @@ export default function UserMenu({ user, onLogout }) {
           </div>
         )}
       </div>
+
+      <CambiarMiPasswordModal
+        isOpen={modalPasswordAbierto}
+        onClose={() => setModalPasswordAbierto(false)}
+      />
     </div>
   );
 }
