@@ -1,3 +1,4 @@
+// pages/admin/proyectos/ActividadesView.jsx
 import { useState, useEffect }  from "react";
 import LayoutContent            from "../../../layouts/LayoutContent";
 import { Card }                 from "../../../components/Card";
@@ -141,10 +142,13 @@ export default function ActividadesView({ proyecto }) {
     />
   );
 
-  // ── Stats derivadas ──
-  const totalActividades  = listaActividades.length;
-  const actRecurrentes    = listaActividades.filter(a => a.recurrencia && a.recurrencia !== "UNICA").length;
-  const actUnicas         = listaActividades.filter(a => a.recurrencia === "UNICA").length;
+  // ── Stats derivadas ───────────────────────────────────────────────────────
+  // Las stats siempre reflejan solo lo activo, sin importar si "Ver Inactivas" está
+  // prendido — de lo contrario el conteo cambiaría solo por un filtro de visibilidad.
+  const actividadesActivas = listaActividades.filter(a => a.activo);
+  const totalActividades  = actividadesActivas.length;
+  const actRecurrentes    = actividadesActivas.filter(a => a.recurrencia && a.recurrencia !== "UNICA").length;
+  const actUnicas         = actividadesActivas.filter(a => a.recurrencia === "UNICA").length;
   const totalCategorias   = listaCategorias.length;
 
   const statsCards = [
@@ -157,6 +161,7 @@ export default function ActividadesView({ proyecto }) {
   const acciones = [
     {
       text: mostrarInactivas ? "Ocultar Inactivas" : "Ver Inactivas",
+      variant: "secondary",
       className: "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
       onClick: () => setMostrarInactivas(v => !v),
     },
