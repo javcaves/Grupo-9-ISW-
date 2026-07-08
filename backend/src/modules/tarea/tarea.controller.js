@@ -79,6 +79,18 @@ export const cancelar = async (req, res) => {
     } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
 };
 
+// Completar (el empleado marca su propia tarea asignada como realizada)
+export const completar = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const idEmpleado = req.user.id_usuario; // Extraído del JWT
+
+        const [resultado, err] = await TareaService.completarTarea(id, idEmpleado);
+        if (err) return handleErrorClient(res, 400, "No se pudo completar la tarea", err);
+        return handleSuccess(res, 200, "Tarea marcada como completada", resultado);
+    } catch (error) { return handleErrorServer(res, 500, "Error al completar la tarea", error.message); }
+};
+
 // ----- Mis Tareas (Específicas del empleado autenticado) -----
 export async function obtenerMisTareas(req, res) {
     try {

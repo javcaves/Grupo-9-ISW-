@@ -13,6 +13,7 @@ router.post('/', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.programa
 router.put('/:id', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.actualizar);
 router.delete('/:id', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.eliminar);
 router.patch('/:id/cancelar', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.cancelar);
+router.patch('/:id/completar', authenticateJwt, TareaCtrl.completar);
 
 
 export default router;

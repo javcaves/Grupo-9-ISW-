@@ -19,13 +19,13 @@ function construirColumnas() {
       key: "nombre",
       label: "Categoría",
       icon: "fa-tag",
-      render: (val) => <span className="font-semibold text-slate-700">{val ?? "—"}</span>,
+      render: (val) => <span className="font-semibold" style={{ color: "var(--table-row-text)" }}>{val ?? "—"}</span>,
     },
     {
       key: "descripcion",
       label: "Descripción",
       icon: "fa-align-left",
-      render: (val) => <span className="text-sm text-gray-500">{val || "Sin descripción"}</span>,
+      render: (val) => <span className="text-sm" style={{ color: "var(--card-subtitle)" }}>{val || "Sin descripción"}</span>,
     },
     {
       key: "requiere_calificacion",

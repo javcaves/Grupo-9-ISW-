@@ -14,7 +14,7 @@ const COLUMNAS_ITEMS = [
     label: "Ítem",
     icon:  "fa-box",
     render: (val) => (
-      <span className="font-semibold text-slate-700">{val ?? "—"}</span>
+      <span className="font-semibold" style={{ color: "var(--table-row-text)" }}>{val ?? "—"}</span>
     ),
   },
   {
@@ -30,7 +30,10 @@ const COLUMNAS_ITEMS = [
     render: (val, item) => {
       const bajo = item.stock_minimo != null && val <= item.stock_minimo;
       return (
-        <span className={`font-semibold ${bajo ? "text-red-500" : "text-slate-700"}`}>
+        <span
+          className={`font-semibold ${bajo ? "text-red-500" : ""}`}
+          style={bajo ? undefined : { color: "var(--table-row-text)" }}
+        >
           {val ?? 0}
           {item.unidad ? ` ${item.unidad}` : ""}
           {bajo && (
@@ -191,7 +194,7 @@ export default function InventarioView({ proyecto }) {
       label: "Comentario",
       icon:  "fa-comment",
       render: (val) => (
-        <span className="text-slate-500 text-xs line-clamp-1">{val ?? "—"}</span>
+        <span className="text-xs line-clamp-1" style={{ color: "var(--card-subtitle)" }}>{val ?? "—"}</span>
       ),
     },
   ];

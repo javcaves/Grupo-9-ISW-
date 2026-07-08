@@ -16,76 +16,92 @@ export default function EmployeeTareas() {
   const [list, setList] = useState([]);
   const [inventory, setInventory] = useState([]);
 
+  // Id de la tarea que se está marcando como completada en este momento
+  // (para deshabilitar solo ese botón y evitar doble clic, no toda la lista).
+  const [completandoId, setCompletandoId] = useState(null);
+
   // =========================
   // CARGA DE DATOS
   // =========================
-  useEffect(() => {
+  async function cargarTareas() {
 
-    async function cargarTareas() {
+    try {
 
-      try {
+      console.log("[Tareas] Cargando tus asignaciones...");
 
-        console.log("[Tareas] Cargando tus asignaciones...");
-
-        // Llamamos al nuevo endpoint refactorizado que trae el array de AsignacionTarea
-        const tareasRes = await TareaService.misTareas();
-        console.log("[Tareas] response tareas =>", tareasRes);
+      // Llamamos al nuevo endpoint refactorizado que trae el array de AsignacionTarea
+      const tareasRes = await TareaService.misTareas();
+      console.log("[Tareas] response tareas =>", tareasRes);
 
 
-        const asignaciones = tareasRes?.data ?? tareasRes ?? [];
-        console.log(JSON.stringify(asignaciones[0], null, 2));
-        setList(asignaciones);
+      const asignaciones = tareasRes?.data ?? tareasRes ?? [];
+      console.log(JSON.stringify(asignaciones[0], null, 2));
+      setList(asignaciones);
 
-        // =========================
-        // SUMMARY (Basado en el estado de la tarea vinculada)
-        // =========================
-        const assigned = asignaciones.length;
-        const completed = asignaciones.filter(a => a.tarea?.estado === "FINALIZADA").length;
+      // =========================
+      // SUMMARY (Basado en el estado de la tarea vinculada)
+      // =========================
+      const assigned = asignaciones.length;
+      const completed = asignaciones.filter(a => a.tarea?.estado === "FINALIZADA").length;
 
-        setSummary({
-          assigned,
-          completed,
-        });
+      setSummary({
+        assigned,
+        completed,
+      });
 
-        // =========================
-        // INVENTARIO
-        // =========================
-        console.log("[Tareas] Cargando inventario...");
+      // =========================
+      // INVENTARIO
+      // =========================
+      console.log("[Tareas] Cargando inventario...");
 
-        const itemsRes = await ItemsService.listarActivos().catch(err => {
-          console.error("❌ Error cargando inventario:", err);
-          return [];
-        });
-        console.log("[Tareas] inventario =>", itemsRes);
+      const itemsRes = await ItemsService.listarActivos().catch(err => {
+        console.error("❌ Error cargando inventario:", err);
+        return [];
+      });
+      console.log("[Tareas] inventario =>", itemsRes);
 
-        const items = itemsRes?.data ?? itemsRes ?? [];
+      const items = itemsRes?.data ?? itemsRes ?? [];
 
-        console.log("IDs tareas:", asignaciones.map(a => a.id_asignacion));
-console.log("IDs items:", items.map(i => i.id_item));
+      console.log("IDs tareas:", asignaciones.map(a => a.id_asignacion));
+      console.log("IDs items:", items.map(i => i.id_item));
 
-console.log(items);
-console.log(items[0]);
+      console.log(items);
+      console.log(items[0]);
 
 
-        setInventory(
-          items.map(i => ({
-            id: i.id_item,
-            name: i.nombre,
-            stock: i.stock,
-          }))
-        );
+      setInventory(
+        items.map(i => ({
+          id: i.id_item,
+          name: i.nombre,
+          stock: i.stock,
+        }))
+      );
 
-      } catch (err) {
-        console.error("[Tareas] Error cargando datos en la pantalla:", err);
-      } finally {
-        setLoading(false);
-      }
-
+    } catch (err) {
+      console.error("[Tareas] Error cargando datos en la pantalla:", err);
+    } finally {
+      setLoading(false);
     }
 
-    cargarTareas();
+  }
 
+  useEffect(() => {
+    cargarTareas();
   }, []);
+
+  // Marca la tarea como completada y refresca la lista + el resumen.
+  async function marcarComoCompletada(idTarea) {
+    setCompletandoId(idTarea);
+    try {
+      await TareaService.completar(idTarea);
+      await cargarTareas();
+    } catch (err) {
+      console.error("[Tareas] Error al completar la tarea:", err);
+      alert(err?.message || "No se pudo marcar la tarea como completada.");
+    } finally {
+      setCompletandoId(null);
+    }
+  }
 
   // =========================
   // UI HELPERS (Adaptados a los Enums reales)
@@ -260,6 +276,36 @@ console.log(items[0]);
                 >
                   Ver Detalle
                 </button>
+
+                {estadoActual === "FINALIZADA" ? (
+                  <div className="mt-2 w-full rounded-xl py-3 text-center text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
+                    <i className="fas fa-circle-check mr-2"></i>
+                    Tarea completada
+                  </div>
+                ) : ["CANCELADA", "INCOMPLETA"].includes(estadoActual) ? null : (
+                  <button
+                    className="mt-2 w-full rounded-xl py-3 font-semibold text-sm border transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                      color: "#059669",
+                      borderColor: "#a7f3d0",
+                      background: "#ecfdf5",
+                    }}
+                    disabled={completandoId === tareaInterna?.id_tarea}
+                    onClick={() => marcarComoCompletada(tareaInterna?.id_tarea)}
+                  >
+                    {completandoId === tareaInterna?.id_tarea ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin mr-2"></i>
+                        Marcando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-check mr-2"></i>
+                        Marcar como Completada
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             );
           })}

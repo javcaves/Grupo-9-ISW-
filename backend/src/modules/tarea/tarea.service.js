@@ -93,6 +93,36 @@ export const cancelarTarea = async (id, data) => {
     return [await tareaRepo.save(tarea), null];
 };
 
+// ----- Completar (el propio empleado marca su tarea como realizada) -----
+export const completarTarea = async (idTarea, idEmpleado) => {
+    const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
+
+    const tarea = await tareaRepo.findOne({
+        where: { id_tarea: idTarea },
+        relations: { asignaciones: { empleado: true } },
+    });
+
+    if (!tarea) return [null, "Tarea no encontrada"];
+
+    // Misma regla que obtenerMisTareas: solo la asignación más reciente
+    // (por hora_asignacion) es la vigente. Así, si la tarea fue reasignada
+    // a otra persona, el empleado anterior ya no puede marcarla como
+    // completada aunque conserve el id_tarea.
+    const asignacionVigente = [...(tarea.asignaciones ?? [])]
+        .sort((a, b) => new Date(b.hora_asignacion) - new Date(a.hora_asignacion))[0];
+
+    if (!asignacionVigente || asignacionVigente.empleado?.id_usuario !== idEmpleado) {
+        return [null, "Esta tarea no está asignada actualmente a tu usuario."];
+    }
+
+    if (["FINALIZADA", "CANCELADA", "INCOMPLETA"].includes(tarea.estado)) {
+        return [null, `No se puede completar: la tarea ya está en estado ${tarea.estado}.`];
+    }
+
+    tarea.estado = "FINALIZADA";
+    return [await tareaRepo.save(tarea), null];
+};
+
 // ----- Mis Tareas (Filtro por empleado con relaciones en cascada) -----
 export async function obtenerMisTareas(idEmpleado) {
     const asignacionRepository = AppDataSource.getRepository("AsignacionTarea");

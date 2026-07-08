@@ -132,18 +132,7 @@ export default function Login() {
               <FaRightToBracket /> {loading ? "Procesando..." : "Iniciar Sesión"}
             </button>
           </form>
-
-          <div className="flex items-center gap-3 my-6 text-[#94a3b8] text-xs before:flex-1 before:h-px before:bg-[#0f172a]/10 after:flex-1 after:h-px after:bg-[#0f172a]/10">
-            o continúa con
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-            <button type="button" className="flex items-center justify-center gap-2 py-3 rounded-[14px] border border-[#0f172a]/10 bg-white text-sm font-semibold hover:shadow-md transition-all">
-              <FaGoogle /> Google
-            </button>
-          </div>
-
-          <p className="mt-7 text-center text-sm text-[#64748b]">¿No tienes cuenta? <a href="#" className="text-[#7c3aed] font-bold">Solicitar acceso</a></p>
+          <p className="mt-7 text-center text-sm text-[#64748b]">Recuerda solicitar tu cuenta a tu supervisor</p>
         </section>
       </div>
     </div>
