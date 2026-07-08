@@ -6,8 +6,7 @@ export default function Sidebar({ activeMenu, setActiveMenu }) {
         { id: 'personal', label: 'Personal', icon: 'fa-user-shield' },
         { id: 'inventarios', label: 'Inventarios', icon: 'fa-box-open' },
         { id: 'categorias', label: 'Categorías', icon: 'fa-tags' },
-        { id: 'reportes', label: 'Reportes', icon: 'fa-chart-line' },
-        { id: 'configuracion', label: 'Configuración', icon: 'fa-gear' }
+        { id: 'reportes', label: 'Reportes', icon: 'fa-chart-line' }
     ];
 
     return (

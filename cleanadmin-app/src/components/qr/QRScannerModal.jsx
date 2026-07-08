@@ -129,6 +129,61 @@ export default function QRScannerModal({
 
                         :
 
+                        // FIX: antes, apenas terminaba el "loading", este bloque volvía a
+                        // montar <QRScanner /> automáticamente (haya habido éxito o error).
+                        // Eso reactivaba la cámara de inmediato y, como normalmente el
+                        // celular sigue apuntando al mismo QR, se disparaba un nuevo escaneo
+                        // automático que llamaba setError(null) antes de que el usuario
+                        // alcanzara a leer el mensaje ("se borra al instante").
+                        //
+                        // Ahora, si hay un error, se muestra fijo en pantalla y la cámara NO
+                        // se vuelve a activar hasta que el usuario presiona "OK" (que recién
+                        // ahí limpia el error y remonta el escáner para un nuevo intento).
+
+                        error
+
+                        ?
+
+                        (
+
+                            <div className="py-8 text-center">
+
+                                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+
+                                    <i className="fas fa-triangle-exclamation text-2xl text-red-600"></i>
+
+                                </div>
+
+                                <p className="mb-1 font-semibold text-red-700">
+
+                                    No se pudo registrar la asistencia
+
+                                </p>
+
+                                <p className="mb-6 text-sm text-slate-600 px-2">
+
+                                    {error}
+
+                                </p>
+
+                                <button
+
+                                    onClick={() => setError(null)}
+
+                                    className="rounded-xl bg-violet-600 px-8 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+
+                                >
+
+                                    OK
+
+                                </button>
+
+                            </div>
+
+                        )
+
+                        :
+
                         (
 
                             <QRScanner
@@ -138,24 +193,6 @@ export default function QRScannerModal({
                                 onCancel={onClose}
 
                             />
-
-                        )
-
-                    }
-
-                    {
-
-                        error && (
-
-                            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
-
-                                <div className="text-red-700 font-semibold">
-
-                                    {error}
-
-                                </div>
-
-                            </div>
 
                         )
 

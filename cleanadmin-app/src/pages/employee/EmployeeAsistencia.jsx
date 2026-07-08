@@ -4,6 +4,7 @@ import { Card } from "../../components/Card";
 import { AuthService } from "../../api/auth.service";
 import { AsistenciaService } from "../../api/asistencia.service";
 import QRScannerModal from "../../components/qr/QRScannerModal";
+import { formatHora } from "../../utils/formatTime";
 
 export default function EmployeeAsistencia() {
   const location = useLocation();
@@ -65,34 +66,54 @@ export default function EmployeeAsistencia() {
           if (codigoApi) setApiCode(codigoApi);
 
           if (registroDb) {
+            // FIX: registroDb.hora_ingreso / hora_egreso son la hora REAL de
+            // marcaje (normalmente un timestamp completo), no la hora
+            // PROGRAMADA del turno. Antes se mostraban crudas (sin formatear),
+            // por eso en mobile aparecía el timestamp completo o texto raro
+            // en vez de "HH:MM". Se usa formatHora() para normalizar
+            // cualquiera de los dos formatos que pueda devolver el backend.
             setCurrentRecord({
-              checkIn:  registroDb.hora_ingreso ?? "--",
-              checkOut: registroDb.hora_egreso  ?? "Pendiente",
+              checkIn:  formatHora(registroDb.hora_ingreso) ?? "--",
+              checkOut: formatHora(registroDb.hora_egreso)  ?? "Pendiente",
               estado:   registroDb.estado       ?? "EN_ESPERA",
             });
 
             const tInfo = registroDb.asistencia?.turno;
             setCurrentShift({
-              nombre: tInfo?.nombre                        ?? "Turno Operativo",
-              start:  tInfo?.hora_ingreso?.substring(0, 5) ?? "--:--",
-              end:    tInfo?.hora_salida?.substring(0, 5)  ?? "--:--",
+              nombre: tInfo?.nombre                    ?? "Turno Operativo",
+              start:  formatHora(tInfo?.hora_ingreso)   ?? "--:--",
+              end:    formatHora(tInfo?.hora_salida)    ?? "--:--",
             });
             setLunch({
-              startTime: tInfo?.hora_inicio_colacion?.substring(0, 5) || "13:00",
-              endTime:   tInfo?.hora_fin_colacion?.substring(0, 5)    || "14:00",
+              startTime: formatHora(tInfo?.hora_inicio_colacion) || "13:00",
+              endTime:   formatHora(tInfo?.hora_fin_colacion)    || "14:00",
             });
 
           } else {
-            // FALLBACK: sin registro, usamos datos del turno recuperado
-            setCurrentRecord({ checkIn: "--", checkOut: "Pendiente", estado: "FUERA_DE_HORARIO" });
+            // FALLBACK: sin registro, usamos datos del turno recuperado.
+            //
+            // FIX: antes se forzaba estado "FUERA_DE_HORARIO" en TODOS los
+            // casos sin registro, lo que bloqueaba el botón de Entrada
+            // incluso dentro de la ventana de atraso en la que el empleado
+            // SÍ debe poder marcar (solo que el backend lo registrará como
+            // ATRASO en vez de PRESENTE, junto con la hora real de llegada).
+            //
+            // Ahora solo se bloquea cuando el backend confirma explícitamente
+            // que no hay turno vigente hoy (SIN_TURNO_ASIGNADO). En cualquier
+            // otro caso (incluido "ESPERANDO_INGRESO", que se mantiene
+            // vigente durante toda la ventana de tolerancia/atraso) se deja
+            // el estado en "EN_ESPERA" para no bloquear el marcaje: es el
+            // backend quien decide PRESENTE vs ATRASO al procesar el scan.
+            const estadoSinRegistro = codigoApi === "SIN_TURNO_ASIGNADO" ? "FUERA_DE_HORARIO" : "EN_ESPERA";
+            setCurrentRecord({ checkIn: "--", checkOut: "Pendiente", estado: estadoSinRegistro });
             setCurrentShift({
-              nombre: objetoTurnoAux?.nombre                        ?? "Turno General",
-              start:  objetoTurnoAux?.hora_ingreso?.substring(0, 5) ?? "--:--",
-              end:    objetoTurnoAux?.hora_salida?.substring(0, 5)  ?? "--:--",
+              nombre: objetoTurnoAux?.nombre                  ?? "Turno General",
+              start:  formatHora(objetoTurnoAux?.hora_ingreso) ?? "--:--",
+              end:    formatHora(objetoTurnoAux?.hora_salida)  ?? "--:--",
             });
             setLunch({
-              startTime: objetoTurnoAux?.inicio_colacion?.substring(0, 5) || "13:00",
-              endTime:   objetoTurnoAux?.fin_colacion?.substring(0, 5)    || "14:00",
+              startTime: formatHora(objetoTurnoAux?.inicio_colacion) || "13:00",
+              endTime:   formatHora(objetoTurnoAux?.fin_colacion)    || "14:00",
             });
           }
         }
@@ -152,11 +173,27 @@ async function registrarQR(datosQR) {
     return <div className="p-4 text-center font-medium">Sincronizando registros biométricos...</div>;
   }
 
-  const estadoActual      = currentRecord?.estado ?? "FUERA_DE_HORARIO";
+  const estadoActual      = currentRecord?.estado ?? "EN_ESPERA";
   const tieneIngreso      = currentRecord?.checkIn  && currentRecord.checkIn  !== "--";
   const tieneSalida       = currentRecord?.checkOut && currentRecord.checkOut !== "Pendiente";
   const esEstadoBloqueado = ["RETIRADO", "FALTA_INJUSTIFICADA", "FALTA_JUSTIFICADA", "FUERA_DE_HORARIO"].includes(estadoActual)
                           || apiCode === "FIN_DE_SEMANA";
+
+  // Indica si ya pasó la hora de ingreso programada del turno pero el
+  // empleado todavía no marca. Es solo informativo: el botón sigue habilitado
+  // (ver esEstadoBloqueado arriba) y es el backend quien decide, al procesar
+  // el marcaje, si corresponde PRESENTE o ATRASO según la hora real de scan.
+  function yaPasoHoraIngreso(horaInicio) {
+    if (!horaInicio || horaInicio === "--:--") return false;
+    const [h, m] = horaInicio.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return false;
+    const ahora = new Date();
+    const inicioTurno = new Date();
+    inicioTurno.setHours(h, m, 0, 0);
+    return ahora > inicioTurno;
+  }
+
+  const posibleAtraso = !tieneIngreso && !esEstadoBloqueado && yaPasoHoraIngreso(currentShift?.start);
 
   return (
     <div className="p-4 space-y-4 pb-24">
@@ -246,6 +283,15 @@ async function registrarQR(datosQR) {
       {activeShiftId && (
         <Card title="Escanear Código QR de Punto de Control" icon="fa-qrcode">
           <div className="space-y-3">
+            {posibleAtraso && (
+              <div className="p-3 rounded-xl text-xs font-medium border bg-amber-50 border-amber-200 text-amber-800 flex items-start gap-2">
+                <i className="fas fa-triangle-exclamation mt-0.5"></i>
+                <span>
+                  Ya pasó tu hora de ingreso ({currentShift?.start} hrs). Puedes marcar igual: quedará
+                  registrado con <strong>atraso</strong>, indicando tu hora real de llegada.
+                </span>
+              </div>
+            )}
             <button
               onClick={() => abrirScanner("ENTRADA")}
               disabled={tieneIngreso || esEstadoBloqueado}
