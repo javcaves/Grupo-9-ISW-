@@ -1,7 +1,7 @@
 // layouts/turnoCard.jsx
 import { Card } from '../components/Card.jsx';
 
-export const TurnoCard = ({ turno, onEdit, onGenerarQr }) => {
+export const TurnoCard = ({ turno, onEdit, onGenerarQr, tieneQrActivo = false }) => {
   const badgeActivo = (
     <span
       className="px-2.5 py-1 text-xs font-semibold rounded-full border"
@@ -77,10 +77,12 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr }) => {
             className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
             style={{
               color: "#fff",
-              background: "linear-gradient(135deg,#7c3aed,#3b82f6)",
+              background: tieneQrActivo
+                ? "linear-gradient(135deg,#059669,#10b981)"
+                : "linear-gradient(135deg,#7c3aed,#3b82f6)",
             }}
           >
-            📱 Generar QR de Asistencia
+            {tieneQrActivo ? "👁️ Ver QR de Asistencia" : "📱 Generar QR de Asistencia"}
           </button>
 
           <button

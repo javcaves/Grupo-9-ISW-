@@ -31,13 +31,5 @@ export const ADMIN_CONFIG = {
       subtitle: "Dashboard de rendimiento",
       actions: [{ text: "Generar PDF", className: "bg-slate-800 text-white" }]
     }
-  },
-  configuracion: {
-    topBar: { title: "Configuración", subtitle: "Ajustes del sistema", tabs: [] },
-    content: {
-      title: "Configuración General",
-      subtitle: "Preferencias del sistema",
-      actions: []
-    }
   }
 };

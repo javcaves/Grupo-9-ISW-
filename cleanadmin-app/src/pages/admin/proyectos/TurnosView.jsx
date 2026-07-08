@@ -8,6 +8,7 @@ import { FormularioTurno }      from "../../../layouts/form_turno";
 import { TurnoService }         from "../../../api/turno.service";
 import { AsistenciaService }    from "../../../api/asistencia.service";
 import QRGenerator from "../../../components/qr/QRGenerator";
+import { qrExpirado } from "../../../components/qr/qr.utils";
 import { FaClock, FaUserClock, FaCircleCheck } from "react-icons/fa6";
 
 export default function TurnosView({ proyecto }) {
@@ -23,13 +24,48 @@ export default function TurnosView({ proyecto }) {
   const [qrEstado, setQrEstado] = useState(null);
   const [qrEmpleados, setQrEmpleados] = useState([]);
   const [cerrandoJornada, setCerrandoJornada] = useState(false);
+  // NUEVO: mapa { [id_turno]: boolean } que indica si ese turno ya tiene una
+  // jornada/QR activo hoy. Se usa para pintar el botón de la card como
+  // "Ver QR" en vez de "Generar QR" incluso después de recargar la página.
+  const [jornadasActivas, setJornadasActivas] = useState({});
+
+  // Determina, consultando el turno (no al usuario logeado), si existe una
+  // jornada de asistencia vigente hoy para ese turno.
+  async function consultarEstadoJornada(idTurno) {
+    try {
+      const snapshot = await AsistenciaService.obtenerActual(idTurno);
+      const asistenciaActual = snapshot?.data?.asistencia ?? snapshot?.asistencia ?? null;
+      const empleados = snapshot?.data?.empleados ?? snapshot?.empleados ?? [];
+
+      const vigente =
+        !!asistenciaActual?.token &&
+        !asistenciaActual?.finalizada && // <- si tu backend usa otro nombre (ej. "activa", "cerrada", "estado"), ajusta esta condición
+        !qrExpirado(asistenciaActual?.token_expira);
+
+      return { vigente, asistenciaActual, empleados };
+    } catch {
+      return { vigente: false, asistenciaActual: null, empleados: [] };
+    }
+  }
 
   async function cargarDatos() {
     if (!proyecto?.id_proyecto) return;
     setLoading(true);
     try {
       const res = await TurnoService.listarPorProyecto(proyecto.id_proyecto);
-      setTurnos(res?.data ?? res ?? []);
+      const listaTurnos = res?.data ?? res ?? [];
+      setTurnos(listaTurnos);
+
+      // Revisamos en paralelo qué turnos ya tienen una jornada/QR vigente,
+      // para que el botón "Ver QR" aparezca correcto ni bien carga la vista
+      // (sin depender de haber hecho clic antes en esta misma sesión).
+      const estados = await Promise.all(
+        listaTurnos.map(async (t) => {
+          const { vigente } = await consultarEstadoJornada(t.id_turno);
+          return [t.id_turno, vigente];
+        })
+      );
+      setJornadasActivas(Object.fromEntries(estados));
     } catch {
       setTurnos([]);
     } finally {
@@ -43,27 +79,25 @@ export default function TurnosView({ proyecto }) {
     if (!qrTurno?.id_turno) return undefined;
 
     const intervalId = window.setInterval(async () => {
-      try {
-        const estadoActual = await AsistenciaService.obtenerMiAsistenciaActual(qrTurno.id_turno).catch(() => null);
-        const codigo = estadoActual?.code;
-        const registro = estadoActual?.data;
+      const { vigente, asistenciaActual, empleados } = await consultarEstadoJornada(qrTurno.id_turno);
 
-        if (codigo === "MARCA_EXISTENTE" && registro?.asistencia?.token) {
-          setQrToken(registro.asistencia.token);
-          setQrExp(registro.asistencia.token_expira);
-          setQrEstado("Jornada ya iniciada para hoy.");
-        }
+      setQrEmpleados(empleados);
+      setJornadasActivas((prev) => ({ ...prev, [qrTurno.id_turno]: vigente }));
 
-        const snapshot = await AsistenciaService.obtenerActual(qrTurno.id_turno).catch(() => null);
-        const empleados = snapshot?.data?.empleados ?? snapshot?.empleados ?? [];
-        setQrEmpleados(empleados);
-      } catch {
-        setQrEmpleados([]);
+      if (!vigente && qrToken) {
+        // La jornada se cerró o el token expiró mientras el modal estaba abierto
+        // (ej. se acabó el horario del turno) -> se inhabilita el QR en pantalla.
+        setQrToken(null);
+        setQrExp(null);
+        setQrEstado("La jornada de este turno ya finalizó.");
+      } else if (vigente && asistenciaActual?.token && asistenciaActual.token !== qrToken) {
+        setQrToken(asistenciaActual.token);
+        setQrExp(asistenciaActual.token_expira);
       }
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [qrTurno?.id_turno]);
+  }, [qrTurno?.id_turno, qrToken]);
 
   // ── Stats derivadas ───────────────────────────────────────────
   const totalTurnos    = turnos.length;
@@ -125,6 +159,9 @@ export default function TurnosView({ proyecto }) {
       setQrToken(null);
       setQrExp(null);
       setQrEmpleados([]);
+      // El turno vuelve a quedar sin QR activo -> la card debe volver a
+      // mostrar "Generar QR" para la próxima jornada.
+      setJornadasActivas((prev) => ({ ...prev, [qrTurno.id_turno]: false }));
     } catch (err) {
       setQrError(err?.message || "No se pudo cerrar la jornada.");
     } finally {
@@ -132,6 +169,17 @@ export default function TurnosView({ proyecto }) {
     }
   }
 
+  // FIX (bugs 1 y 2): antes se usaba AsistenciaService.obtenerMiAsistenciaActual,
+  // que consulta la asistencia del USUARIO logeado (pensado para el empleado
+  // que escanea). Como el encargado normalmente no es "empleado" del turno,
+  // el backend respondía "MARCA_EXISTENTE" sin token adjunto y el QR se
+  // perdía para siempre al cerrar el modal, sin forma de recuperarlo.
+  //
+  // Ahora se usa AsistenciaService.obtenerActual(idTurno), que consulta el
+  // estado del TURNO en sí (ya se usaba para la lista de empleados y para
+  // cerrar la jornada), así que siempre encuentra el token vigente sin
+  // depender de quién está logeado. Además se valida expiración/cierre para
+  // decidir si hay que reutilizar el QR existente o generar uno nuevo.
   async function generarQrAsistencia(turno) {
     setQrTurno(turno);
     setQrToken(null);
@@ -142,30 +190,22 @@ export default function TurnosView({ proyecto }) {
     setQrLoading(true);
 
     try {
-      const estadoActual = await AsistenciaService.obtenerMiAsistenciaActual(turno.id_turno).catch(() => null);
-      const codigo = estadoActual?.code;
-      const registro = estadoActual?.data;
+      const { vigente, asistenciaActual, empleados } = await consultarEstadoJornada(turno.id_turno);
 
-      if (codigo === "MARCA_EXISTENTE" && registro?.asistencia?.token) {
-        setQrToken(registro.asistencia.token);
-        setQrExp(registro.asistencia.token_expira);
+      if (vigente) {
+        // Ya existe una jornada/QR vigente para hoy -> se reutiliza el mismo
+        // token (así el QR que ya vieron/escanearon los empleados sigue
+        // siendo válido, en vez de invalidarlo generando uno nuevo).
+        setQrToken(asistenciaActual.token);
+        setQrExp(asistenciaActual.token_expira);
         setQrEstado("Jornada ya iniciada para hoy.");
-
-        try {
-          const snapshot = await AsistenciaService.obtenerActual(turno.id_turno);
-          const empleados = snapshot?.data?.empleados ?? snapshot?.empleados ?? [];
-          setQrEmpleados(empleados);
-        } catch {
-          setQrEmpleados([]);
-        }
+        setQrEmpleados(empleados);
+        setJornadasActivas((prev) => ({ ...prev, [turno.id_turno]: true }));
         return;
       }
 
-      if (codigo === "MARCA_EXISTENTE") {
-        setQrEstado("Ya existe una jornada abierta para hoy.");
-        return;
-      }
-
+      // No hay jornada vigente (no existe, ya expiró o ya se cerró) -> se
+      // crea una nueva para este turno.
       const res = await AsistenciaService.crear({ id_turno: turno.id_turno });
       const token = res?.data?.token ?? res?.token ?? null;
       const exp = res?.data?.token_expira ?? res?.token_expira ?? null;
@@ -175,11 +215,12 @@ export default function TurnosView({ proyecto }) {
       setQrToken(token);
       setQrExp(exp);
       setQrEstado("Jornada iniciada correctamente.");
+      setJornadasActivas((prev) => ({ ...prev, [turno.id_turno]: true }));
 
       try {
         const snapshot = await AsistenciaService.obtenerActual(turno.id_turno);
-        const empleados = snapshot?.data?.empleados ?? snapshot?.empleados ?? [];
-        setQrEmpleados(empleados);
+        const empleadosNuevos = snapshot?.data?.empleados ?? snapshot?.empleados ?? [];
+        setQrEmpleados(empleadosNuevos);
       } catch {
         setQrEmpleados([]);
       }
@@ -213,6 +254,7 @@ export default function TurnosView({ proyecto }) {
           turno={turno}
           onEdit={(t) => setTurnoEditar(t)}
           onGenerarQr={(t) => generarQrAsistencia(t)}
+          tieneQrActivo={!!jornadasActivas[turno.id_turno]}
         />
       ))}
     </div>
@@ -277,6 +319,7 @@ export default function TurnosView({ proyecto }) {
           setQrToken(null);
           setQrExp(null);
           setQrError(null);
+          setQrEstado(null);
         }}
         title="QR de Asistencia"
         variant="wide"
