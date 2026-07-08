@@ -1,5 +1,7 @@
+// pages/admin/CategoriasView.jsx
 import { useState, useEffect }  from "react";
 import LayoutContent            from "../../layouts/LayoutContent";
+import { Card }                 from "../../components/Card";
 import { Table }                from "../../components/Table";
 import { ListToolbar }          from "../../components/ListToolbar";
 import NuevaCategoria           from "../../components/modals/NuevaCategoria";
@@ -8,6 +10,8 @@ import ConfirmarEliminacion     from "../../components/modals/Eliminar";
 import GestionarCalificaciones  from "../../components/modals/GestionarCalificaciones";
 import { CategoriaService }     from "../../api/categorias.service";
 import { UsuarioService }       from "../../api/usuario.service";
+import { CalificacionService }  from "../../api/calificacion.service";
+import { FaTags, FaStar, FaCircleCheck, FaUserGroup } from "react-icons/fa6";
 
 function construirColumnas() {
   return [
@@ -49,6 +53,7 @@ function construirColumnas() {
 export default function CategoriasView() {
   const [listaCategorias, setListaCategorias] = useState([]);
   const [empleados,        setEmpleados]        = useState([]);
+  const [calificaciones,   setCalificaciones]    = useState([]);
   const [loading,          setLoading]          = useState(true);
   const [mostrarInactivas, setMostrarInactivas] = useState(false);
 
@@ -68,12 +73,14 @@ export default function CategoriasView() {
   async function cargarDatos() {
     setLoading(true);
     try {
-      const [resCat, resEmp] = await Promise.all([
+      const [resCat, resEmp, resCalif] = await Promise.all([
         CategoriaService.listar(mostrarInactivas).catch(() => []),
         UsuarioService.buscar({ rol: "EMPLEADO" }).catch(() => []),
+        CalificacionService.listar().catch(() => []),
       ]);
       setListaCategorias(resCat?.data ?? resCat ?? []);
       setEmpleados(resEmp?.data ?? resEmp ?? []);
+      setCalificaciones(resCalif?.data ?? resCalif ?? []);
     } catch (err) {
       console.error("CategoriasView cargarDatos:", err);
     } finally {
@@ -96,7 +103,24 @@ export default function CategoriasView() {
 
   const COLUMNAS_CATEGORIAS = construirColumnas();
 
-  // ── Búsqueda + filtro + orden ───
+  // Las stats reflejan siempre solo lo activo, sin importar si "Ver Inactivas"
+  // está prendido (mismo criterio aplicado en ActividadesView).
+  const categoriasActivas   = listaCategorias.filter(c => c.activo);
+  const totalCategorias     = categoriasActivas.length;
+  const requierenCal        = categoriasActivas.filter(c => c.requiere_calificacion).length;
+  const noRequierenCal      = categoriasActivas.filter(c => !c.requiere_calificacion).length;
+  // Empleados DISTINTOS con al menos una calificación vigente (no la suma de
+  // calificaciones: un empleado calificado en 3 categorías cuenta una sola vez).
+  const empleadosCalificados = new Set(calificaciones.map(c => c.empleado?.id_usuario).filter(Boolean)).size;
+
+  const statsCards = [
+    { title: "Categorías Activas",       number: totalCategorias, icon: FaTags,       detail: totalCategorias === 0 ? "Sin categorías aún" : "Catálogo global" },
+    { title: "Requieren Calificación",   number: requierenCal,    icon: FaStar,       detail: requierenCal    === 0 ? "Ninguna por ahora" : "Necesitan personal calificado" },
+    { title: "No Requieren",             number: noRequierenCal,  icon: FaCircleCheck,detail: noRequierenCal  === 0 ? "Todas requieren calificación" : "Asignación libre" },
+    { title: "Empleados Calificados",    number: empleadosCalificados, icon: FaUserGroup, detail: empleadosCalificados === 0 ? "Nadie calificado aún" : "Con al menos una calificación" },
+  ];
+
+  // ── Búsqueda + filtro + orden ───────────────────────────────────────────
   const categoriasFiltradas = listaCategorias
     .filter((c) => !busqueda.trim() || c.nombre?.toLowerCase().includes(busqueda.trim().toLowerCase()))
     .filter((c) => !filtroCalificacion || String(c.requiere_calificacion) === filtroCalificacion)
@@ -130,6 +154,7 @@ export default function CategoriasView() {
   const acciones = [
     {
       text: mostrarInactivas ? "Ocultar Inactivas" : "Ver Inactivas",
+      variant: "secondary",
       className: "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
       onClick: () => setMostrarInactivas(v => !v),
     },
@@ -184,6 +209,44 @@ export default function CategoriasView() {
       <LayoutContent
         header={{ title: "Gestión de Categorías", subtitle: "Catálogo global de clasificaciones para actividades" }}
         actions={acciones}
+        stats={
+          <>
+            {statsCards.map((card, index) => {
+              const Icon = card.icon;
+              return (
+                <Card
+                  key={index}
+                  hoverable
+                  className="rounded-[28px] overflow-hidden relative min-h-[170px]"
+                  decorator={
+                    <div
+                      className="absolute top-[-20px] right-[-20px] w-[110px] h-[110px] rounded-full"
+                      style={{ backgroundColor: "var(--card-decorator-bg)" }}
+                    />
+                  }
+                >
+                  <div className="relative z-10 flex flex-col h-full">
+                    <span style={{ color: "var(--card-label-text)" }} className="font-semibold text-[1rem]">
+                      {card.title}
+                    </span>
+                    <h2 className="text-[3rem] leading-none font-bold mt-5" style={{ color: "var(--card-number-text)" }}>
+                      {card.number}
+                    </h2>
+                    <div className="flex items-center gap-2 mt-5 text-sm" style={{ color: "var(--card-detail-text)" }}>
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: "var(--card-icon-wrapper-bg)", color: "var(--card-icon-wrapper-text)" }}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <span>{card.detail}</span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </>
+        }
         toolbar={barraHerramientas}
         table={tablaContenido}
       />
@@ -222,6 +285,7 @@ export default function CategoriasView() {
           onClose={() => { setAbrirCalificaciones(false); setCategoriaCalificaciones(null); }}
           categoria={categoriaCalificaciones}
           empleados={empleados}
+          actualizarLista={cargarDatos}
         />
       )}
     </>

@@ -4,7 +4,7 @@ import { CalificacionService } from "../../api/calificacion.service";
 
 // Gestiona qué empleados están calificados para una categoría que "requiere_calificacion".
 // Se abre desde CategoriasView, sobre una categoría puntual.
-export default function GestionarCalificaciones({ isOpen, onClose, categoria, empleados }) {
+export default function GestionarCalificaciones({ isOpen, onClose, categoria, empleados, actualizarLista }) {
   const [calificados, setCalificados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [idEmpleadoNuevo, setIdEmpleadoNuevo] = useState("");
@@ -44,6 +44,7 @@ export default function GestionarCalificaciones({ isOpen, onClose, categoria, em
       });
       setIdEmpleadoNuevo("");
       cargar();
+      actualizarLista?.();
     } catch (error) {
       console.error("Error al otorgar calificación:", error);
       alert(`No se pudo otorgar la calificación:\n\n${error.message}`);
@@ -55,6 +56,7 @@ export default function GestionarCalificaciones({ isOpen, onClose, categoria, em
     try {
       await CalificacionService.revocar(calificacion.id_calificacion);
       cargar();
+      actualizarLista?.();
     } catch (error) {
       console.error("Error al revocar calificación:", error);
       alert(`No se pudo revocar:\n\n${error.message}`);

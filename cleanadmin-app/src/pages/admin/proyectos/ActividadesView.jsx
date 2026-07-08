@@ -124,6 +124,7 @@ export default function ActividadesView({ proyecto }) {
   const acciones = [
     {
       text: mostrarInactivas ? "Ocultar Inactivas" : "Ver Inactivas",
+      variant: "secondary",
       className: "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
       onClick: () => setMostrarInactivas(v => !v),
     },
