@@ -11,6 +11,7 @@ import { ProyectoUsuarioService }     from "../../../api/proyecto_usuario.servic
 import NuevoPersonalModal             from "../../../components/modals/NuevoPersonalModal";
 import VincularPersonalModal          from "../../../components/modals/VincularPersonalModal";
 import HojaDeVida                     from "../../../components/modals/HojaDeVida";
+import ConfirmarEliminacion           from "../../../components/modals/Eliminar";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
 
 const TABS = [
@@ -101,7 +102,7 @@ function construirColumnasPersonal() {
       label: "Nombre",
       icon:  "fa-user",
       render: (_, u) => (
-        <span className="font-semibold text-slate-700">
+        <span className="font-semibold" style={{ color: "var(--table-row-text)" }}>
           {u.nombre} {u.apellido}
         </span>
       ),
@@ -139,6 +140,10 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   const [modalVincularAbierto, setModalVincularAbierto] = useState(false);
   const [abrirHojaDeVida, setAbrirHojaDeVida] = useState(false);
   const [empleadoHojaDeVida, setEmpleadoHojaDeVida] = useState(null);
+
+  // Desvincular (no elimina al usuario del sistema, solo lo saca de este proyecto)
+  const [modalEliminarAbierto, setModalEliminarAbierto] = useState(false);
+  const [usuarioADesvincular, setUsuarioADesvincular]   = useState(null);
 
   const COLUMNAS_PERSONAL = construirColumnasPersonal();
 
@@ -251,7 +256,10 @@ function PersonalTab({ proyecto, rolEjecutor }) {
         },
       ]}
       onEdit={(item)   => console.log("Editar usuario:", item)}
-      onDelete={(item) => console.log("Eliminar usuario:", item)}
+      onDelete={(item) => {
+        setUsuarioADesvincular(item);
+        setModalEliminarAbierto(true);
+      }}
     />
   );
 
@@ -347,6 +355,18 @@ function PersonalTab({ proyecto, rolEjecutor }) {
           isOpen={abrirHojaDeVida}
           onClose={() => { setAbrirHojaDeVida(false); setEmpleadoHojaDeVida(null); }}
           empleado={empleadoHojaDeVida}
+        />
+      )}
+
+      {modalEliminarAbierto && (
+        <ConfirmarEliminacion
+          isOpen={modalEliminarAbierto}
+          onClose={() => { setModalEliminarAbierto(false); setUsuarioADesvincular(null); }}
+          tituloElemento={`${usuarioADesvincular?.nombre ?? ""} ${usuarioADesvincular?.apellido ?? ""}`.trim()}
+          idElemento={usuarioADesvincular?.id_usuario}
+          servicioEliminar={(idUsuario) => ProyectoUsuarioService.desvincularUsuario(proyecto?.id_proyecto, idUsuario)}
+          actualizarLista={cargarDatos}
+          mensajeConfirmacion="Esta acción solo lo desvinculará de este proyecto. Seguirá activo en el sistema y en otros proyectos."
         />
       )}
     </>

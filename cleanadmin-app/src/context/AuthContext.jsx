@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { AuthService } from "../api/auth.service";
 
 const AuthContext = createContext();
@@ -18,12 +18,6 @@ export function AuthProvider({ children }) {
       try {
 
         const response = await AuthService.me();
-
-        console.log("🔐 Auth.me completo:", response);
-        console.log("👤 Usuario:", response.user);
-        console.log("📛 Nombre:", response.user?.nombre);
-        console.log("🆔 Rut:", response.user?.rut);
-        console.log("🎭 Rol:", response.user?.rol);
 
         if (response?.success && response?.user) {
           setUser(response.user);
@@ -46,14 +40,18 @@ export function AuthProvider({ children }) {
   // =========================
   // 2. Login (manual update)
   // =========================
-  const loginUser = (userData) => {
+  // FIX: sin useCallback, esta función era una referencia nueva en cada
+  // render de AuthProvider (aunque acá casi no importaba, ya que este
+  // provider rara vez re-renderiza por sí solo; se deja por consistencia
+  // y para que el value memoizado de abajo funcione de verdad).
+  const loginUser = useCallback((userData) => {
     setUser(userData);
-  };
+  }, []);
 
   // =========================
   // 3. Logout real
   // =========================
-  const logoutUser = async () => {
+  const logoutUser = useCallback(async () => {
 
     try {
       await AuthService.logout();
@@ -62,23 +60,31 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null);
     }
-  };
+
+  }, []);
 
   // =========================
   // 4. Derivado (NO estado duplicado)
   // =========================
   const isAuthenticated = !!user;
 
+  // FIX: value memoizado. AuthProvider envuelve TODA la app (incluso
+  // fuera del BrowserRouter), así que cualquier objeto nuevo acá se
+  // propaga como re-render a absolutamente todo. Con useMemo, solo se
+  // recrea si user/loading realmente cambiaron.
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated,
+      loading,
+      loginUser,
+      logoutUser,
+    }),
+    [user, isAuthenticated, loading, loginUser, logoutUser]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        loading,
-        loginUser,
-        logoutUser,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,28 +1,39 @@
 // src/context/NotificacionesContext.jsx
-import React, { createContext, useContext, useEffect, useCallback, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { NotificacionesService } from '../api/notificaciones.service';
 import { extraerListado } from '../utils/apiResponse';
 
 const NotificacionesContext = createContext(null);
 
-const INTERVALO_POLLING_MS = 30000;
+// dispara re-renders de todo lo que consuma este contexto (ver más abajo).
+// 10 minutos + refresco manual es un mejor balance.
+const INTERVALO_POLLING_MS = 10 * 60 * 1000; // 10 minutos
 
 export function NotificacionesProvider({ children }) {
   const [notificaciones, setNotificaciones] = useState([]);
   const [cargando, setCargando] = useState(false);
   const intervaloRef = useRef(null);
 
-  const refrescar = useCallback(async () => {
+  // FIX: antes `cargando` se prendía y apagaba en CADA poll automático
+  // (cada 30s), lo que producía 3 renders de todo el árbol que usa
+  // useNotificaciones() por ciclo: cargando=true -> cargando=false ->
+  // notificaciones actualizadas. Ahora los polls en background son
+  // silenciosos (no tocan `cargando`); solo el refresco manual (botón)
+  // muestra el spinner.
+  const refrescar = useCallback(async ({ mostrarCargando = false } = {}) => {
     try {
-      setCargando(true);
+      if (mostrarCargando) setCargando(true);
       const res = await NotificacionesService.listar();
       setNotificaciones(extraerListado(res));
     } catch (error) {
       console.error('Error al refrescar notificaciones:', error);
     } finally {
-      setCargando(false);
+      if (mostrarCargando) setCargando(false);
     }
   }, []);
+
+  // Esta es la que debe usar cualquier botón de "Actualizar" en la UI.
+  const refrescarManual = useCallback(() => refrescar({ mostrarCargando: true }), [refrescar]);
 
   const marcarLeida = useCallback(async (idNotificacion) => {
     // optimista: la marcamos en el estado local altiro, sin esperar la red
@@ -51,17 +62,32 @@ export function NotificacionesProvider({ children }) {
   }, [refrescar]);
 
   useEffect(() => {
-    refrescar();
-    intervaloRef.current = setInterval(refrescar, INTERVALO_POLLING_MS);
+    refrescar({ mostrarCargando: true }); // carga inicial: sí mostramos loading
+    intervaloRef.current = setInterval(() => refrescar(), INTERVALO_POLLING_MS); // polls en background: silenciosos
     return () => clearInterval(intervaloRef.current);
   }, [refrescar]);
 
   const noLeidas = notificaciones.filter((n) => !n.leido).length;
 
+  // FIX: antes este objeto se creaba de cero en cada render del Provider,
+  // así que TODO componente que llame useNotificaciones() en cualquier
+  // parte del árbol se re-renderizaba en cada cambio, sin importar qué
+  // parte del contexto usara. useMemo evita recrear el objeto salvo que
+  // alguno de estos valores realmente haya cambiado.
+  const value = useMemo(
+    () => ({
+      notificaciones,
+      noLeidas,
+      cargando,
+      refrescar: refrescarManual,
+      marcarLeida,
+      marcarTodasLeidas,
+    }),
+    [notificaciones, noLeidas, cargando, refrescarManual, marcarLeida, marcarTodasLeidas]
+  );
+
   return (
-    <NotificacionesContext.Provider
-      value={{ notificaciones, noLeidas, cargando, refrescar, marcarLeida, marcarTodasLeidas }}
-    >
+    <NotificacionesContext.Provider value={value}>
       {children}
     </NotificacionesContext.Provider>
   );

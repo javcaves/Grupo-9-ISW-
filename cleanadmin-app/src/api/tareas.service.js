@@ -68,4 +68,13 @@ export const TareaService = {
     return response.data ?? response;
   },
 
+  /**
+   * Marca como completada (FINALIZADA) una tarea asignada al empleado
+   * autenticado. El backend valida que la asignación vigente le pertenezca.
+   */
+  async completar(idTarea) {
+    const response = await api.patch(`${URL}/${idTarea}/completar`);
+    return response.data ?? response;
+  },
+
 };

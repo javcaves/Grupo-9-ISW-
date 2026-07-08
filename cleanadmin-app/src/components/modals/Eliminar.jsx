@@ -8,12 +8,14 @@ export default function ConfirmarEliminacion({
   idElemento,
   servicioEliminar,
   actualizarLista,
+  mensajeConfirmacion = "Esta acción lo deshabilitará del sistema.",
+  mensajeExito        = "¡Elemento eliminado correctamente del sistema!",
 }) {
   const handleEliminar = async () => {
     try {
       await servicioEliminar(idElemento);
 
-      alert("¡Elemento eliminado correctamente del sistema!");
+      alert(mensajeExito);
       actualizarLista();
       onClose();
     } catch (error) {
@@ -32,7 +34,7 @@ export default function ConfirmarEliminacion({
         <h2 className="text-xl font-bold text-gray-800 mb-2">¿Estás seguro?</h2>
         <p className="text-gray-600 mb-6">
           Estás a punto de eliminar <strong>{tituloElemento}</strong>.
-          <br /> Esta acción lo deshabilitará del sistema.
+          <br /> {mensajeConfirmacion}
         </p>
 
         <div className="flex gap-3 w-full justify-center">
