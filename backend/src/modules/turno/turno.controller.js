@@ -82,7 +82,11 @@ export const actualizarTurno = async (req, res) => {
 export const eliminarTurno = async (req, res) => {
     try {
         const { id } = req.params;
-        const [resultado, err] = await TurnoService.eliminarTurno(id);
+        const idParseado = parseInt(id, 10);
+        if (isNaN(idParseado)) {
+            return handleErrorClient(res, 400, "Datos inválidos", "El id del turno debe ser un número");
+        }
+        const [resultado, err] = await TurnoService.eliminarTurno(idParseado);
         if (err) return handleErrorClient(res, 400, "Operación denegada", err);
         return handleSuccess(res, 200, "Operación exitosa", resultado);
     } catch (error) {
@@ -118,7 +122,14 @@ export const agregarEmpleadoATurno = async (req, res) => {
 export const eliminarEmpleadoDeTurno = async (req, res) => {
     try {
         const { id, id_empleado } = req.params;
-        const [resultado, err] = await TurnoService.eliminarEmpleadoDeTurno(id, id_empleado);
+        const idTurnoParseado = parseInt(id, 10);
+        const idEmpleadoParseado = parseInt(id_empleado, 10);
+
+        if (isNaN(idTurnoParseado) || isNaN(idEmpleadoParseado)) {
+            return handleErrorClient(res, 400, "Datos inválidos", "El id del turno y del empleado deben ser números válidos");
+        }
+
+        const [resultado, err] = await TurnoService.eliminarEmpleadoDeTurno(idTurnoParseado, idEmpleadoParseado);
         if (err) return handleErrorClient(res, 400, "Operación denegada", err);
 
         // El service retorna requiere_confirmacion cuando el empleado tiene estado EN_ESPERA en asistencia
@@ -137,7 +148,14 @@ export const eliminarEmpleadoDeTurno = async (req, res) => {
 export const confirmarEliminacionConAsistencia = async (req, res) => {
     try {
         const { id, id_empleado } = req.params;
-        const [resultado, err] = await TurnoService.confirmarEliminacionConAsistencia(id, id_empleado);
+        const idTurnoParseado = parseInt(id, 10);
+        const idEmpleadoParseado = parseInt(id_empleado, 10);
+
+        if (isNaN(idTurnoParseado) || isNaN(idEmpleadoParseado)) {
+            return handleErrorClient(res, 400, "Datos inválidos", "El id del turno y del empleado deben ser números válidos");
+        }
+
+        const [resultado, err] = await TurnoService.confirmarEliminacionConAsistencia(idTurnoParseado, idEmpleadoParseado);
         if (err) return handleErrorClient(res, 400, "Operación denegada", err);
         return handleSuccess(res, 200, "Empleado desvinculado y asistencia del día eliminada", resultado);
     } catch (error) {

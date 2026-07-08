@@ -20,9 +20,11 @@ export const FormularioTurno = ({ onSuccess, idProyecto, turno = null }) => {
 
   useEffect(() => {
     if (turno) {
+      console.log("TURNO EMPLEADOS RECIBIDOS:", turno.turnoEmpleados);
       const empleadosIniciales = (turno.turnoEmpleados || turno.empleados || [])
-        .map((item) => item?.id_empleado ?? item?.empleado?.id_usuario ?? item?.id_usuario ?? item?.id ?? null)
-        .filter(Boolean);
+        .filter(item => item.activo !== false) // Ignore already deleted assignments
+        .map((item) => String(item?.id_empleado ?? item?.empleado?.id_usuario ?? item?.id_usuario ?? item?.id ?? ''))
+        .filter(id => id !== '');
 
       setTurnoData({
         nombre: turno.nombre || '',
@@ -98,9 +100,10 @@ export const FormularioTurno = ({ onSuccess, idProyecto, turno = null }) => {
         await TurnoService.actualizar(turno.id_turno, payload);
 
         const empleadosActuales = new Set((turno.turnoEmpleados || turno.empleados || [])
-          .map((item) => item?.id_empleado ?? item?.empleado?.id_usuario ?? item?.id_usuario ?? item?.id ?? null)
+          .filter(item => item.activo !== false)
+          .map((item) => String(item?.id_empleado ?? item?.empleado?.id_usuario ?? item?.id_usuario ?? item?.id ?? ''))
           .filter(Boolean));
-        const empleadosDeseados = new Set(turnoData.empleados);
+        const empleadosDeseados = new Set(turnoData.empleados.map(String));
 
         const paraAgregar = [...empleadosDeseados].filter((id) => !empleadosActuales.has(id));
         const paraQuitar = [...empleadosActuales].filter((id) => !empleadosDeseados.has(id));
@@ -110,7 +113,13 @@ export const FormularioTurno = ({ onSuccess, idProyecto, turno = null }) => {
         }
 
         for (const idEmpleado of paraQuitar) {
-          await TurnoService.eliminarEmpleado(turno.id_turno, idEmpleado);
+          const res = await TurnoService.eliminarEmpleado(turno.id_turno, idEmpleado);
+          if (res?.data?.requiere_confirmacion) {
+            const confirmed = window.confirm(`El empleado tiene un registro de asistencia en espera hoy en este turno. ¿Deseas eliminarlo y cancelar su asistencia del día?`);
+            if (confirmed) {
+              await TurnoService.confirmarEliminacion(turno.id_turno, idEmpleado);
+            }
+          }
         }
       } else {
         const empleadosArray = turnoData.empleados.map(id => ({ id_empleado: id }));
@@ -220,7 +229,7 @@ export const FormularioTurno = ({ onSuccess, idProyecto, turno = null }) => {
             <p className="text-gray-500 text-center py-4">No hay empleados disponibles para este proyecto.</p>
           ) : (
             usuariosDisponibles.map(usuario => {
-              const userId = usuario.id_usuario || usuario.id;
+              const userId = String(usuario.id_usuario || usuario.id);
               const isSelected = turnoData.empleados.includes(userId);
               return (
                 <div 

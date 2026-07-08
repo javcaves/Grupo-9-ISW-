@@ -21,7 +21,8 @@ export const ColacionManager = ({ turno, onSuccess }) => {
           apellidos: empleadoData.apellidos || empleadoData.apellido || '',
           rut: empleadoData.rut || 'N/A',
           inicio_colacion: item.inicio_colacion || '',
-          fin_colacion: item.fin_colacion || ''
+          fin_colacion: item.fin_colacion || '',
+          trabaja_feriados: item.trabaja_feriados || false
         };
       });
       setEmpleados(items);
@@ -42,8 +43,9 @@ export const ColacionManager = ({ turno, onSuccess }) => {
   };
 
   const handleSave = async (empleado) => {
-    if (!empleado.inicio_colacion || !empleado.fin_colacion) {
-      setErrorIds(prev => ({ ...prev, [empleado.id_empleado]: 'Ambos horarios son requeridos.' }));
+    // Si llena uno de los dos campos de colación, debe llenar el otro
+    if ((empleado.inicio_colacion || empleado.fin_colacion) && (!empleado.inicio_colacion || !empleado.fin_colacion)) {
+      setErrorIds(prev => ({ ...prev, [empleado.id_empleado]: 'Ambos horarios son requeridos para colación.' }));
       return;
     }
 
@@ -53,12 +55,20 @@ export const ColacionManager = ({ turno, onSuccess }) => {
     setGlobalError(null);
 
     try {
-      const payload = {
-        inicio_colacion: empleado.inicio_colacion,
-        fin_colacion: empleado.fin_colacion
-      };
+      const promesas = [];
 
-      await TurnoService.configurarColacion(turno.id_turno, empleado.id_empleado, payload);
+      // Si ambos están definidos, guardar colación
+      if (empleado.inicio_colacion && empleado.fin_colacion) {
+        promesas.push(TurnoService.configurarColacion(turno.id_turno, empleado.id_empleado, {
+          inicio_colacion: empleado.inicio_colacion,
+          fin_colacion: empleado.fin_colacion
+        }));
+      }
+
+      // Siempre guardar el estado de feriados
+      promesas.push(TurnoService.configurarFeriados(turno.id_turno, empleado.id_empleado, empleado.trabaja_feriados));
+
+      await Promise.all(promesas);
 
       setSuccessIds(prev => ({ ...prev, [empleado.id_empleado]: 'Horario guardado' }));
       // Optional: hide success message after 3 seconds
@@ -85,7 +95,7 @@ export const ColacionManager = ({ turno, onSuccess }) => {
     <div className="flex flex-col h-full bg-slate-50 p-4 rounded-xl">
       <div className="mb-4">
         <p className="text-sm text-slate-600">
-          Configura los horarios de colación para cada empleado del turno <strong>{turno.nombre}</strong>.
+          Configura los horarios de colación y obligación en feriados para cada empleado del turno <strong>{turno.nombre}</strong>.
           Recuerda que no puede haber horarios sin cobertura (al menos 1 empleado debe estar disponible).
         </p>
       </div>
@@ -126,6 +136,18 @@ export const ColacionManager = ({ turno, onSuccess }) => {
                     value={emp.fin_colacion}
                     onChange={(e) => handleTimeChange(emp.id_empleado, 'fin_colacion', e.target.value)}
                   />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">¿Feriados?</label>
+                  <div className="flex items-center justify-center mt-1.5">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-violet-600 border-slate-300 rounded focus:ring-violet-500 cursor-pointer"
+                      checked={emp.trabaja_feriados}
+                      onChange={(e) => handleTimeChange(emp.id_empleado, 'trabaja_feriados', e.target.checked)}
+                      title="Marcar si el empleado debe trabajar en días feriados"
+                    />
+                  </div>
                 </div>
               </div>
 
