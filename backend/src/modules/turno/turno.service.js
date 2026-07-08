@@ -90,7 +90,8 @@ export const obtenerTodosActivosPorProyecto = async (id_proyecto) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
     return await turnoRepo.find({
         where: {
-            proyecto: { id_proyecto: parseInt(id_proyecto, 10) }
+            proyecto: { id_proyecto: parseInt(id_proyecto, 10) },
+            activo: true
         },
         relations: {
             proyecto: true,
@@ -158,15 +159,15 @@ export const eliminarTurno = async (id) => {
     const turno = await turnoRepo.findOne({ where: { id_turno: id } });
     if (!turno) return [null, "Turno no encontrado."];
 
-    const empleadosActivos = await turnoEmpleadoRepo.count({
-        where: { id_turno: id, activo: true }
-    });
-    if (empleadosActivos > 0) {
-        return [null, "No se puede eliminar el turno: aún tiene empleados activos asignados. Desvincúlelos primero."];
-    }
+    // Soft-delete all assigned employees first
+    await turnoEmpleadoRepo.update(
+        { id_turno: id },
+        { activo: false }
+    );
 
+    // Then soft-delete the turno itself
     await turnoRepo.update(id, { activo: false });
-    return [{ message: "Turno eliminado correctamente. Los registros históricos se conservan." }, null];
+    return [{ message: "Turno y sus asignaciones de empleados eliminados correctamente. Los registros históricos se conservan." }, null];
 };
 
 // ==================== TURNO_EMPLEADO ====================
@@ -271,9 +272,9 @@ export const eliminarEmpleadoDeTurno = async (id_turno, id_empleado) => {
     }
 
     const turnoEmpleado = await turnoEmpleadoRepo.findOne({
-        where: { id_turno, id_empleado, activo: true }
+        where: { turno: { id_turno }, empleado: { id_usuario: id_empleado }, activo: true }
     });
-    if (!turnoEmpleado) return [null, "El empleado no está asignado a este turno."];
+    if (!turnoEmpleado) return [{ message: "El empleado ya no está asignado a este turno." }, null];
 
     const hoy = new Date().toISOString().split("T")[0];
     const asistenciaHoy = await asistenciaRepo.findOne({
@@ -444,19 +445,25 @@ const _validarCoberturaMinimaColacion = async (
     turnoEmpleadoRepo, turno, id_empleado_modificado, nuevo_inicio, nuevo_fin
 ) => {
     const todosEmpleados = await turnoEmpleadoRepo.find({
-        where: { id_turno: turno.id_turno, activo: true }
+        where: { turno: { id_turno: turno.id_turno }, activo: true },
+        relations: { empleado: true }
     });
 
     if (todosEmpleados.length < 2) {
         return `${nuevo_inicio} - ${nuevo_fin} (se requieren al menos 2 empleados para configurar colaciones)`;
     }
 
+    const norm = (t) => t.substring(0, 5);
+    const n_inicio = norm(nuevo_inicio);
+    const n_fin = norm(nuevo_fin);
+
     const colaciones = todosEmpleados.map((te) => {
-        if (te.id_empleado === id_empleado_modificado) {
-            return { inicio: nuevo_inicio, fin: nuevo_fin };
+        // Compare integers properly
+        if (parseInt(te.empleado?.id_usuario || te.id_empleado, 10) === parseInt(id_empleado_modificado, 10)) {
+            return { inicio: n_inicio, fin: n_fin };
         }
         return te.inicio_colacion && te.fin_colacion
-            ? { inicio: te.inicio_colacion, fin: te.fin_colacion }
+            ? { inicio: norm(te.inicio_colacion), fin: norm(te.fin_colacion) }
             : null;
     }).filter(Boolean);
 
@@ -467,6 +474,7 @@ const _validarCoberturaMinimaColacion = async (
         if (enColacion >= todosEmpleados.length) {
             return punto;
         }
+
     }
 
     return null;

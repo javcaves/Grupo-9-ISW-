@@ -1,21 +1,21 @@
 // pages/admin/proyectos/TurnosView.jsx
-import { useState, useEffect }  from "react";
-import LayoutContent            from "../../../layouts/LayoutContent";
-import { Card }                 from "../../../components/Card";
-import { Modal }                from "../../../components/Modal";
-import { TurnoCard }            from "../../../layouts/turnoCard";
-import { FormularioTurno }      from "../../../layouts/form_turno";
-import { ColacionManager }      from "../../../layouts/ColacionManager";
-import { TurnoService }         from "../../../api/turno.service";
-import { AsistenciaService }    from "../../../api/asistencia.service";
+import { useState, useEffect } from "react";
+import LayoutContent from "../../../layouts/LayoutContent";
+import { Card } from "../../../components/Card";
+import { Modal } from "../../../components/Modal";
+import { TurnoCard } from "../../../layouts/turnoCard";
+import { FormularioTurno } from "../../../layouts/form_turno";
+import { ColacionManager } from "../../../layouts/ColacionManager";
+import { TurnoService } from "../../../api/turno.service";
+import { AsistenciaService } from "../../../api/asistencia.service";
 import QRGenerator from "../../../components/qr/QRGenerator";
 import { qrExpirado } from "../../../components/qr/qr.utils";
 import { FaClock, FaUserClock, FaCircleCheck } from "react-icons/fa6";
 
 export default function TurnosView({ proyecto }) {
-  const [turnos,      setTurnos]      = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [modalCrear,  setModalCrear]  = useState(false);
+  const [turnos, setTurnos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalCrear, setModalCrear] = useState(false);
   const [turnoEditar, setTurnoEditar] = useState(null);
   const [turnoColacionManager, setTurnoColacionManager] = useState(null);
   const [qrTurno, setQrTurno] = useState(null);
@@ -102,39 +102,39 @@ export default function TurnosView({ proyecto }) {
   }, [qrTurno?.id_turno, qrToken]);
 
   // ── Stats derivadas ───────────────────────────────────────────
-  const totalTurnos    = turnos.length;
+  const totalTurnos = turnos.length;
   const totalEmpleados = turnos.reduce((acc, t) => acc + (t.empleados?.length ?? 0), 0);
-  const ingresoMinimo  = turnos.length
+  const ingresoMinimo = turnos.length
     ? turnos.reduce((min, t) => (t.hora_ingreso < min ? t.hora_ingreso : min), turnos[0].hora_ingreso)
     : null;
-  const salidaMaxima   = turnos.length
+  const salidaMaxima = turnos.length
     ? turnos.reduce((max, t) => (t.hora_salida > max ? t.hora_salida : max), turnos[0].hora_salida)
     : null;
 
   const statsCards = [
     {
-      title:  "Turnos Configurados",
+      title: "Turnos Configurados",
       number: totalTurnos,
-      icon:   FaClock,
+      icon: FaClock,
       detail: totalTurnos === 0 ? "Sin turnos aún" : `${totalTurnos} turno${totalTurnos !== 1 ? "s" : ""} activo${totalTurnos !== 1 ? "s" : ""}`,
     },
     {
-      title:  "Personal Asignado",
+      title: "Personal Asignado",
       number: totalEmpleados,
-      icon:   FaUserClock,
+      icon: FaUserClock,
       detail: totalEmpleados === 0 ? "Sin empleados asignados" : `En ${totalTurnos} turno${totalTurnos !== 1 ? "s" : ""}`,
     },
     {
-      title:  "Hora de Ingreso",
+      title: "Hora de Ingreso",
       number: ingresoMinimo ?? "—",
-      icon:   FaCircleCheck,
+      icon: FaCircleCheck,
       detail: ingresoMinimo ? "Más temprana del proyecto" : "Sin datos aún",
       isTime: true,
     },
     {
-      title:  "Hora de Salida",
+      title: "Hora de Salida",
       number: salidaMaxima ?? "—",
-      icon:   FaClock,
+      icon: FaClock,
       detail: salidaMaxima ? "Más tardía del proyecto" : "Sin datos aún",
       isTime: true,
     },
@@ -142,9 +142,9 @@ export default function TurnosView({ proyecto }) {
 
   const acciones = [
     {
-      text:      "+ Crear Turno",
+      text: "+ Crear Turno",
       className: "bg-indigo-600 text-white",
-      onClick:   () => setModalCrear(true),
+      onClick: () => setModalCrear(true),
     },
   ];
 
@@ -233,6 +233,18 @@ export default function TurnosView({ proyecto }) {
     }
   }
 
+  async function handleEliminarTurno(turno) {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar el turno "${turno.nombre}"?`)) {
+      try {
+        await TurnoService.eliminar(turno.id_turno);
+        alert(`El turno "${turno.nombre}" ha sido eliminado exitosamente.`);
+        cargarDatos();
+      } catch (err) {
+        alert(err?.message || "Error al eliminar turno");
+      }
+    }
+  }
+
   const tablaContenido = loading ? (
     <div className="flex items-center justify-center py-16">
       <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
@@ -257,6 +269,8 @@ export default function TurnosView({ proyecto }) {
           onEdit={(t) => setTurnoEditar(t)}
           onGenerarQr={(t) => generarQrAsistencia(t)}
           tieneQrActivo={!!jornadasActivas[turno.id_turno]}
+          onManageColaciones={(t) => setTurnoColacionManager(t)}
+          onEliminar={(t) => handleEliminarTurno(t)}
         />
       ))}
     </div>
@@ -266,7 +280,7 @@ export default function TurnosView({ proyecto }) {
     <>
       <LayoutContent
         header={{
-          title:    "Gestión de Turnos",
+          title: "Gestión de Turnos",
           subtitle: proyecto?.nombre_proy ?? "Asignación horaria del personal",
         }}
         actions={acciones}
