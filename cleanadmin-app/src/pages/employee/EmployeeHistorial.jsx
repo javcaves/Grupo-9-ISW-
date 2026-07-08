@@ -5,6 +5,7 @@ import { Card } from "../../components/Card";
 import { AsistenciaService } from "../../api/asistencia.service";
 import { useAuth } from "../../context/AuthContext";
 import { ProyectoService } from "../../api/proyecto.service";
+import { formatearFecha } from "../../utils/formatters";
 
 export default function EmployeeHistorial() {
 
@@ -153,7 +154,7 @@ const response = await AsistenciaService.obtenerMisAsistencias();
               className="rounded-2xl p-4"
               style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
 
-              <div className="font-semibold mb-3">{record.date}</div>
+              <div className="font-semibold mb-3">{formatearFecha(record.date)}</div>
 
               <div className="flex justify-between text-sm">
                 <span>Entrada</span>
@@ -223,7 +224,7 @@ const response = await AsistenciaService.obtenerMisAsistencias();
               className="flex items-center justify-between rounded-2xl p-4"
               style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
 
-              <span>{appeal.date}</span>
+              <span>{appeal.date ? formatearFecha(appeal.date) : appeal.date}</span>
 
               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                 appeal.status === "Aprobada"

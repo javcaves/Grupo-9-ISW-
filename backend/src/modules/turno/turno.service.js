@@ -37,23 +37,26 @@ export const crearTurno = async (data) => {
     for (const emp of data.empleados) {
         const { id_empleado } = emp;
 
+        const empleadoData = await usuarioRepo.findOne({ where: { id_usuario: id_empleado } });
+        const nombreEmpleado = empleadoData ? `${empleadoData.nombre} ${empleadoData.apellido}` : `ID ${id_empleado}`;
+
         // 1.1 Verificar pertenencia al proyecto
         const perteneceAlProyecto = await proyectoUsuarioRepo.findOne({
             where: { id_proyecto: data.id_proyecto, id_usuario: id_empleado }
         });
-        if (!perteneceAlProyecto) return [null, `El empleado con ID ${id_empleado} no pertenece formalmente a este proyecto.`];
+        if (!perteneceAlProyecto) return [null, `El empleado ${nombreEmpleado} no pertenece formalmente a este proyecto.`];
 
         // 1.2 Verificar solapamiento
         const solapado = await _verificarSolapamientoHorario(
             turnoEmpleadoRepo, id_empleado, data.id_proyecto, data.hora_ingreso, data.hora_salida
         );
-        if (solapado) return [null, `El empleado ${id_empleado} ya tiene un turno con horario solapado en este proyecto.`];
+        if (solapado) return [null, `El empleado ${nombreEmpleado} ya tiene un turno con horario solapado en este proyecto.`];
 
         // 1.3 Verificar exclusividad de proyecto
         const enOtroProyecto = await _verificarEmpleadoEnOtroProyecto(
             turnoEmpleadoRepo, id_empleado, data.id_proyecto
         );
-        if (enOtroProyecto) return [null, `El empleado ${id_empleado} ya está activo en otro proyecto.`];
+        if (enOtroProyecto) return [null, `El empleado ${nombreEmpleado} ya está activo en otro proyecto.`];
     }
 
     // 2. Crear el turno (UNA SOLA VEZ)
