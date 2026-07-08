@@ -142,6 +142,35 @@ function PersonalTab({ proyecto, rolEjecutor }) {
 
   const COLUMNAS_PERSONAL = construirColumnasPersonal();
 
+  const getEstadoPersonal = () =>{
+    const currentCount = usuarios.length;
+    const min = proyecto?.min_emp || 0;
+    const max = proyecto?.max_emp || 0;
+
+    if (currentCount < min) {
+      return{
+        type: 'warning',
+        message: `Faltan ${min - currentCount} empleado(s) para alcanzar el minimo requerido (${min})`,
+        color: 'bg-amber-50 border-amber-200 text-amber-700',
+        icon: 'fa-exclamation-triangle'
+      };
+    } else if(currentCount > max){
+      return{
+        type: 'warning',
+        message: `Se excedió el máximo requerido (${max}), tienes ${max - currentCount} empleado(s) de sobra`,
+        color: 'bg-red-50 border-red-200 text-red-700',
+        icon: 'fa-times-circle'
+      };
+    } else{
+      return{
+        type: 'success',
+        message: `Personal dentro del rango establecido`,
+        color: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+        icon: 'fa-check-circle'
+      };
+    }
+  };
+
   async function cargarDatos() {
     if (!proyecto?.id_proyecto) return;
     setLoading(true);
@@ -226,8 +255,29 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     />
   );
 
+  const status = getEstadoPersonal();
+
   return (
     <>
+    {/*señal visual de personal */}
+      <div className={`
+          mb-6 p-4 rounded-xl border flex items-center justify-between
+          ${status.color}
+      `}>
+        <div className="flex items-center gap-3">
+          <i className={`fas ${status.icon} text-lg`}></i>
+          <span className="font-medium">{status.message}</span>
+        </div>
+         <div className="flex items-center gap-4 text-sm">
+            <span>Minimo: <strong>{proyecto?.min_emp || 0}</strong></span>
+            <span>Actual: <strong className={`
+              ${usuarios.length < (proyecto?.min_emp || 0) ? 'text-amber-600' : ''}
+              ${usuarios.length > (proyecto?.max_emp || 0) ? 'text-red-600' : ''}
+            `}> {usuarios.length}</strong></span>
+            <span>Máximo: <strong>{proyecto?.max_emp || 0}</strong></span>
+         </div>
+      </div>
+
       <LayoutContent
         header={{
           title:    "Registro de Personal",
