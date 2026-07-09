@@ -67,6 +67,7 @@ export default function ActividadesView({ proyecto }) {
   const [abrirEliminarAct, setAbrirEliminarAct] = useState(false);
   const [actividadAEliminar, setActividadAEliminar] = useState(null);
 
+  // Búsqueda / filtro / orden de la lista
   const [busqueda, setBusqueda] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [ordenDescendente, setOrdenDescendente] = useState(false);
@@ -142,17 +143,25 @@ export default function ActividadesView({ proyecto }) {
   );
 
   // ── Stats derivadas ───────────────────────────────────────────────────────
+  // Las stats siempre reflejan solo lo activo, sin importar si "Ver Inactivas" está
+  // prendido — de lo contrario el conteo cambiaría solo por un filtro de visibilidad.
   const actividadesActivas = listaActividades.filter(a => a.activo);
-  const totalActividades  = listaActividades.length;
-  const actRecurrentes    = listaActividades.filter(a => a.recurrencia && a.recurrencia !== "UNICA").length;
-  const actUnicas         = listaActividades.filter(a => a.recurrencia === "UNICA").length;
-  const totalCategorias   = listaCategorias.length;
+  const totalActividades  = actividadesActivas.length;
+  const actRecurrentes    = actividadesActivas.filter(a => a.recurrencia && a.recurrencia !== "UNICA").length;
+  const actUnicas         = actividadesActivas.filter(a => a.recurrencia === "UNICA").length;
+  // Categoria es un catálogo global (no pertenece a un proyecto), así que
+  // "categorías de este proyecto" en realidad significa: categorías distintas
+  // que efectivamente usan las actividades de este proyecto. listaCategorias
+  // (el catálogo completo) se sigue usando tal cual para el filtro y los
+  // selects de crear/editar actividad, donde sí corresponde poder elegir
+  // cualquier categoría existente.
+  const categoriasEnUso   = new Set(actividadesActivas.map(a => a.categoria?.id_cat).filter(Boolean)).size;
 
   const statsCards = [
     { title: "Actividades Base",  number: totalActividades,  icon: FaClipboardCheck, detail: totalActividades  === 0 ? "Sin actividades aún" : "Catálogo del proyecto" },
     { title: "Recurrentes",       number: actRecurrentes,    icon: FaRotate,         detail: actRecurrentes    === 0 ? "Sin rutinas" : "Tareas periódicas" },
     { title: "Ejecución Única",   number: actUnicas,         icon: FaCalendarDay,    detail: actUnicas         === 0 ? "Sin actividades únicas" : "Eventos puntuales" },
-    { title: "Categorías",        number: totalCategorias,   icon: FaListCheck,      detail: totalCategorias   === 0 ? "Sin categorías" : "Clasificaciones globales" },
+    { title: "Categorías en Uso", number: categoriasEnUso,   icon: FaListCheck,      detail: categoriasEnUso   === 0 ? "Sin categorías asignadas" : "Usadas en este proyecto" },
   ];
 
   const acciones = [

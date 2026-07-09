@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Modal } from "../Modal";
 import { FormContainer } from "../Formulario";
 import { EvaluacionService } from "../../api/evaluacion.service";
+import { formatearFecha } from "../../utils/formatters";
 
 // Se abre desde una fila de TareasView, sobre la tarea + el empleado asignado a ella
 export default function EvaluarDesempeno({ isOpen, onClose, tarea, empleado, actualizarLista }) {
@@ -42,7 +43,7 @@ export default function EvaluarDesempeno({ isOpen, onClose, tarea, empleado, act
     <Modal isOpen={isOpen} onClose={onClose} title="Evaluar Desempeño">
       <FormContainer
         title={`Evaluar a ${empleado?.nombre ?? ""} ${empleado?.apellido ?? ""}`}
-        description={`Sobre la tarea: ${tarea?.actividad?.descripcion_esp || "esta tarea"} (${tarea?.fecha ?? ""})`}
+        description={`Sobre la tarea: ${tarea?.actividad?.descripcion_esp || "esta tarea"} (${tarea?.fecha ? formatearFecha(tarea.fecha) : ""})`}
         onSubmit={handleSubmit}
         onCancel={onClose}
         submitText="Registrar Evaluación"
@@ -79,9 +80,11 @@ export default function EvaluarDesempeno({ isOpen, onClose, tarea, empleado, act
               onChange={handleChange}
               rows="3"
               required={formData.cumplio === "false"}
+              maxLength={500}
               placeholder={formData.cumplio === "false" ? "Explica por qué no se cumplió (obligatorio)" : "Observaciones (opcional)"}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
+            <p className="text-xs text-gray-400 mt-1 text-right">{formData.comentario.length}/500 caracteres</p>
           </div>
         </div>
       </FormContainer>

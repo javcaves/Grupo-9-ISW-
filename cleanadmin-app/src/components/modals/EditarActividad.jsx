@@ -38,7 +38,7 @@ export default function EditarActividad({ isOpen, onClose, categorias, actualiza
       onClose();
     } catch (error) {
       console.error("Error al editar la actividad:", error);
-      alert("Hubo un error al actualizar la actividad.");
+      alert(`No se pudo actualizar la actividad:\n\n${error.message || "Ocurrió un error inesperado."}`);
     }
   };
 

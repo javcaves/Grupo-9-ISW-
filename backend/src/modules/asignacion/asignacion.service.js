@@ -1,4 +1,5 @@
 import { AppDataSource } from '../../config/ConfigDB.js';
+import { obtenerEmpleadosDisponibles } from '../tarea/tarea.service.js';
 
 // ----- Asignar tarea -----
 export const asignarTarea = async (data, id_asignador) => {
@@ -31,6 +32,15 @@ export const asignarTarea = async (data, id_asignador) => {
         if (!calificacion) {
             return [null, `El empleado no tiene la calificación requerida para la categoría: ${tarea.actividad.categoria.nombre}`];
         }
+    }
+
+    // Validar disponibilidad: el empleado debe pertenecer a un turno activo
+    // cuyo horario cubra la fecha/hora en que se realizará la tarea.
+    const [disponibles, errDisponibilidad] = await obtenerEmpleadosDisponibles(data.id_tarea);
+    if (errDisponibilidad) return [null, errDisponibilidad];
+    const estaDisponible = disponibles.some((emp) => emp.id_usuario === data.id_empleado);
+    if (!estaDisponible) {
+        return [null, "El empleado no tiene un turno vigente que cubra la fecha y hora de esta tarea."];
     }
 
     const nueva = asignRepo.create({
