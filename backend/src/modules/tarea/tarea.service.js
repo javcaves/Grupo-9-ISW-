@@ -115,12 +115,77 @@ export const completarTarea = async (idTarea, idEmpleado) => {
         return [null, "Esta tarea no está asignada actualmente a tu usuario."];
     }
 
-    if (["FINALIZADA", "CANCELADA", "INCOMPLETA"].includes(tarea.estado)) {
-        return [null, `No se puede completar: la tarea ya está en estado ${tarea.estado}.`];
+    if (tarea.estado !== "EN_PROCESO") {
+        if (["FINALIZADA", "CANCELADA", "INCOMPLETA"].includes(tarea.estado)) {
+            return [null, `No se puede completar: la tarea ya está en estado ${tarea.estado}.`];
+        }
+        return [null, `No se puede completar: la tarea aún no está EN_PROCESO (estado actual: ${tarea.estado}). Debe esperar a que comience su horario programado.`];
     }
 
     tarea.estado = "FINALIZADA";
     return [await tareaRepo.save(tarea), null];
+};
+
+// ----- Empleados disponibles para asignar (según turno vigente a la fecha/hora de la tarea) -----
+export const obtenerEmpleadosDisponibles = async (idTarea) => {
+    const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
+    const turnoRepo = AppDataSource.getRepository("Turno");
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+
+    const tarea = await tareaRepo.findOne({
+        where: { id_tarea: idTarea },
+        relations: { actividad: { proyecto: true } },
+    });
+    if (!tarea) return [null, "Tarea no encontrada"];
+
+    const idProyecto = tarea.actividad?.proyecto?.id_proyecto;
+    if (!idProyecto) return [null, "La actividad de esta tarea no tiene un proyecto asociado."];
+
+    const horaTarea = tarea.hora?.length === 5 ? `${tarea.hora}:00` : tarea.hora;
+    const fechaTarea = tarea.fecha;
+
+    // Turnos activos del proyecto cuyo rango horario cubre la hora de la tarea
+    const turnos = await turnoRepo.find({
+        where: { proyecto: { id_proyecto: idProyecto }, activo: true },
+    });
+
+    const turnosQueCubren = turnos.filter((t) =>
+        _estaEnHorarioActivo(t.hora_ingreso, t.hora_salida, horaTarea)
+    );
+
+    if (turnosQueCubren.length === 0) return [[], null];
+
+    const idsTurnos = turnosQueCubren.map((t) => t.id_turno);
+
+    // Empleados vinculados a esos turnos, vigentes para la fecha de la tarea
+    const vinculos = await turnoEmpleadoRepo.find({
+        where: idsTurnos.map((id_turno) => ({ id_turno, activo: true })),
+        relations: { empleado: true },
+    });
+
+    const vigentesEnFecha = vinculos.filter((v) => {
+        if (v.fecha_ingreso && v.fecha_ingreso > fechaTarea) return false;
+        if (v.fecha_egreso && v.fecha_egreso < fechaTarea) return false;
+        return true;
+    });
+
+    // Ppuede estar en más de un turno que cubra la hora
+    const empleadosMap = new Map();
+    for (const v of vigentesEnFecha) {
+        const emp = v.empleado;
+        if (emp && emp.activo && !empleadosMap.has(emp.id_usuario)) {
+            empleadosMap.set(emp.id_usuario, emp);
+        }
+    }
+
+    return [Array.from(empleadosMap.values()), null];
+};
+
+const _estaEnHorarioActivo = (hora_ingreso, hora_salida, hora) => {
+    if (hora_salida < hora_ingreso) { // Turno nocturno que cruza la medianoche
+        return hora >= hora_ingreso || hora <= hora_salida;
+    }
+    return hora >= hora_ingreso && hora <= hora_salida;
 };
 
 // ----- Mis Tareas (Filtro por empleado con relaciones en cascada) -----
@@ -147,9 +212,18 @@ export async function obtenerMisTareas(idEmpleado) {
         },
     });
 
+    // Si la tarea fue reasignada a otra persona después de esta asignación,
+    // esta ya no es la vigente -> no debe seguir apareciendo en "Mis Tareas"
+    // del empleado anterior
+    const asignacionesVigentes = asignaciones.filter((asignacion) => {
+        const vigente = [...(asignacion.tarea.asignaciones ?? [])]
+            .sort((a, b) => new Date(b.hora_asignacion) - new Date(a.hora_asignacion))[0];
+        return vigente?.empleado?.id_usuario === idEmpleado;
+    });
+
     // Transformamos la respuesta para no exponer información sensible
     // de otros trabajadores.
-    return asignaciones.map(asignacion => ({
+    return asignacionesVigentes.map(asignacion => ({
 
         id_asignacion: asignacion.id_asignacion,
         tipo_asignacion: asignacion.tipo_asignacion,
@@ -170,18 +244,6 @@ export async function obtenerMisTareas(idEmpleado) {
             comentario: asignacion.tarea.comentario,
 
             actividad: asignacion.tarea.actividad,
-
-            // Solo la asignación vigente de cada tarea 
-            // Sin este filtro, tras una reasignación seguirían apareciendo empleados que ya no están a cargo de la tarea.
-            equipo: [asignacion.tarea.asignaciones].flat()
-                .sort((a, b) => new Date(b.hora_asignacion) - new Date(a.hora_asignacion))
-                .slice(0, 1)
-                .map(companero => ({
-                    id_usuario: companero.empleado.id_usuario,
-                    nombre: companero.empleado.nombre,
-                    apellido: companero.empleado.apellido,
-                    rol: companero.empleado.rol,
-                })),
         },
 
     }));

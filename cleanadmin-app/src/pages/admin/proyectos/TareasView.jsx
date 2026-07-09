@@ -10,7 +10,6 @@ import EliminarTarea from "../../../components/modals/EliminarTarea";
 import EvaluarDesempeno from "../../../components/modals/EvaluarDesempeno";
 import { ActividadesService } from "../../../api/actividades.service";
 import { TareaService } from "../../../api/tareas.service";
-import { ProyectoUsuarioService } from "../../../api/proyecto_usuario.service";
 import { formatearFechaHora } from "../../../utils/formatters";
 import { FaListUl, FaCircleCheck, FaSpinner, FaTriangleExclamation } from "react-icons/fa6";
 
@@ -26,7 +25,6 @@ function empleadoActualDe(tarea) {
 export default function TareasView({ proyecto }) {
   const [actividadesProyecto, setActividadesProyecto] = useState([]);
   const [tareasPendientes, setTareasPendientes] = useState([]);
-  const [empleados, setEmpleados] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Estados de Modales
@@ -42,16 +40,18 @@ export default function TareasView({ proyecto }) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [ordenDescendente, setOrdenDescendente] = useState(false);
 
-  async function cargarDatos() {
-    setLoading(true);
+  // Cada cuánto se revisa en segundo plano si hay cambios de estado
+  const INTERVALO_REFRESCO_MS = 20000;
+
+  async function cargarDatos({ mostrarSpinner = true } = {}) {
+    if (mostrarSpinner) setLoading(true);
     try {
       const idProy = proyecto?.id_proyecto;
       if (!idProy) return;
 
-      const [resAct, resTar, resEmp] = await Promise.all([
+      const [resAct, resTar] = await Promise.all([
         ActividadesService.listar().catch(() => []),
         TareaService.listar().catch(() => []),
-        ProyectoUsuarioService.listarUsuarios(idProy).catch(() => [])
       ]);
 
       const actividadesFiltradas = (resAct?.data ?? resAct ?? []).filter(
@@ -71,22 +71,22 @@ export default function TareasView({ proyecto }) {
       });
       setTareasPendientes(tareasFiltradas);
 
-      const empleadosMapeados = (resEmp?.data ?? resEmp ?? []).map(item => {
-        if (item.usuario) {
-          return { ...item.usuario, rol: item.rol }; 
-        }
-        return item;
-      });
-      setEmpleados(empleadosMapeados);
-
     } catch (err) {
       console.error("TareasView cargarDatos:", err);
     } finally {
-      setLoading(false);
+      if (mostrarSpinner) setLoading(false);
     }
   }
 
   useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
+
+  useEffect(() => {
+    if (!proyecto?.id_proyecto) return;
+    const intervalo = setInterval(() => {
+      cargarDatos({ mostrarSpinner: false });
+    }, INTERVALO_REFRESCO_MS);
+    return () => clearInterval(intervalo);
+  }, [proyecto?.id_proyecto]);
 
   const totalTareas = tareasPendientes.length;
   const finalizadas = tareasPendientes.filter(t => t.estado === "FINALIZADA").length;
@@ -146,7 +146,7 @@ export default function TareasView({ proyecto }) {
       icon: "fa-clock",
       render: (_, tarea) => (
         <span className="text-sm font-medium" style={{ color: "var(--table-row-text)" }}>
-          {tarea.hora ? `${tarea.fecha} • ${tarea.hora}` : "Indefinido"}
+          {tarea.hora ? formatearFechaHora(tarea.fecha, tarea.hora) : "Indefinido"}
         </span>
       ),
     },
@@ -334,7 +334,6 @@ export default function TareasView({ proyecto }) {
         isOpen={abrirAsignar}
         onClose={() => { setAbrirAsignar(false); setTareaSeleccionada(null); }}
         tareasPendientes={tareasPendientes}
-        empleados={empleados}
         tareaPreseleccionada={tareaSeleccionada}
         actualizarLista={cargarDatos}
       />

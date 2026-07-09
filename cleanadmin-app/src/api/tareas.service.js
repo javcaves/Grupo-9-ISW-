@@ -36,6 +36,15 @@ export const TareaService = {
   },
 
   /**
+   * Obtiene los empleados que están disponibles (según el turno vigente
+   * para la fecha/hora de la tarea) para ser asignados a esta tarea.
+   */
+  async obtenerEmpleadosDisponibles(idTarea) {
+    const response = await api.get(`${URL}/${idTarea}/empleados-disponibles`);
+    return response.data ?? response;
+  },
+
+  /**
    * Programa una nueva tarea.
    */
   async crear(datos) {

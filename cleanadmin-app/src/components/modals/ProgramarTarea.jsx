@@ -46,7 +46,8 @@ export default function ProgramarTarea({ isOpen, onClose, actividades, actualiza
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-              <input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required 
+              <input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required
+                min={new Date().toISOString().split("T")[0]}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
@@ -58,7 +59,9 @@ export default function ProgramarTarea({ isOpen, onClose, actividades, actualiza
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Comentario / Detalles</label>
             <textarea name="comentario" value={formData.comentario} onChange={handleChange} rows="2"
+              maxLength={255} placeholder="Ej: Revisar especialmente el sector de bodega norte"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"></textarea>
+            <p className="text-xs text-gray-400 mt-1 text-right">{formData.comentario.length}/255 caracteres</p>
           </div>
         </div>
       </FormContainer>

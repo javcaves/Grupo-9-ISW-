@@ -2,13 +2,13 @@ import Joi from "joi";
 
 export const tareaCreateValidation = Joi.object({
     id_act: Joi.number().integer().positive().required(),
-    fecha: Joi.date().iso().required(),
+    fecha: Joi.date().iso().raw().required(),
     hora: Joi.string().pattern(/^([01]\d|2[0-3]):?([0-5]\d)$/).required(),
     comentario: Joi.string().max(255).allow(null, "")
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
 
 export const tareaUpdateValidation = Joi.object({
-    fecha: Joi.date().iso().optional(),
+    fecha: Joi.date().iso().raw().optional(),
     hora: Joi.string().pattern(/^([01]\d|2[0-3]):?([0-5]\d)$/).optional(),
     comentario: Joi.string().max(255).optional()
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
