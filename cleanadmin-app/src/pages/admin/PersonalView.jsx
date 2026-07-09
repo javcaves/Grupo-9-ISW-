@@ -7,6 +7,8 @@ import { Card }                from "../../components/Card";
 import { UsuarioService }      from "../../api/usuario.service";
 import ConfirmarEliminacion    from "../../components/modals/Eliminar";
 import HojaDeVida              from "../../components/modals/HojaDeVida";
+import NuevoPersonalModal      from "../../components/modals/NuevoPersonalModal";
+import CambiarPasswordModal    from "../../components/modals/CambiarPasswordModal";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
 
 function construirColumnasPersonal() {
@@ -59,6 +61,14 @@ export default function PersonalView() {
   // Desactivar (baja lógica del usuario en todo el sistema, no solo de un proyecto)
   const [modalEliminarAbierto, setModalEliminarAbierto] = useState(false);
   const [usuarioADesactivar, setUsuarioADesactivar]     = useState(null);
+
+  // Editar usuario (usa el mismo modal de "Agregar Personal" en modo edición)
+  const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
+  const [usuarioAEditar, setUsuarioAEditar]         = useState(null);
+
+  // Cambiar contraseña (reseteo por si el usuario la olvida)
+  const [modalPasswordAbierto, setModalPasswordAbierto] = useState(false);
+  const [usuarioPassword, setUsuarioPassword]            = useState(null);
 
   const COLUMNAS_PERSONAL = construirColumnasPersonal();
 
@@ -127,8 +137,15 @@ export default function PersonalView() {
           hoverBg: "#dbeafe",
           hoverText: "#2563eb",
         },
+        {
+          icon: "fa-key",
+          title: "Cambiar contraseña",
+          onClick: (u) => { setUsuarioPassword(u); setModalPasswordAbierto(true); },
+          hoverBg: "#fef3c7",
+          hoverText: "#b45309",
+        },
       ]}
-      onEdit={(item)   => console.log("Editar usuario:", item)}
+      onEdit={(item) => { setUsuarioAEditar(item); setModalEditarAbierto(true); }}
       onDelete={(item) => {
         setUsuarioADesactivar(item);
         setModalEliminarAbierto(true);
@@ -199,6 +216,26 @@ export default function PersonalView() {
           servicioEliminar={UsuarioService.eliminar}
           actualizarLista={cargarDatos}
           mensajeConfirmacion="Esta acción lo eliminará del sistema por completo, en todos los proyectos."
+          mensajeExito="¡Usuario eliminado del sistema correctamente!"
+        />
+      )}
+
+      {modalEditarAbierto && (
+        <NuevoPersonalModal
+          isOpen={modalEditarAbierto}
+          onClose={() => { setModalEditarAbierto(false); setUsuarioAEditar(null); }}
+          modo="editar"
+          usuario={usuarioAEditar}
+          onSuccess={cargarDatos}
+        />
+      )}
+
+      {modalPasswordAbierto && (
+        <CambiarPasswordModal
+          isOpen={modalPasswordAbierto}
+          onClose={() => { setModalPasswordAbierto(false); setUsuarioPassword(null); }}
+          usuario={usuarioPassword}
+          onSuccess={cargarDatos}
         />
       )}
     </>
