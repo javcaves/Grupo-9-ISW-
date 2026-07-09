@@ -163,6 +163,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   const [usuarioADesvincular, setUsuarioADesvincular] = useState(null);
 
   const [filtroRol, setFiltroRol] = useState("TODOS");
+  const [busqueda, setBusqueda] = useState("");
 
   const COLUMNAS_PERSONAL = construirColumnasPersonal();
 
@@ -263,9 +264,31 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     { key: "EMPLEADO",   label: "Empleado"   },
   ];
 
-  const usuariosFiltrados = filtroRol === "TODOS"
-    ? usuarios
-    : usuarios.filter((u) => u.rol === filtroRol);
+  const usuariosFiltrados = usuarios
+    .filter((u) => filtroRol === "TODOS" || u.rol === filtroRol)
+    .filter((u) => {
+      if (!busqueda.trim()) return true;
+      const termino = busqueda.trim().toLowerCase();
+      const nombreCompleto = `${u.nombre ?? ""} ${u.apellido ?? ""}`.toLowerCase();
+      return (
+        nombreCompleto.includes(termino) ||
+        (u.rut ?? "").toLowerCase().includes(termino) ||
+        (u.email ?? "").toLowerCase().includes(termino)
+      );
+    });
+
+  const barraBusqueda = (
+    <div className="relative mb-4 max-w-sm">
+      <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" />
+      <input
+        type="text"
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        placeholder="Buscar por nombre, RUT o email..."
+        className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:border-violet-400"
+      />
+    </div>
+  );
 
   const filtroBar = (
     <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -294,11 +317,16 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     </div>
   ) : (
     <>
+      {barraBusqueda}
       {filtroBar}
       <Table
         columns={COLUMNAS_PERSONAL}
         data={usuariosFiltrados}
-        emptyMessage="No hay personal con este cargo en este proyecto."
+        emptyMessage={
+          usuarios.length === 0
+            ? "No hay personal registrado en este proyecto."
+            : "Nadie coincide con la búsqueda o el filtro aplicado."
+        }
         extraActions={[
           {
             icon: "fa-chart-line",
