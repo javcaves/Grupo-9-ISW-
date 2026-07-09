@@ -52,11 +52,12 @@ export const crearProyecto = async (data, ejecutor) => {
 
 /**
  * 2. Obtener todos los proyectos del sistema (con personal enriquecido)
+ * @param {boolean} incluirInactivos - si es true, trae también los soft-deleted (activo=false)
  */
-export const obtenerTodosProyectos = async () => {
+export const obtenerTodosProyectos = async (incluirInactivos = false) => {
     try {
         const proyectos = await proyectoRepository.find({
-            where: { activo: true },
+            where: incluirInactivos ? {} : { activo: true },
             order: { id_proyecto: 'ASC' }
         });
         const enriquecidos = await enriquecerProyectosConPersonal(proyectos);
@@ -180,6 +181,31 @@ export const eliminarProyecto = async (id, ejecutor) => {
         await proyectoRepository.save(proyecto);
 
         return [{ message: 'proyecto eliminado de forma exitosa' }, null];
+    } catch (error) {
+        return [null, error.message];
+    }
+};
+
+/**
+ * 7. Reactivar un proyecto previamente desactivado (soft-delete inverso)
+ */
+export const reactivarProyecto = async (id, ejecutor) => {
+    try {
+        if (!['ROOT', 'ADMIN'].includes(ejecutor.rol)) {
+            throw new Error("solo administradores pueden reactivar proyectos");
+        }
+
+        const proyecto = await proyectoRepository.findOne({
+            where: { id_proyecto: parseInt(id) }
+        });
+
+        if (!proyecto) throw new Error('proyecto no encontrado');
+        if (proyecto.activo) throw new Error('el proyecto ya está activo');
+
+        proyecto.activo = true;
+        const reactivado = await proyectoRepository.save(proyecto);
+
+        return [reactivado, null];
     } catch (error) {
         return [null, error.message];
     }

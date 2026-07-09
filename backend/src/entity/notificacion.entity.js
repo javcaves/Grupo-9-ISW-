@@ -1,17 +1,6 @@
+// entity/notificacion.entity.js
 import { EntitySchema } from "typeorm";
 
-/**
- * Tabla dedicada (no derivada) para poder marcar leido/no leido y llevar
- * historial. Se genera una fila POR DESTINATARIO cada vez que se crea un
- * MovimientoInventario con tipo_movimiento = 'SOLICITUD': todos los
- * SUPERVISOR/ADMIN/ROOT (los roles que pueden resolver via
- * PATCH /movimientos/:id_mov/resolver).
- *
- * id_movimiento referencia MovimientoInventario.id_mov. No se modela como
- * relation de TypeORM a proposito, para no acoplar este modulo nuevo a
- * como decidas registrar las entidades existentes (string vs. import de
- * clase) - se accede iaual por getRepository('Notificacion').
- */
 export const Notificacion = new EntitySchema({
     name: "Notificacion",
     tableName: "notificacion",
@@ -31,12 +20,35 @@ export const Notificacion = new EntitySchema({
             length: 50,
             nullable: false,
             // "SOLICITUD_PENDIENTE" | "SOLICITUD_APROBADA" | "SOLICITUD_RECHAZADA"
+            // | "SOLICITUD_PASSWORD" | "SOLICITUD_ASISTENCIA"
         },
-        id_movimiento: {
+        tipo_referencia: {
+            type: "varchar",
+            length: 50,
+            nullable: true,
+            // "MOVIMIENTO_INVENTARIO" | "USUARIO" | "SOLICITUD_ASISTENCIA" | null
+        },
+        id_referencia: {
             type: "int",
-            nullable: false,
+            nullable: true,
+        },
+        mensaje: {
+            type: "varchar",
+            length: 255,
+            nullable: true,
         },
         leido: {
+            type: "boolean",
+            nullable: false,
+            default: false,
+        },
+        // NUEVO: fuente única de verdad de "¿esto todavía requiere acción?".
+        // "leido" solo significa "el usuario ya lo vio"; "resuelto" significa
+        // "ya se actuó sobre esto" (se aprobó/rechazó el item, se reseteó la
+        // password, se resolvió la corrección de asistencia). La campana
+        // filtra resuelto=false; el historial no filtra por esto (o permite
+        // elegir).
+        resuelto: {
             type: "boolean",
             nullable: false,
             default: false,
@@ -56,6 +68,10 @@ export const Notificacion = new EntitySchema({
         {
             name: "IDX_NOTIFICACION_LEIDO",
             columns: ["leido"],
+        },
+        {
+            name: "IDX_NOTIFICACION_RESUELTO",
+            columns: ["resuelto"],
         },
     ],
 });

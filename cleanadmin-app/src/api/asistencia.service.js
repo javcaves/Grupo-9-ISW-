@@ -82,4 +82,28 @@ export const AsistenciaService = {
     );
     return response.data;
   },
+  /** POST /asistencia/solicitudes (EMPLEADO) */
+  async crearSolicitudCorreccion(data) {
+    const response = await api.post("/asistencia/solicitudes", data);
+    return response.data ?? response;
+  },
+
+  /** GET /asistencia/solicitudes/pendientes (gestión) */
+  async listarSolicitudesPendientes() {
+    const response = await api.get("/asistencia/solicitudes/pendientes");
+    return response.data ?? response;
+  },
+
+  /** GET /asistencia/solicitudes/mias (EMPLEADO) */
+  async listarMisSolicitudes() {
+    const response = await api.get("/asistencia/solicitudes/mias");
+    return response.data ?? response;
+  },
+
+  /** PATCH /asistencia/solicitudes/:id_solicitud/resolver (gestión) */
+  async resolverSolicitud(idSolicitud, data) {
+    const response = await api.patch(`/asistencia/solicitudes/${idSolicitud}/resolver`, data);
+    return response.data ?? response;
+  },
 };
+

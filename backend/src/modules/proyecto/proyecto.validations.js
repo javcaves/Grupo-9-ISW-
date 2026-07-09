@@ -9,6 +9,11 @@ export const proyectoQueryValidation = Joi.object({
     .valid(...ESTADOS_VALIDOS)
     .optional(),
     activo: Joi.boolean().optional(),
+    incluirInactivos: Joi.boolean()
+    .truthy('true')
+    .falsy('false')
+    .optional()
+    .default(false),
     search: Joi.string().max(100).optional(),
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).default(10).optional()

@@ -117,3 +117,21 @@ export const eliminarUsuario = async (req, res) => {
         return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
 };
+
+export const resetearPassword = async (req, res) => {
+    try {
+        const { id_usuario } = req.params;
+        const { password } = req.body;
+
+        if (!password || typeof password !== "string" || password.length < 6) {
+            return handleErrorClient(res, 400, "error de validacion", "La nueva contraseña debe tener al menos 6 caracteres.");
+        }
+
+        const [resultado, err] = await UsuarioService.resetearPasswordUsuario(id_usuario, password);
+        if (err) return handleErrorClient(res, 400, "no se pudo actualizar la contraseña", err);
+
+        return handleSuccess(res, 200, resultado.message, null);
+    } catch (error) {
+        return handleErrorServer(res, 500, "error de servidor", error.message);
+    }
+};

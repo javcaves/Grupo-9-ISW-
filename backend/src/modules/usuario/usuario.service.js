@@ -14,6 +14,7 @@
 import { AppDataSource } from '../../config/ConfigDB.js';
 import { ILike } from 'typeorm';
 import bcrypt from "bcrypt";
+import * as NotificacionService from '../notificaciones/notificacion.service.js';
 
 //obtener usuario por query (id o rut)
 /*
@@ -191,3 +192,35 @@ export const eliminarUsuarioService = async(id, ejecutor) =>{
             return[null, "error interno del servidor"];
         }
     };
+
+/**
+ * Asigna una contraseña provisional (ej. el usuario la olvidó y pidió
+ * recuperarla). Marca como resueltas todas las notificaciones
+ * SOLICITUD_PASSWORD de este usuario -- sin importar cuál admin las vio,
+ * ya que la acción real la puede ejecutar cualquier ADMIN/SUPERVISOR/ROOT.
+ * No se genera ninguna notificación de vuelta (gestión fuera del sistema).
+ */
+export const resetearPasswordUsuario = async (id_usuario, nuevaPassword) => {
+    try {
+        const usuarioRepository = AppDataSource.getRepository("Usuario");
+        const usuario = await usuarioRepository.findOne({ where: { id_usuario: parseInt(id_usuario) } });
+        if (!usuario) throw new Error("usuario no encontrado");
+
+        const saltRounds = 10;
+        usuario.password = await bcrypt.hash(nuevaPassword, saltRounds);
+        usuario.fecha_actualizacion = new Date();
+        await usuarioRepository.save(usuario);
+
+        const [, errNotif] = await NotificacionService.marcarResueltasPorReferencia({
+            tipo_referencia: "USUARIO",
+            id_referencia: usuario.id_usuario,
+            tipo: "SOLICITUD_PASSWORD",
+        });
+        if (errNotif) console.error("error al marcar solicitudes de password resueltas:", errNotif);
+
+        return [{ message: "Contraseña provisional asignada con éxito." }, null];
+    } catch (error) {
+        console.log("error en resetearPasswordUsuario", error);
+        return [null, error.message || "error interno del servidor"];
+    }
+};
