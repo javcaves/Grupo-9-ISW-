@@ -138,14 +138,40 @@ export const listarTurnos = async () => {
 
 export const actualizarTurno = async (id, data) => {
     const turnoRepo = AppDataSource.getRepository("Turno");
-    const turno = await turnoRepo.findOne({ where: { id_turno: parseInt(id, 10) } });
+    const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
+    const turno = await turnoRepo.findOne({ 
+        where: { id_turno: parseInt(id, 10) },
+        relations: { turnoEmpleados: true, proyecto: true }
+    });
     if (!turno) return [null, "No se encontró el turno en el sistema."];
 
     // Actualización de campos
     if (data.descripcion !== undefined) turno.descripcion = data.descripcion;
     if (data.activo !== undefined) turno.activo = data.activo;
     
-    // 🌟 Nueva lógica para actualizar horarios
+    // 🌟 Nueva lógica para actualizar horarios y validar solapamiento
+    const nuevaHoraIngreso = data.hora_ingreso || turno.hora_ingreso;
+    const nuevaHoraSalida = data.hora_salida || turno.hora_salida;
+
+    if (data.hora_ingreso || data.hora_salida) {
+        for (const te of turno.turnoEmpleados) {
+            if (!te.activo) continue;
+            
+            const solapado = await _verificarSolapamientoHorario(
+                turnoEmpleadoRepo,
+                te.id_empleado,
+                turno.proyecto.id_proyecto,
+                nuevaHoraIngreso,
+                nuevaHoraSalida,
+                turno.id_turno
+            );
+
+            if (solapado) {
+                return [null, `No se puede actualizar el horario. El empleado (ID: ${te.id_empleado}) asignado a este turno ya tiene otro turno con horario solapado en este proyecto.`];
+            }
+        }
+    }
+
     if (data.hora_ingreso) turno.hora_ingreso = data.hora_ingreso;
     if (data.hora_salida) turno.hora_salida = data.hora_salida;
 
