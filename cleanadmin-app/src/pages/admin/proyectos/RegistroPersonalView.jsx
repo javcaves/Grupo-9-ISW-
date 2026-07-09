@@ -5,6 +5,7 @@ import ActividadesView from "./ActividadesView";
 import TareasView from "./TareasView";
 import InventarioView from "./InventarioView";
 import TurnosView from "./TurnosView";
+import AsistenciaHistorialView from "./AsistenciaHistorialView";
 import { Table } from "../../../components/Table";
 import { Card } from "../../../components/Card";
 import { ProyectoUsuarioService } from "../../../api/proyecto_usuario.service";
