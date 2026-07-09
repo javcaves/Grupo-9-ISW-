@@ -91,6 +91,16 @@ export const completar = async (req, res) => {
     } catch (error) { return handleErrorServer(res, 500, "Error al completar la tarea", error.message); }
 };
 
+// Empleados disponibles para asignar (según el turno que cubre la fecha/hora de la tarea)
+export const obtenerEmpleadosDisponibles = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [empleados, err] = await TareaService.obtenerEmpleadosDisponibles(id);
+        if (err) return handleErrorClient(res, 404, "No encontrado", err);
+        return handleSuccess(res, 200, "Empleados disponibles obtenidos", empleados);
+    } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
+};
+
 // ----- Mis Tareas (Específicas del empleado autenticado) -----
 export async function obtenerMisTareas(req, res) {
     try {

@@ -50,13 +50,15 @@ export default function EliminarTarea({ isOpen, onClose, tareaSeleccionada, actu
             <label className="block text-sm font-medium text-red-600 mb-1">Motivo / Justificación *</label>
             <textarea 
               value={comentario} 
-              onChange={(e) => setComentario(e.target.value)} 
+              onChange={(e) => setComentario(e.target.value.slice(0, 255))} 
               rows="4"
               required
               minLength={5}
+              maxLength={255}
               placeholder="Ej: Empleado no se presentó, falta de insumos, etc. (Mín. 5 caracteres)"
               className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
             ></textarea>
+            <p className="text-xs text-gray-400 mt-1 text-right">{comentario.length}/255 caracteres</p>
           </div>
         </div>
       </FormContainer>
