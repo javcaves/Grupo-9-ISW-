@@ -47,5 +47,11 @@ export const Asistencia = new EntitySchema({
             joinColumn: { name: "id_proyecto" },
             nullable: false,
         },
+        asistenciaEmpleados: {
+            target: "AsistenciaEmpleado",
+            type: "one-to-many",
+            inverseSide: "asistencia",
+            joinColumn: { name: "id_asistencia" },
+        },
     },
 });
