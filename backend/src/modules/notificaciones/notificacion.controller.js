@@ -1,5 +1,5 @@
 import * as NotificacionService from './notificacion.service.js';
-import { notificacionIdValidation, notificacionQueryValidation } from './notificacion.validations.js';
+import { notificacionIdValidation, notificacionQueryValidation, solicitudPasswordValidation } from './notificacion.validations.js';
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
 /**
@@ -48,6 +48,26 @@ export const marcarTodasLeidas = async (req, res) => {
         if (err) return handleErrorClient(res, 400, 'error al marcar notificaciones', err);
 
         return handleSuccess(res, 200, 'notificaciones marcadas como leidas', resultado);
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    }
+};
+
+/**
+ * 4. Solicitar recuperación de contraseña (PÚBLICO, sin JWT: quien la usa
+ * está deslogueado). Notifica a los ADMIN/ROOT si el identificador
+ * corresponde a una cuenta activa.
+ * POST /notificaciones/solicitud-password
+ */
+export const solicitarRecuperacionPassword = async (req, res) => {
+    try {
+        const { error, value } = solicitudPasswordValidation.validate(req.body);
+        if (error) return handleErrorClient(res, 400, 'error de validacion', error.message);
+
+        const [resultado, err] = await NotificacionService.solicitarRecuperacionPassword(value.identifier);
+        if (err) return handleErrorClient(res, 400, 'no se pudo procesar la solicitud', err);
+
+        return handleSuccess(res, 200, resultado.message, null);
     } catch (error) {
         return handleErrorServer(res, 500, 'error de servidor', error.message);
     }

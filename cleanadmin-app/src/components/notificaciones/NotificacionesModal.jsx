@@ -1,5 +1,5 @@
 // src/components/notificaciones/NotificacionesModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { useNotificaciones } from '../../context/NotificacionesContext';
 import SolicitudResolverModal from './SolicitudResolverModal';
@@ -8,6 +8,7 @@ const ETIQUETAS_TIPO = {
   SOLICITUD_PENDIENTE: { texto: 'Nueva solicitud', color: 'text-indigo-600', icono: 'fa-inbox' },
   SOLICITUD_APROBADA: { texto: 'Solicitud aprobada', color: 'text-emerald-600', icono: 'fa-check-circle' },
   SOLICITUD_RECHAZADA: { texto: 'Solicitud rechazada', color: 'text-red-600', icono: 'fa-times-circle' },
+  SOLICITUD_PASSWORD: { texto: 'Recuperación de contraseña', color: 'text-amber-600', icono: 'fa-key' },
 };
 
 function formatearFecha(fechaIso) {
@@ -22,8 +23,20 @@ function formatearFecha(fechaIso) {
 }
 
 export default function NotificacionesModal({ isOpen, onClose }) {
-  const { notificaciones, marcarLeida, marcarTodasLeidas } = useNotificaciones();
+  const { notificaciones, marcarLeida, marcarTodasLeidas, refrescar } = useNotificaciones();
   const [idMovimientoSeleccionado, setIdMovimientoSeleccionado] = useState(null);
+
+  // FIX: antes la lista solo se cargaba al montar NotificacionesProvider
+  // (una vez) + cada 10 minutos en background. Si el usuario ya tenía la
+  // pestaña abierta y logeado desde antes de que se generara una
+  // notificación nueva (ej. alguien pidió recuperar su contraseña
+  // después), la campana se quedaba mostrando datos viejos hasta el
+  // próximo poll. Ahora, cada vez que se ABRE el modal, se pide la lista
+  // fresca -- así "hacer clic en la campana" siempre trae lo último,
+  // sin depender del timer.
+  useEffect(() => {
+    if (isOpen) refrescar();
+  }, [isOpen, refrescar]);
 
   const ordenadas = [...notificaciones].sort(
     (a, b) => new Date(b.fecha) - new Date(a.fecha)
@@ -33,9 +46,11 @@ export default function NotificacionesModal({ isOpen, onClose }) {
     if (!notif.leido) marcarLeida(notif.id_notificacion);
 
     if (notif.tipo === 'SOLICITUD_PENDIENTE') {
-      setIdMovimientoSeleccionado(notif.id_movimiento);
+      // id_referencia reemplaza al viejo id_movimiento (ver notificacion.entity.js);
+      // para este tipo, tipo_referencia siempre es "MOVIMIENTO_INVENTARIO".
+      setIdMovimientoSeleccionado(notif.id_referencia);
     }
-    // para APROBADA/RECHAZADA no hay acción adicional, solo se marca leida
+    // para APROBADA/RECHAZADA/PASSWORD no hay acción adicional, solo se marca leida
   };
 
   return (
@@ -81,6 +96,11 @@ export default function NotificacionesModal({ isOpen, onClose }) {
                       <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
                     )}
                   </div>
+                  {notif.mensaje && (
+                    <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
+                      {notif.mensaje}
+                    </p>
+                  )}
                   <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                     {formatearFecha(notif.fecha)}
                   </p>

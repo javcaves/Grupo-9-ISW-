@@ -18,3 +18,16 @@ export const notificacionQueryValidation = Joi.object({
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).default(10).optional(),
 });
+
+// validación del body para POST /notificaciones/solicitud-password
+export const solicitudPasswordValidation = Joi.object({
+    identifier: Joi.string()
+        .trim()
+        .min(3)
+        .max(100)
+        .required()
+        .messages({
+            "string.empty": "Debes ingresar tu correo o RUT.",
+            "any.required": "Debes ingresar tu correo o RUT.",
+        }),
+});

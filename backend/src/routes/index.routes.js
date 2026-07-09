@@ -6,6 +6,12 @@ import AuthRoutes from './auth.routes.js';
 // MIDDLEWARE INTERCEPTOR GLOBAL
 import { authenticateJwt } from '../middlewares/auth.middleware.js';
 
+// Controller usado directo acá solo para la ÚNICA ruta pública de
+// notificaciones (solicitud de recuperación de contraseña). El resto de
+// rutas de notificaciones vive en notificacion.routes.js y se monta más
+// abajo, después del filtro global.
+import * as NotificacionController from '../modules/notificaciones/notificacion.controller.js';
+
 // MÓDULO DE ACTIVIDADES
 import ActividadesRoutes from '../modules/actividades/actividades.routes.js';
 import CategoriasRoutes from '../modules/categoria/categoria.routes.js';
@@ -37,6 +43,7 @@ const router = Router();
 // =============================================
 // Rutas de login y logout que no requieren token previo
 router.use('/auth', AuthRoutes); 
+router.post('/notificaciones/solicitud-password', NotificacionController.solicitarRecuperacionPassword);
 
 
 // =============================================

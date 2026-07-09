@@ -31,7 +31,8 @@ export const notificarSolicitudPendiente = async (movimiento) => {
             notificacionRepository.create({
                 id_usuario_destinatario: id_usuario,
                 tipo: "SOLICITUD_PENDIENTE",
-                id_movimiento: movimiento.id_mov,
+                tipo_referencia: "MOVIMIENTO_INVENTARIO",
+                id_referencia: movimiento.id_mov,
                 leido: false,
             })
         );
@@ -62,7 +63,8 @@ export const notificarResolucionSolicitud = async (movimiento) => {
         const notificacion = notificacionRepository.create({
             id_usuario_destinatario: movimiento.id_emisor,
             tipo,
-            id_movimiento: movimiento.id_mov,
+            tipo_referencia: "MOVIMIENTO_INVENTARIO",
+            id_referencia: movimiento.id_mov,
             leido: false,
         });
 
@@ -88,9 +90,7 @@ const obtenerDestinatarios = async (id_proyecto) => {
         .andWhere("u.rol = :rol", { rol: "SUPERVISOR" })
         .getRawMany();
 
-    const adminsYRoot = await usuarioRepository.find({
-        where: [{ rol: "ADMIN", activo: true }, { rol: "ROOT", activo: true }],
-    });
+    const adminsYRoot = await obtenerAdminsYRoot();
 
     const ids = new Set([
         ...supervisoresDelProyecto.map((s) => Number(s.id_usuario)),
@@ -98,6 +98,97 @@ const obtenerDestinatarios = async (id_proyecto) => {
     ]);
 
     return [...ids];
+};
+
+/**
+ * Todos los usuarios activos con rol ADMIN o ROOT del sistema (sin
+ * relación a ningún proyecto en particular). Se reutiliza tanto para
+ * solicitudes de inventario como para "olvidé mi contraseña".
+ */
+const obtenerAdminsYRoot = async () => {
+    return await usuarioRepository.find({
+        where: [{ rol: "ADMIN", activo: true }, { rol: "ROOT", activo: true }],
+    });
+};
+
+/**
+ * Genera una notificación por cada ADMIN/ROOT avisando que un usuario
+ * solicitó recuperar su contraseña. No apunta a ninguna fila de negocio
+ * (no hay "movimiento" ni similar) -- por eso usa tipo_referencia
+ * "USUARIO" + id_referencia = id del usuario que la solicitó, y deja el
+ * detalle legible en `mensaje` para que se muestre directo en la campanita.
+ */
+export const notificarSolicitudPassword = async (usuario) => {
+    try {
+        const adminsYRoot = await obtenerAdminsYRoot();
+
+        const mensaje = `${usuario.nombre} ${usuario.apellido} (RUT ${usuario.rut}) solicitó recuperar su contraseña.`;
+
+        const notificaciones = adminsYRoot.map((admin) =>
+            notificacionRepository.create({
+                id_usuario_destinatario: admin.id_usuario,
+                tipo: "SOLICITUD_PASSWORD",
+                tipo_referencia: "USUARIO",
+                id_referencia: usuario.id_usuario,
+                mensaje,
+                leido: false,
+            })
+        );
+
+        if (notificaciones.length > 0) {
+            await notificacionRepository.save(notificaciones);
+        }
+
+        return [notificaciones, null];
+    } catch (error) {
+        return [null, error.message];
+    }
+};
+
+/**
+ * Punto de entrada público (sin JWT, porque quien la usa está deslogueado
+ * por definición): recibe un identificador (email o RUT), busca al
+ * usuario y -si existe- notifica a los ADMIN/ROOT.
+ *
+ * Por seguridad (no revelar si un correo/RUT existe en el sistema) la
+ * respuesta hacia el front es SIEMPRE el mismo mensaje genérico, exista o
+ * no una cuenta con ese identificador -- solo cambia si internamente se
+ * generó o no la notificación.
+ */
+export const solicitarRecuperacionPassword = async (identifier) => {
+    try {
+        const valor = (identifier || "").trim();
+        if (!valor) return [null, "Debes ingresar tu correo o RUT."];
+
+        // FIX: el RUT se guarda en la BD sin puntos (ej. "10000000-1"), pero
+        // el usuario puede escribirlo con puntos ("10.000.000-1") en el
+        // formulario. Sin normalizar, el match fallaba silenciosamente y
+        // nunca se creaba la notificación (ni error ni aviso -- por diseño
+        // la respuesta es siempre genérica, así que el fallo pasaba
+        // desapercibido). Solo se le quitan los puntos al candidato a RUT;
+        // el email se compara tal cual, porque ahí los puntos sí son
+        // parte válida de la dirección (ej. "juan.perez@empresa.cl").
+        const valorRutNormalizado = valor.replace(/\./g, "").toUpperCase();
+
+        const usuario = await usuarioRepository.findOne({
+            where: [
+                { email: valor, activo: true },
+                { rut: valor, activo: true },
+                { rut: valorRutNormalizado, activo: true },
+            ],
+        });
+
+        if (usuario) {
+            await notificarSolicitudPassword(usuario);
+        }
+
+        return [
+            { message: "Si el correo o RUT corresponde a una cuenta registrada, se notificó al equipo administrador." },
+            null,
+        ];
+    } catch (error) {
+        return [null, error.message];
+    }
 };
 
 /**

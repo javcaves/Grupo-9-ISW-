@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { FaLayerGroup, FaShieldHalved, FaChartLine, FaUsers, FaBoxesStacked, FaEnvelope, FaLock, FaRightToBracket } from "react-icons/fa6";
-import { FaGoogle, FaMicrosoft } from "react-icons/fa";
+import { Modal } from "../components/Modal";
+import { NotificacionesService } from "../api/notificaciones.service";
 
 export default function Login() {
   const { loginUser } = useAuth();
@@ -9,6 +10,37 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // ---- Recuperar contraseña (notifica a los ADMIN, no resetea nada acá) ----
+  const [modalRecuperarAbierto, setModalRecuperarAbierto] = useState(false);
+  const [identifierRecuperar, setIdentifierRecuperar] = useState("");
+  const [enviandoRecuperar, setEnviandoRecuperar] = useState(false);
+  const [mensajeRecuperar, setMensajeRecuperar] = useState("");
+
+  function cerrarModalRecuperar() {
+    setModalRecuperarAbierto(false);
+    setIdentifierRecuperar("");
+    setMensajeRecuperar("");
+  }
+
+  async function handleSolicitarRecuperacion(e) {
+    e.preventDefault();
+    setEnviandoRecuperar(true);
+    setMensajeRecuperar("");
+    try {
+      const res = await NotificacionesService.solicitarRecuperacionPassword(identifierRecuperar);
+      const data = res?.data ?? res;
+      setMensajeRecuperar(
+        data?.message || "Si el correo o RUT corresponde a una cuenta registrada, se notificó al equipo administrador."
+      );
+    } catch (err) {
+      setMensajeRecuperar(
+        err?.response?.data?.message || "No se pudo enviar la solicitud. Inténtalo más tarde."
+      );
+    } finally {
+      setEnviandoRecuperar(false);
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -122,7 +154,7 @@ export default function Login() {
 
             <div className="flex justify-between items-center text-xs font-semibold">
               <label className="flex items-center gap-2 text-[#475569]"><input type="checkbox" className="w-3.5 h-3.5 accent-[#7c3aed]" /> Recordarme</label>
-              <a href="#" className="text-[#7c3aed]">¿Olvidaste tu contraseña?</a>
+              <button type="button" onClick={() => setModalRecuperarAbierto(true)} className="text-[#7c3aed]">¿Olvidaste tu contraseña?</button>
             </div>
 
             <button 
@@ -132,9 +164,43 @@ export default function Login() {
               <FaRightToBracket /> {loading ? "Procesando..." : "Iniciar Sesión"}
             </button>
           </form>
-          <p className="mt-7 text-center text-sm text-[#64748b]">Recuerda solicitar tu cuenta a tu supervisor</p>
+          <p className="mt-7 text-center text-sm text-[#64748b]">Recuerda solicitar acceso a tu supervisor</p>
         </section>
       </div>
+
+      <Modal isOpen={modalRecuperarAbierto} onClose={cerrarModalRecuperar} title="Recuperar contraseña" variant="center">
+        <form className="space-y-4" onSubmit={handleSolicitarRecuperacion}>
+          <p className="text-sm text-[#64748b]">
+            Ingresa tu correo o RUT. Le avisaremos al equipo administrador para que te ayude a restablecer tu contraseña.
+          </p>
+
+          <div className="relative">
+            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
+            <input
+              type="text"
+              required
+              value={identifierRecuperar}
+              onChange={(e) => setIdentifierRecuperar(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 text-sm rounded-[14px] border border-[#0f172a]/10 bg-white focus:ring-4 focus:ring-[#7c3aed]/10 focus:border-[#7c3aed] transition-all outline-none"
+              placeholder="correo@empresa.cl o RUT"
+            />
+          </div>
+
+          {mensajeRecuperar && (
+            <div className="p-3.5 bg-indigo-50 text-indigo-700 text-sm rounded-[14px] border border-indigo-100 font-medium">
+              {mensajeRecuperar}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={enviandoRecuperar}
+            className="w-full py-3 rounded-[16px] bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] text-white font-bold flex items-center justify-center gap-2 shadow-[0_10px_20px_rgba(124,58,237,0.2)] hover:-translate-y-0.5 transition-all disabled:opacity-70"
+          >
+            {enviandoRecuperar ? "Enviando..." : "Notificar al equipo administrador"}
+          </button>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -16,4 +16,12 @@ export const NotificacionesService = {
     return api.put("/notificaciones/leido-todas");
   },
 
+  /**
+   * Endpoint público (no requiere sesión): notifica a los ADMIN/ROOT que
+   * alguien solicitó recuperar su contraseña.
+   */
+  solicitarRecuperacionPassword(identifier) {
+    return api.post("/notificaciones/solicitud-password", { identifier });
+  },
+
 };
