@@ -1,12 +1,13 @@
 // pages/admin/proyectos/ProyectoHome.jsx
 import { useState, useEffect, useCallback } from "react";
-import { Pencil, Trash2, RotateCcw } from "lucide-react";
+import { Pencil, Trash2, RotateCcw, ArrowRightCircle, Undo2, MoreVertical } from "lucide-react";
 import { ProyectoService } from "../../../api/proyecto.service";
 import { Card }            from "../../../components/Card";
 import LayoutContent       from "../../../layouts/LayoutContent";
 import { ListToolbar }     from "../../../components/ListToolbar";
 import ProyectoFormModal   from "../../../components/modals/ProyectoFormModal";
 import ConfirmDeleteProyectoModal from "../../../components/modals/ConfirmDeleteProyectoModal";
+import CambiarFaseProyectoModal from "../../../components/modals/CambiarFaseProyectoModal";
 
 const ESTADO_BADGE = {
   EN_PREPARACION: { label: "En Preparación", cls: "bg-amber-100 text-amber-700" },
@@ -20,6 +21,21 @@ const ESTADOS_FILTRO = [
   { value: "FINALIZADO",     label: "Finalizado" },
 ];
 
+// Orden del flujo de fases. Desactivar NO es una fase más (es el flag
+// `activo`, ya manejado por ConfirmDeleteProyectoModal/handleReactivar);
+// por eso este arreglo solo cubre los 3 estados de `estado`.
+const ORDEN_FASES = ["EN_PREPARACION", "EN_CURSO", "FINALIZADO"];
+
+function faseSiguiente(estado) {
+  const i = ORDEN_FASES.indexOf(estado);
+  return i >= 0 && i < ORDEN_FASES.length - 1 ? ORDEN_FASES[i + 1] : null;
+}
+
+function faseAnterior(estado) {
+  const i = ORDEN_FASES.indexOf(estado);
+  return i > 0 ? ORDEN_FASES[i - 1] : null;
+}
+
 export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
   const [proyectos, setProyectos] = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -29,6 +45,8 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
   const [proyectoEditar, setProyectoEditar]       = useState(null);
   const [proyectoEliminar, setProyectoEliminar]   = useState(null);
   const [reactivandoId, setReactivandoId]         = useState(null);
+  const [cambioFase, setCambioFase]               = useState(null); // { proyecto, nuevoEstado, direccion }
+  const [menuAbiertoId, setMenuAbiertoId]         = useState(null);
 
   // ── Filtros ──────────────────────────────────────────────────────────
   const [busqueda, setBusqueda]           = useState("");
@@ -60,6 +78,16 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  useEffect(() => {
+    function handleClickFuera(e) {
+      if (!e.target.closest("[data-menu-proyecto]")) {
+        setMenuAbiertoId(null);
+      }
+    }
+    document.addEventListener("click", handleClickFuera);
+    return () => document.removeEventListener("click", handleClickFuera);
+  }, []);
 
   async function handleReactivar(proyecto) {
     setReactivandoId(proyecto.id_proyecto);
@@ -139,6 +167,9 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
     const cantidadEmpleados = proyecto.cantidad_empleados ?? 0;
     const supervisores = proyecto.supervisores ?? [];
     const inactivo = !proyecto.activo;
+    const siguiente = faseSiguiente(proyecto.estado);
+    const anterior = faseAnterior(proyecto.estado);
+    const menuAbierto = menuAbiertoId === proyecto.id_proyecto;
 
     return (
       <Card
@@ -154,6 +185,7 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
         onClick={inactivo ? undefined : () => onSeleccionarProyecto(proyecto)}
       >
         <div className="relative z-10 flex flex-col h-full">
+          {/* ── Encabezado: ícono + badges + menú de acciones ── */}
           <div className="flex items-center gap-3 mb-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
@@ -171,7 +203,7 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
             )}
 
             {esAdmin && (
-              <div className="ml-auto flex items-center gap-1">
+              <div className="ml-auto relative" data-menu-proyecto>
                 {inactivo ? (
                   <button
                     onClick={(e) => {
@@ -179,33 +211,51 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
                       handleReactivar(proyecto);
                     }}
                     disabled={reactivandoId === proyecto.id_proyecto}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors disabled:opacity-40"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors disabled:opacity-40"
                     title="Reactivar proyecto"
                   >
-                    <RotateCcw size={14} className={reactivandoId === proyecto.id_proyecto ? "animate-spin" : ""} />
+                    <RotateCcw size={15} className={reactivandoId === proyecto.id_proyecto ? "animate-spin" : ""} />
                   </button>
                 ) : (
                   <>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setProyectoEditar(proyecto);
+                        setMenuAbiertoId(menuAbierto ? null : proyecto.id_proyecto);
                       }}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                      title="Editar proyecto"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                      title="Más acciones"
                     >
-                      <Pencil size={14} />
+                      <MoreVertical size={16} />
                     </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setProyectoEliminar(proyecto);
-                      }}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                      title="Eliminar proyecto"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+
+                    {menuAbierto && (
+                      <div
+                        className="absolute right-0 top-9 z-20 w-40 rounded-xl border shadow-lg py-1 text-sm"
+                        style={{ background: "var(--card-bg)", borderColor: "var(--card-border)" }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => {
+                            setMenuAbiertoId(null);
+                            setProyectoEditar(proyecto);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 transition-colors"
+                          style={{ color: "var(--card-title)" }}
+                        >
+                          <Pencil size={13} /> Editar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMenuAbiertoId(null);
+                            setProyectoEliminar(proyecto);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 size={13} /> {proyecto.estado === "FINALIZADO" ? "Desactivar" : "Eliminar"}
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -222,6 +272,43 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
               empleado{cantidadEmpleados !== 1 ? "s" : ""}
             </span>
           </h2>
+
+          {/* ── Progreso de fase (solo proyectos activos) ── */}
+          {!inactivo && <FaseStepper estadoActual={proyecto.estado} />}
+
+          {/* ── Acción principal: avanzar / anular / desactivar ── */}
+          {esAdmin && !inactivo && (
+            <div className="flex items-center gap-2 mt-1 mb-1" onClick={(e) => e.stopPropagation()}>
+              {siguiente ? (
+                <button
+                  style={{ background: 'var(--button-bg)', color: 'var(--button-text)' }}
+                  onClick={() => setCambioFase({ proyecto, nuevoEstado: siguiente, direccion: "avanzar" })}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-transform hover:scale-[1.02]"
+                >
+                  Avanzar a {ESTADO_BADGE[siguiente]?.label}
+                  <ArrowRightCircle size={14} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setProyectoEliminar(proyecto)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                >
+                  Desactivar proyecto
+                  <Trash2 size={14} />
+                </button>
+              )}
+
+              {anterior && (
+                <button
+                  onClick={() => setCambioFase({ proyecto, nuevoEstado: anterior, direccion: "retroceder" })}
+                  title={`Anular avance (volver a ${ESTADO_BADGE[anterior]?.label})`}
+                  className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                >
+                  <Undo2 size={15} />
+                </button>
+              )}
+            </div>
+          )}
 
           {supervisores.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
@@ -257,7 +344,7 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
   const totalFiltrado = proyectosActivos.length + (mostrarInactivos ? proyectosInactivos.length : 0);
 
   const contenido = totalFiltrado === 0 ? (
-    <div className="col-span-4 text-center py-16 text-sm text-gray-400">
+    <div className="col-span-full text-center py-16 text-sm text-gray-400">
       <i className="fas fa-folder-open text-3xl mb-3 block opacity-30" />
       {proyectos.length === 0
         ? "No hay proyectos disponibles."
@@ -353,6 +440,54 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
         proyecto={proyectoEliminar}
         onSuccess={cargar}
       />
+
+      <CambiarFaseProyectoModal
+        isOpen={!!cambioFase}
+        onClose={() => setCambioFase(null)}
+        proyecto={cambioFase?.proyecto}
+        nuevoEstado={cambioFase?.nuevoEstado}
+        direccion={cambioFase?.direccion}
+        onSuccess={cargar}
+      />
     </>
+  );
+}
+
+// Progreso visual de la fase actual: 3 puntos conectados por una línea,
+// las fases ya completadas y la línea hasta ahí se pintan en verde, la
+// fase actual queda resaltada con un anillo. Puramente informativo --
+// las acciones de avanzar/anular viven en los botones de abajo.
+function FaseStepper({ estadoActual }) {
+  const idx = ORDEN_FASES.indexOf(estadoActual);
+
+  return (
+    <div className="flex items-center gap-1.5 my-3">
+      {ORDEN_FASES.map((fase, i) => {
+        const completada = idx >= 0 && i < idx;
+        const actual = i === idx;
+
+        return (
+          <div key={fase} className="flex items-center flex-1 last:flex-none">
+            <span
+              className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors ${
+                completada
+                  ? "bg-emerald-500"
+                  : actual
+                    ? "bg-indigo-600 ring-4 ring-indigo-100"
+                    : "bg-gray-200"
+              }`}
+              title={ESTADO_BADGE[fase]?.label}
+            />
+            {i < ORDEN_FASES.length - 1 && (
+              <span
+                className={`flex-1 h-0.5 mx-1 rounded-full transition-colors ${
+                  completada ? "bg-emerald-500" : "bg-gray-200"
+                }`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

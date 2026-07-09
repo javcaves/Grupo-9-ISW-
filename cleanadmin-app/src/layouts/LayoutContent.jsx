@@ -6,8 +6,18 @@ export default function LayoutContent({
   toolbar,
   stats, 
   table, 
-  actions = [] 
+  actions = [],
+  statsCols = 4, // cantidad de columnas de la grilla de tarjetas en desktop (lg). Default 4 para no afectar a las demás vistas.
 }) {
+  const COLS_LG = {
+    2: "lg:grid-cols-2",
+    3: "lg:grid-cols-3",
+    4: "lg:grid-cols-4",
+    5: "lg:grid-cols-5",
+    6: "lg:grid-cols-6",
+  };
+  const claseColsLg = COLS_LG[statsCols] ?? COLS_LG[4];
+
   return (
     <section 
       className="view-panel backdrop-blur-lg rounded-3xl p-8 shadow-xl border"
@@ -41,20 +51,20 @@ export default function LayoutContent({
         </div>
       </div>
 
-      {/* FIX: antes esta prop se recibía pero nunca se renderizaba —
-          ActividadesView.jsx (y ahora ProyectoHome.jsx) le pasan
-          `toolbar` esperando ver la barra de búsqueda/filtros, y se
-          perdía en silencio. */}
-      {toolbar && (
-        <div className="mb-6">
-          {toolbar}
+      {/* Grilla de Stats (tarjetas) */}
+      {stats && (
+        <div className={`stats-grid grid grid-cols-1 md:grid-cols-2 ${claseColsLg} gap-6 mb-8`}>
+          {stats}
         </div>
       )}
 
-      {/* Grilla de Stats */}
-      {stats && (
-        <div className="stats-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats}
+      {/* FIX: antes esta prop se recibía pero nunca se renderizaba —
+          ActividadesView.jsx (y ahora ProyectoHome.jsx) le pasan
+          `toolbar` esperando ver la barra de búsqueda/filtros, y se
+          perdía en silencio. Ahora se muestra debajo de las tarjetas. */}
+      {toolbar && (
+        <div className="mb-6">
+          {toolbar}
         </div>
       )}
       
