@@ -73,7 +73,7 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr, onManageColaciones, onEl
 
         <div className="mt-auto space-y-2">
           <button
-            onClick={() => onGenerarQr?.(turno)}
+            onClick={() => onGenerarQr?.(turno, 'ENTRADA')}
             className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
             style={{
               color: "#fff",
@@ -82,7 +82,20 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr, onManageColaciones, onEl
                 : "linear-gradient(135deg,#7c3aed,#3b82f6)",
             }}
           >
-            {tieneQrActivo ? "👁️ Ver QR de Asistencia" : "📱 Generar QR de Asistencia"}
+            {tieneQrActivo ? "👁️ Ver QR de Entrada" : "📱 Generar QR de Entrada"}
+          </button>
+
+          <button
+            onClick={() => onGenerarQr?.(turno, 'SALIDA')}
+            className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none"
+            style={{
+              color: "#fff",
+              background: tieneQrActivo
+                ? "linear-gradient(135deg,#059669,#10b981)"
+                : "linear-gradient(135deg,#9333ea,#a855f7)",
+            }}
+          >
+            {tieneQrActivo ? "👁️ Ver QR de Salida" : "📱 Generar QR de Salida"}
           </button>
 
           <button
