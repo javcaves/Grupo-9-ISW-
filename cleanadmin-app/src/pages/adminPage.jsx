@@ -32,6 +32,8 @@ export default function AdminPage() {
   const [activeMenu, setActiveMenu] = useState("proyectos");
   const [activeTab,  setActiveTab]  = useState("");
 
+  const esEncargado = user?.rol === 'ENCARGADO';
+
   // Proyectos maneja su propio TopBar interno — no pasamos tabs ni config hardcodeada
   const esProyectos = activeMenu === "proyectos";
 
@@ -50,10 +52,12 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-screen" style={{ background: "var(--bg-color)" }}>
-      <Sidebar activeMenu={activeMenu} setActiveMenu={(menu) => {
-        setActiveMenu(menu);
-        setActiveTab(""); // reset tab al cambiar módulo
-      }} />
+      {!esEncargado && (
+        <Sidebar activeMenu={activeMenu} setActiveMenu={(menu) => {
+          setActiveMenu(menu);
+          setActiveTab(""); // reset tab al cambiar módulo
+        }} />
+      )}
 
       <main className="flex-1 flex flex-col overflow-auto p-7">
         <TopBar

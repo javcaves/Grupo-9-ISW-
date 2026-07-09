@@ -22,11 +22,13 @@ export const ProyectoService = {
   /**
    * Obtiene todos los proyectos.
    * Solo ROOT y ADMIN.
+   * @param {{incluirInactivos?: boolean}} filtros
    */
-  async listarTodos() {
+  async listarTodos(filtros = {}) {
 
     const response = await api.get(
-      `${URL}/todos`
+      `${URL}/todos`,
+      filtros
     );
 
     return response.data;
@@ -81,6 +83,19 @@ export const ProyectoService = {
 
     const response = await api.delete(
       `${URL}/${idProyecto}`
+    );
+
+    return response.data;
+
+  },
+
+  /**
+   * Reactiva un proyecto previamente desactivado.
+   */
+  async reactivar(idProyecto) {
+
+    const response = await api.patch(
+      `${URL}/${idProyecto}/reactivar`
     );
 
     return response.data;

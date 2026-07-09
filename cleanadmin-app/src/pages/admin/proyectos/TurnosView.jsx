@@ -82,9 +82,12 @@ export default function TurnosView({ proyecto }) {
     const intervalId = window.setInterval(async () => {
       const { vigente, asistenciaActual, empleados } = await consultarEstadoJornada(qrTurno.id_turno);
 
-      setQrEmpleados(empleados);
-      setJornadasActivas((prev) => ({ ...prev, [qrTurno.id_turno]: vigente }));
-
+      setQrEmpleados((prev) =>
+        JSON.stringify(prev) === JSON.stringify(empleados) ? prev : empleados
+      );
+      setJornadasActivas((prev) =>
+        prev[qrTurno.id_turno] === vigente ? prev : { ...prev, [qrTurno.id_turno]: vigente }
+      );
       if (!vigente && qrToken) {
         // La jornada se cerró o el token expiró mientras el modal estaba abierto
         // (ej. se acabó el horario del turno) -> se inhabilita el QR en pantalla.

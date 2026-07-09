@@ -3,8 +3,8 @@ import ButtonTemplate from '../components/Buttons';
 
 export default function LayoutContent({ 
   header, 
-  stats, 
   toolbar,
+  stats, 
   table, 
   actions = [] 
 }) {
@@ -41,6 +41,16 @@ export default function LayoutContent({
         </div>
       </div>
 
+      {/* FIX: antes esta prop se recibía pero nunca se renderizaba —
+          ActividadesView.jsx (y ahora ProyectoHome.jsx) le pasan
+          `toolbar` esperando ver la barra de búsqueda/filtros, y se
+          perdía en silencio. */}
+      {toolbar && (
+        <div className="mb-6">
+          {toolbar}
+        </div>
+      )}
+
       {/* Grilla de Stats */}
       {stats && (
         <div className="stats-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -48,7 +58,7 @@ export default function LayoutContent({
         </div>
       )}
       
-      {/* Contenedor de la Tabla*/}
+      {/* Contenedor de la Tabla */}
       {table && (
         <div 
           className="table-wrapper rounded-2xl overflow-hidden border"
@@ -57,11 +67,6 @@ export default function LayoutContent({
             borderColor: 'var(--lc-table-border)'
           }}
         >
-          {toolbar && (
-            <div className="p-4" style={{ borderBottom: '1px solid var(--lc-table-border)' }}>
-              {toolbar}
-            </div>
-          )}
           {table}
         </div>
       )}

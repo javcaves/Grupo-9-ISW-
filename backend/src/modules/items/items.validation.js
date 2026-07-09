@@ -88,3 +88,12 @@ export const actualizarInventarioValidation = Joi.object({
         "array.min": "La lista de ítems auditados no puede estar vacía."
     })
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
+
+// ================= VALIDACIÓN PARA VINCULAR ITEM EXISTENTE A UN PROYECTO =================
+export const vincularItemValidation = Joi.object({
+    id_item:      Joi.number().integer().positive().required()
+                    .messages({ "any.required": "Debe indicar qué item vincular." }),
+    id_proyecto:  Joi.number().integer().positive().required(),
+    cantidad:     Joi.number().integer().min(0).default(0),
+    stock_minimo: Joi.number().integer().min(0).default(0),
+}).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });

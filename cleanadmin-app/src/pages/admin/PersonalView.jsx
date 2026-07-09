@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { ADMIN_CONFIG }        from "../../data/adminConfig";
 import LayoutContent           from "../../layouts/LayoutContent";
 import { Table }               from "../../components/Table";
+import { ListToolbar }         from "../../components/ListToolbar";
 import { Card }                from "../../components/Card";
 import { UsuarioService }      from "../../api/usuario.service";
 import ConfirmarEliminacion    from "../../components/modals/Eliminar";
@@ -10,6 +11,13 @@ import HojaDeVida              from "../../components/modals/HojaDeVida";
 import NuevoPersonalModal      from "../../components/modals/NuevoPersonalModal";
 import CambiarPasswordModal    from "../../components/modals/CambiarPasswordModal";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
+
+const ROLES_PERSONAL = {
+  ADMIN:      { label: "Admin",      cls: "bg-indigo-50 text-indigo-700" },
+  SUPERVISOR: { label: "Supervisor", cls: "bg-blue-50   text-blue-700"   },
+  ENCARGADO:  { label: "Encargado",  cls: "bg-amber-50  text-amber-700"  },
+  EMPLEADO:   { label: "Empleado",   cls: "bg-gray-100  text-gray-600"   },
+};
 
 function construirColumnasPersonal() {
   return [
@@ -70,6 +78,12 @@ export default function PersonalView() {
   const [modalPasswordAbierto, setModalPasswordAbierto] = useState(false);
   const [usuarioPassword, setUsuarioPassword]            = useState(null);
 
+  // ── Búsqueda + filtros + orden ──────────────────────────────────
+  const [busqueda, setBusqueda]                 = useState("");
+  const [filtroRol, setFiltroRol]               = useState("");
+  const [filtroEstado, setFiltroEstado]         = useState("");
+  const [ordenDescendente, setOrdenDescendente] = useState(false);
+
   const COLUMNAS_PERSONAL = construirColumnasPersonal();
 
   async function cargarDatos() {
@@ -119,6 +133,53 @@ export default function PersonalView() {
     },
   ];
 
+  // ── Búsqueda + filtro + orden ────────────────────────────────────
+  const usuariosFiltrados = usuarios
+    .filter((u) => {
+      if (!busqueda.trim()) return true;
+      const q = busqueda.trim().toLowerCase();
+      return (
+        `${u.nombre ?? ""} ${u.apellido ?? ""}`.toLowerCase().includes(q) ||
+        u.rut?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q)
+      );
+    })
+    .filter((u) => !filtroRol || u.rol === filtroRol)
+    .filter((u) => !filtroEstado || (filtroEstado === "activo" ? u.activo : !u.activo))
+    .sort((a, b) => {
+      const cmp = `${a.nombre ?? ""} ${a.apellido ?? ""}`.localeCompare(`${b.nombre ?? ""} ${b.apellido ?? ""}`);
+      return ordenDescendente ? -cmp : cmp;
+    });
+
+  const barraHerramientas = (
+    <ListToolbar
+      searchValue={busqueda}
+      onSearchChange={setBusqueda}
+      searchPlaceholder="Buscar por nombre, RUT o email..."
+      filters={[
+        {
+          label: "Rol",
+          allLabel: "Todos",
+          value: filtroRol,
+          onChange: setFiltroRol,
+          options: Object.entries(ROLES_PERSONAL).map(([value, { label }]) => ({ value, label })),
+        },
+        {
+          label: "Estado",
+          allLabel: "Todos",
+          value: filtroEstado,
+          onChange: setFiltroEstado,
+          options: [
+            { value: "activo", label: "Activo" },
+            { value: "inactivo", label: "Inactivo" },
+          ],
+        },
+      ]}
+      sortLabel={ordenDescendente ? "Z → A" : "A → Z"}
+      onToggleSort={() => setOrdenDescendente((v) => !v)}
+    />
+  );
+
   const tablaContenido = loading ? (
     <div className="flex items-center justify-center py-16">
       <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
@@ -126,8 +187,12 @@ export default function PersonalView() {
   ) : (
     <Table
       columns={COLUMNAS_PERSONAL}
-      data={usuarios}
-      emptyMessage="No hay personal registrado en el sistema."
+      data={usuariosFiltrados}
+      emptyMessage={
+        usuarios.length === 0
+          ? "No hay personal registrado en el sistema."
+          : "Ningún registro coincide con la búsqueda o el filtro aplicado."
+      }
       extraActions={[
         {
           icon: "fa-chart-line",
@@ -158,6 +223,7 @@ export default function PersonalView() {
       <LayoutContent
         header={{ title: content.title, subtitle: content.subtitle }}
         actions={content.actions}
+        toolbar={barraHerramientas}
         stats={
           <>
             {statsCards.map((card, index) => {
@@ -243,14 +309,7 @@ export default function PersonalView() {
 }
 
 function RolBadge({ rol }) {
-  const map = {
-    ROOT:       { label: "Root",       cls: "bg-purple-50 text-purple-700" },
-    ADMIN:      { label: "Admin",      cls: "bg-indigo-50 text-indigo-700" },
-    SUPERVISOR: { label: "Supervisor", cls: "bg-blue-50   text-blue-700"   },
-    ENCARGADO:  { label: "Encargado",  cls: "bg-amber-50  text-amber-700"  },
-    EMPLEADO:   { label: "Empleado",   cls: "bg-gray-100  text-gray-600"   },
-  };
-  const { label, cls } = map[rol] ?? { label: rol, cls: "bg-gray-100 text-gray-500" };
+  const { label, cls } = ROLES_PERSONAL[rol] ?? { label: rol, cls: "bg-gray-100 text-gray-500" };
   return (
     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>
       {label}

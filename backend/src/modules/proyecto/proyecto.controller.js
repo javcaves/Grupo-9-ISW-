@@ -2,7 +2,8 @@ import * as ProyectoService from './proyecto.service.js';
 import {
     proyectoCreateValidation,
     proyectoIdValidation,
-    proyectoUpdateValidation
+    proyectoUpdateValidation,
+    proyectoQueryValidation
 } from './proyecto.validations.js';
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js";
 
@@ -32,7 +33,10 @@ export const obtenerTodosProyectos = async (req, res) => {
             return handleErrorClient(res, 403, 'acceso denegado', 'no tienes permiso');
         }
 
-        const [proyectos, err] = await ProyectoService.obtenerTodosProyectos();
+        const { error, value } = proyectoQueryValidation.validate(req.query);
+        if (error) return handleErrorClient(res, 400, 'error de validacion', error.message);
+
+        const [proyectos, err] = await ProyectoService.obtenerTodosProyectos(value.incluirInactivos);
         if (err) return handleErrorClient(res, 500, 'error al obtener todos los proyectos', err);
 
         return handleSuccess(res, 200, 'proyectos obtenidos de forma exitosa', proyectos);
@@ -119,6 +123,25 @@ export const eliminarProyecto = async (req, res) => {
         if (err) return handleErrorClient(res, 404, 'error al eliminar', err);
 
         return handleSuccess(res, 200, 'proyecto eliminado de forma exitosa', resultado);
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    }
+};
+
+/**
+ * 4. Reactivar proyecto (Solo Admin/Root)
+ * PATCH /proyectos/:id/reactivar
+ */
+export const reactivarProyecto = async (req, res) => {
+    try {
+        const { error, value } = proyectoIdValidation.validate(req.params);
+        if (error){
+            return handleErrorClient(res, 400, 'error de validacion', error.message);
+        }
+        const [proyecto, err] = await ProyectoService.reactivarProyecto(value.id_proyecto, req.user);
+        if (err) return handleErrorClient(res, 400, 'error al reactivar', err);
+
+        return handleSuccess(res, 200, 'proyecto reactivado de forma exitosa', proyecto);
     } catch (error) {
         return handleErrorServer(res, 500, 'error de servidor', error.message);
     }

@@ -23,6 +23,24 @@ const itemRepo = () => AppDataSource.getRepository(Item);
 const itemProyectoRepo = () => AppDataSource.getRepository(ItemProyecto);
 const movRepo = () => AppDataSource.getRepository(MovimientoInventario);
 
+// Aplana una fila ItemProyecto (+ su relación item) al shape plano que
+// consume el frontend: atributos propios del Item (nombre, tipo,
+// unidad_medida, control) junto a los campos que viven en el vínculo
+// ItemProyecto (cantidad, stock_minimo, ultima_revision, activo).
+const mapItemProyectoDTO = (ip) => ({
+    id_item: ip.id_item,
+    id_proyecto: ip.id_proyecto,
+    nombre: ip.item?.nombre,
+    descripcion: ip.item?.descripcion,
+    tipo: ip.item?.tipo,
+    unidad_medida: ip.item?.unidad_medida,
+    control: ip.item?.control,
+    cantidad_actual: ip.cantidad,
+    stock_minimo: ip.stock_minimo,
+    ultima_revision: ip.ultima_revision,
+    activo: ip.activo,
+});
+
 const TIPOS_QUE_SUMAN = ['ENTRADA', 'ABASTECIMIENTO', 'COMPRA'];
 const TIPOS_QUE_RESTAN = ['SALIDA'];
 
@@ -439,14 +457,87 @@ export const obtenerMovimientosPorItem = async (id_item) => {
     return await movRepo().find({ where: { item: { id_item } }, order: { fecha: 'DESC' } });
 };
 
+export const obtenerPorProyecto = async (id_proyecto) => {
+    const filas = await itemProyectoRepo()
+        .createQueryBuilder('ip')
+        .innerJoinAndSelect('ip.item', 'item')
+        .where('ip.id_proyecto = :id_proyecto', { id_proyecto })
+        .orderBy('item.nombre', 'ASC')
+        .getMany();
+    return filas.map(mapItemProyectoDTO);
+};
+
 export const obtenerBajoStockPorProyecto = async (id_proyecto) => {
-    return await itemProyectoRepo()
+    const filas = await itemProyectoRepo()
         .createQueryBuilder('ip')
         .innerJoinAndSelect('ip.item', 'item')
         .where('ip.id_proyecto = :id_proyecto', { id_proyecto })
         .andWhere('ip.activo = true')
         .andWhere('ip.cantidad <= ip.stock_minimo')
         .getMany();
+    return filas.map(mapItemProyectoDTO);
+};
+
+// Bajo stock a través de TODOS los proyectos (para la vista de
+// inventario global, donde no hay un único "stock" por item -- cada
+// item puede estar vinculado a varios proyectos con cantidades y
+// mínimos distintos).
+export const obtenerBajoStockGlobal = async () => {
+    const filas = await itemProyectoRepo()
+        .createQueryBuilder('ip')
+        .innerJoinAndSelect('ip.item', 'item')
+        .innerJoinAndSelect('ip.proyecto', 'proyecto')
+        .where('ip.activo = true')
+        .andWhere('ip.cantidad <= ip.stock_minimo')
+        .orderBy('item.nombre', 'ASC')
+        .getMany();
+
+    return filas.map((ip) => ({
+        ...mapItemProyectoDTO(ip),
+        proyecto: ip.proyecto ? { id_proyecto: ip.proyecto.id_proyecto, nombre_proy: ip.proyecto.nombre_proy } : null,
+    }));
+};
+
+// ================= VINCULAR / DESVINCULAR ITEM-PROYECTO =================
+// Vincula un item YA EXISTENTE del catálogo a un proyecto. Si el item
+// tuvo un vínculo previo con ese proyecto y fue desvinculado, reactiva
+// esa misma fila (la PK es id_item + id_proyecto, no se puede duplicar).
+export const vincularItemAProyecto = async (data) => {
+    const { id_item, id_proyecto, cantidad = 0, stock_minimo = 0 } = data;
+
+    const item = await itemRepo().findOne({ where: { id_item, activo: true } });
+    if (!item) return [null, 'Item no encontrado o inactivo.'];
+
+    const repo = itemProyectoRepo();
+    let itemProj = await repo.findOne({ where: { id_item, id_proyecto } });
+
+    if (itemProj && itemProj.activo) {
+        return [null, 'Este item ya está vinculado a este proyecto.'];
+    }
+
+    if (itemProj) {
+        itemProj.activo = true;
+        itemProj.cantidad = cantidad;
+        itemProj.stock_minimo = stock_minimo;
+    } else {
+        itemProj = repo.create({ id_item, id_proyecto, cantidad, stock_minimo, activo: true });
+    }
+
+    const guardado = await repo.save(itemProj);
+    return [guardado, null];
+};
+
+// Desvincula (soft) un item de un proyecto: marca activo=false en su
+// fila ItemProyecto. No borra el item del catálogo ni la fila en sí.
+export const desvincularItemDeProyecto = async (id_item, id_proyecto) => {
+    const repo = itemProyectoRepo();
+    const itemProj = await repo.findOne({ where: { id_item, id_proyecto } });
+    if (!itemProj) return [null, 'Este item no está vinculado a este proyecto.'];
+    if (!itemProj.activo) return [null, 'Este item ya estaba desvinculado de este proyecto.'];
+
+    itemProj.activo = false;
+    await repo.save(itemProj);
+    return [{ message: 'Item desvinculado del proyecto.' }, null];
 };
 
 // ================= ESTADISTICAS ((VER)) =================
