@@ -41,8 +41,7 @@ export default function TurnosView({ proyecto }) {
 
       const vigente =
         !!asistenciaActual?.token &&
-        !asistenciaActual?.finalizada && // <- si tu backend usa otro nombre (ej. "activa", "cerrada", "estado"), ajusta esta condición
-        !qrExpirado(asistenciaActual?.token_expira);
+        !asistenciaActual?.finalizada;
 
       return { vigente, asistenciaActual, empleados };
     } catch {
@@ -147,6 +146,29 @@ export default function TurnosView({ proyecto }) {
       onClick: () => setModalCrear(true),
     },
   ];
+
+  async function anularJornada() {
+    if (!qrTurno?.id_turno) return;
+    if (!window.confirm("¿Estás seguro de que deseas ANULAR esta jornada completa? Se eliminará el registro de todos los empleados de este turno para el día de hoy.")) return;
+    
+    setCerrandoJornada(true);
+    try {
+      const snapshot = await AsistenciaService.obtenerActual(qrTurno.id_turno).catch(() => null);
+      const idAsistencia = snapshot?.data?.asistencia?.id_asistencia ?? snapshot?.asistencia?.id_asistencia;
+      if (!idAsistencia) throw new Error("No hay una jornada abierta para anular.");
+
+      await AsistenciaService.eliminar(idAsistencia);
+      setQrEstado("Jornada anulada correctamente.");
+      setQrToken(null);
+      setQrExp(null);
+      setQrEmpleados([]);
+      setJornadasActivas((prev) => ({ ...prev, [qrTurno.id_turno]: false }));
+    } catch (err) {
+      setQrError(err?.response?.data?.message || err?.message || "No se pudo anular la jornada.");
+    } finally {
+      setCerrandoJornada(false);
+    }
+  }
 
   async function cerrarJornada() {
     if (!qrTurno?.id_turno) return;
@@ -351,13 +373,22 @@ export default function TurnosView({ proyecto }) {
             <QRGenerator token={qrToken} proyecto={proyecto?.nombre_proy} turno={qrTurno?.nombre} exp={qrExp} />
           )}
           {!qrLoading && !qrError && (
-            <button
-              onClick={cerrarJornada}
-              disabled={cerrandoJornada}
-              className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
-            >
-              {cerrandoJornada ? "Cerrando..." : "Cerrar jornada"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={anularJornada}
+                disabled={cerrandoJornada}
+                className="rounded-lg bg-red-100 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-200 disabled:opacity-60"
+              >
+                Anular jornada
+              </button>
+              <button
+                onClick={cerrarJornada}
+                disabled={cerrandoJornada}
+                className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
+              >
+                {cerrandoJornada ? "Cerrando..." : "Cerrar jornada"}
+              </button>
+            </div>
           )}
 
           {qrEmpleados.length > 0 && (

@@ -223,9 +223,15 @@ export const finalizarAsistenciaService = async (id_asistencia) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export const obtenerHistorialService = async (id_proyecto) => {
     return await asistenciaRepo.find({
-        where: { proyecto: { id_proyecto }, activo: true },
+        where: { proyecto: { id_proyecto } },
         order: { fecha: "DESC" },
-        relations: { turno: true, encargado: true }
+        relations: { 
+            turno: true, 
+            encargado: true,
+            asistenciaEmpleados: {
+                empleado: true
+            }
+        }
     });
 };
 
