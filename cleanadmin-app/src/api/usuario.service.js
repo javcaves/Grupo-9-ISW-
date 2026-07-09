@@ -56,13 +56,13 @@ export const UsuarioService = {
    * TODO: endpoint asumido, no confirmado contra el backend real — ajustar
    * la ruta/método si el backend expone esto distinto (ej. PATCH, u otro path).
    */
+    resetearPassword(idUsuario, nuevaPassword) {
+    return api.put(`${URL}/${idUsuario}/reset-password`, { password: nuevaPassword });
+  },
+
+  // Alias, por si algo del código existente sigue llamando cambiarPassword.
   cambiarPassword(idUsuario, nuevaPassword) {
-
-    return api.put(
-      `${URL}/${idUsuario}/password`,
-      { password: nuevaPassword }
-    );
-
+    return this.resetearPassword(idUsuario, nuevaPassword);
   },
 
   /**

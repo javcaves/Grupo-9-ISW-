@@ -1,11 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Card } from "../../components/Card";
 import { AsistenciaService } from "../../api/asistencia.service";
 import { useAuth } from "../../context/AuthContext";
-import { ProyectoService } from "../../api/proyecto.service";
 import { formatearFecha } from "../../utils/formatters";
+import SolicitarCorreccionAsistenciaModal from "../../components/modals/SolicitarCorreccionAsistenciaModal";
+
+const ETIQUETAS_ESTADO_SOLICITUD = {
+  PENDIENTE: { label: "Pendiente", className: "bg-amber-100 text-amber-700" },
+  APROBADO: { label: "Aprobada", className: "bg-green-100 text-green-700" },
+  RECHAZADO: { label: "Rechazada", className: "bg-red-100 text-red-700" },
+};
 
 export default function EmployeeHistorial() {
 
@@ -13,6 +19,9 @@ export default function EmployeeHistorial() {
   const { user, logoutUser } = useAuth();
 
   const [loading, setLoading] = useState(true);
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [registroParaCorregir, setRegistroParaCorregir] = useState(null);
 
   const [monthlySummary, setMonthlySummary] = useState({
     workedDays: 0,
@@ -20,68 +29,52 @@ export default function EmployeeHistorial() {
     absences: 0,
   });
 
-  const [attendanceHistory, setAttendanceHistory] = useState([]);
-  const [taskHistory, setTaskHistory] = useState({
-    completedTasks: 0,
-    lastCompleted: [],
-  });
+  // NOTA: taskHistory seguía apuntando a un campo que el backend real nunca
+  // devolvió desde este endpoint. Se deja en 0 -- no es parte de este
+  // cambio; requeriría conectar con TareaService por separado.
+  const [taskHistory] = useState({ completedTasks: 0, lastCompleted: [] });
 
-  const [appeals, setAppeals] = useState([]);
-
-  useEffect(() => {
-
-    async function cargarHistorial() {
-
-      if (!user?.id_usuario) {
-        console.warn("⚠️ Usuario no disponible aún");
-        setLoading(false);
-        return;
-      }
-
-      try {
-
-  console.log("📡 Cargando historial para usuario:", user.id_usuario);
-
-console.log("📡 Cargando historial para usuario:", user.id_usuario);
-
-const response = await AsistenciaService.obtenerMisAsistencias();
-
-  console.log("5️⃣ Historial recibido:", response);
-
-  const data = response?.data ?? response;
-
-  console.log("6️⃣ Data procesada:", data);
-
-  if (!data) {
-    console.warn("⚠️ Sin data en historial");
-    return;
-  }
-
-  setMonthlySummary({
-    workedDays: data?.monthlySummary?.workedDays ?? 0,
-    delays: data?.monthlySummary?.delays ?? 0,
-    absences: data?.monthlySummary?.absences ?? 0,
-  });
-
-  setAttendanceHistory(data?.attendanceHistory ?? []);
-
-  setTaskHistory({
-    completedTasks: data?.taskHistory?.completedTasks ?? 0,
-    lastCompleted: data?.taskHistory?.lastCompleted ?? [],
-  });
-
-  setAppeals(data?.appeals ?? []);
-
-} catch (error) {
-  console.error("❌ Error cargando historial:", error);
-} finally {
-        setLoading(false);
-      }
+  const cargarHistorial = useCallback(async () => {
+    if (!user?.id_usuario) {
+      console.warn("⚠️ Usuario no disponible aún");
+      setLoading(false);
+      return;
     }
 
-    cargarHistorial();
+    try {
+      const [historialRes, solicitudesRes] = await Promise.all([
+        AsistenciaService.obtenerMisAsistencias(),
+        AsistenciaService.listarMisSolicitudes().catch((err) => {
+          console.error("❌ Error cargando solicitudes de corrección:", err);
+          return [];
+        }),
+      ]);
 
+      // CAMBIO: el backend real (/asistencia/mi-historial) devuelve
+      // directamente un arreglo plano de registros, no un objeto anidado
+      // { monthlySummary, attendanceHistory, ... }. El resumen mensual
+      // ahora se calcula acá mismo a partir de ese arreglo real.
+      const registros = historialRes?.data ?? historialRes ?? [];
+
+      setAttendanceHistory(registros);
+      setMonthlySummary({
+        workedDays: registros.filter((r) => ["PRESENTE", "ATRASO", "RETIRADO"].includes(r.estado)).length,
+        delays: registros.filter((r) => r.estado === "ATRASO").length,
+        absences: registros.filter((r) => r.estado === "FALTA_INJUSTIFICADA").length,
+      });
+
+      setSolicitudes(solicitudesRes?.data ?? solicitudesRes ?? []);
+
+    } catch (error) {
+      console.error("❌ Error cargando historial:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    cargarHistorial();
+  }, [cargarHistorial]);
 
   const handleLogout = async () => {
     const confirmLogout = window.confirm("¿Deseas cerrar sesión?");
@@ -104,7 +97,6 @@ const response = await AsistenciaService.obtenerMisAsistencias();
           <h1 className="text-2xl font-bold" style={{ color: "var(--card-title)" }}>
             Historial
           </h1>
-
           <p className="text-sm mt-1" style={{ color: "var(--card-subtitle)" }}>
             Revisa tu asistencia, tareas y registros anteriores
           </p>
@@ -150,22 +142,29 @@ const response = await AsistenciaService.obtenerMisAsistencias();
           )}
 
           {attendanceHistory.map((record) => (
-            <div key={record.id}
+            <div key={record.id_asistencia}
               className="rounded-2xl p-4"
               style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
 
-              <div className="font-semibold mb-3">{formatearFecha(record.date)}</div>
+              <div className="font-semibold mb-3">{formatearFecha(record.fecha)}</div>
 
               <div className="flex justify-between text-sm">
                 <span>Entrada</span>
-                <strong>{record.checkIn}</strong>
+                <strong>{record.hora_ingreso ?? "--:--"}</strong>
               </div>
 
               <div className="flex justify-between text-sm mt-2">
                 <span>Salida</span>
-                <strong>{record.checkOut}</strong>
+                <strong>{record.hora_egreso ?? "--:--"}</strong>
               </div>
 
+              <button
+                onClick={() => setRegistroParaCorregir(record)}
+                className="w-full mt-3 px-3 py-2 rounded-xl text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+              >
+                <i className="fas fa-pen mr-1.5" />
+                Solicitar corrección
+              </button>
             </div>
           ))}
 
@@ -208,34 +207,36 @@ const response = await AsistenciaService.obtenerMisAsistencias();
 
       </Card>
 
-      {/* APELACIONES */}
-      <Card title="Apelaciones" icon="fa-file-signature">
+      {/* SOLICITUDES DE CORRECCIÓN (antes "Apelaciones", ahora con datos reales) */}
+      <Card title="Mis solicitudes de corrección" icon="fa-file-signature">
 
         <div className="space-y-3">
 
-          {appeals.length === 0 && (
+          {solicitudes.length === 0 && (
             <div className="text-sm text-gray-500">
-              No hay apelaciones registradas.
+              No has solicitado correcciones de asistencia.
             </div>
           )}
 
-          {appeals.map((appeal) => (
-            <div key={appeal.id}
-              className="flex items-center justify-between rounded-2xl p-4"
-              style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+          {solicitudes.map((solicitud) => {
+            const meta = ETIQUETAS_ESTADO_SOLICITUD[solicitud.estado_solicitud] || ETIQUETAS_ESTADO_SOLICITUD.PENDIENTE;
+            return (
+              <div key={solicitud.id_solicitud}
+                className="flex items-center justify-between rounded-2xl p-4"
+                style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
 
-              <span>{appeal.date ? formatearFecha(appeal.date) : appeal.date}</span>
+                <div className="min-w-0">
+                  <span className="text-sm font-medium">{formatearFecha(solicitud.fecha_solicitud)}</span>
+                  <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]">{solicitud.motivo}</div>
+                </div>
 
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                appeal.status === "Aprobada"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}>
-                {appeal.status}
-              </span>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${meta.className}`}>
+                  {meta.label}
+                </span>
 
-            </div>
-          ))}
+              </div>
+            );
+          })}
 
         </div>
 
@@ -254,6 +255,13 @@ const response = await AsistenciaService.obtenerMisAsistencias();
           Cerrar Sesión
         </button>
       </Card>
+
+      <SolicitarCorreccionAsistenciaModal
+        isOpen={registroParaCorregir !== null}
+        registro={registroParaCorregir}
+        onClose={() => setRegistroParaCorregir(null)}
+        onSuccess={cargarHistorial}
+      />
 
     </div>
   );

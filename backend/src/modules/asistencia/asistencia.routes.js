@@ -4,6 +4,7 @@ import { Router } from "express";
 import * as AsistenciaCtrl from "./asistencia.controller.js";
 import { authenticateJwt } from "../../middlewares/auth.middleware.js";
 import { checkRole } from "../../middlewares/role.middleware.js";
+import * as SolicitudAsistenciaCtrl from "./solicitudAsistencia.controller.js";
 
 const router = Router();
 
@@ -102,6 +103,37 @@ router.get(
     authenticateJwt,
     checkRole(rolesEmpleado),
     AsistenciaCtrl.obtenerMiHistorial
+);
+
+// ============================================================================
+// SOLICITUDES DE CORRECCIÓN (EMPLEADO crea y consulta las suyas; gestión resuelve)
+// ============================================================================
+router.post(
+    "/solicitudes",
+    authenticateJwt,
+    checkRole(rolesEmpleado),
+    SolicitudAsistenciaCtrl.crear
+);
+
+router.get(
+    "/solicitudes/pendientes",
+    authenticateJwt,
+    checkRole(rolesGestion),
+    SolicitudAsistenciaCtrl.listarPendientes
+);
+
+router.get(
+    "/solicitudes/mias",
+    authenticateJwt,
+    checkRole(rolesEmpleado),
+    SolicitudAsistenciaCtrl.listarMias
+);
+
+router.patch(
+    "/solicitudes/:id_solicitud/resolver",
+    authenticateJwt,
+    checkRole(rolesGestion),
+    SolicitudAsistenciaCtrl.resolver
 );
 
 export default router;

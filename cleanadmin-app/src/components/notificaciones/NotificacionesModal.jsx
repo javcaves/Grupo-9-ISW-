@@ -3,54 +3,50 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { useNotificaciones } from '../../context/NotificacionesContext';
 import SolicitudResolverModal from './SolicitudResolverModal';
-
-const ETIQUETAS_TIPO = {
-  SOLICITUD_PENDIENTE: { texto: 'Nueva solicitud', color: 'text-indigo-600', icono: 'fa-inbox' },
-  SOLICITUD_APROBADA: { texto: 'Solicitud aprobada', color: 'text-emerald-600', icono: 'fa-check-circle' },
-  SOLICITUD_RECHAZADA: { texto: 'Solicitud rechazada', color: 'text-red-600', icono: 'fa-times-circle' },
-  SOLICITUD_PASSWORD: { texto: 'Recuperación de contraseña', color: 'text-amber-600', icono: 'fa-key' },
-};
-
-function formatearFecha(fechaIso) {
-  try {
-    return new Date(fechaIso).toLocaleString('es-CL', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-  } catch {
-    return fechaIso;
-  }
-}
+import PasswordResolverModal from './PasswordResolverModal';
+import AsistenciaSolicitudResolverModal from './AsistenciaSolicitudResolverModal';
+import HistorialSolicitudesModal from './HistorialSolicitudesModal';
+import { ETIQUETAS_TIPO, formatearFecha } from './notificacionMeta';
 
 export default function NotificacionesModal({ isOpen, onClose }) {
   const { notificaciones, marcarLeida, marcarTodasLeidas, refrescar } = useNotificaciones();
-  const [idMovimientoSeleccionado, setIdMovimientoSeleccionado] = useState(null);
 
-  // FIX: antes la lista solo se cargaba al montar NotificacionesProvider
-  // (una vez) + cada 10 minutos en background. Si el usuario ya tenía la
-  // pestaña abierta y logeado desde antes de que se generara una
-  // notificación nueva (ej. alguien pidió recuperar su contraseña
-  // después), la campana se quedaba mostrando datos viejos hasta el
-  // próximo poll. Ahora, cada vez que se ABRE el modal, se pide la lista
-  // fresca -- así "hacer clic en la campana" siempre trae lo último,
-  // sin depender del timer.
+  const [idMovimientoSeleccionado, setIdMovimientoSeleccionado] = useState(null);
+  const [idUsuarioPasswordSeleccionado, setIdUsuarioPasswordSeleccionado] = useState(null);
+  const [idSolicitudAsistenciaSeleccionada, setIdSolicitudAsistenciaSeleccionada] = useState(null);
+  const [historialAbierto, setHistorialAbierto] = useState(false);
+
   useEffect(() => {
     if (isOpen) refrescar();
   }, [isOpen, refrescar]);
 
-  const ordenadas = [...notificaciones].sort(
+  // Defensivo: aunque el context ya pide solo resuelto=false al backend,
+  // filtramos también acá por si algo llega resuelto en el medio de un poll.
+  const pendientes = notificaciones.filter((n) => !n.resuelto);
+  const ordenadas = [...pendientes].sort(
     (a, b) => new Date(b.fecha) - new Date(a.fecha)
   );
 
   const handleClickNotificacion = (notif) => {
     if (!notif.leido) marcarLeida(notif.id_notificacion);
 
-    if (notif.tipo === 'SOLICITUD_PENDIENTE') {
-      // id_referencia reemplaza al viejo id_movimiento (ver notificacion.entity.js);
-      // para este tipo, tipo_referencia siempre es "MOVIMIENTO_INVENTARIO".
-      setIdMovimientoSeleccionado(notif.id_referencia);
+    switch (notif.tipo) {
+      case 'SOLICITUD_PENDIENTE':
+        setIdMovimientoSeleccionado(notif.id_referencia);
+        break;
+      case 'SOLICITUD_PASSWORD':
+        setIdUsuarioPasswordSeleccionado(notif.id_referencia);
+        break;
+      case 'SOLICITUD_ASISTENCIA':
+        setIdSolicitudAsistenciaSeleccionada(notif.id_referencia);
+        break;
+      default:
+        // SOLICITUD_APROBADA / SOLICITUD_RECHAZADA: informativas, no
+        // requieren acción; ya nacen con resuelto=true así que en teoría
+        // ni deberían aparecer acá, pero por si acaso no hacen nada más
+        // que marcarse como leídas.
+        break;
     }
-    // para APROBADA/RECHAZADA/PASSWORD no hay acción adicional, solo se marca leida
   };
 
   return (
@@ -58,11 +54,11 @@ export default function NotificacionesModal({ isOpen, onClose }) {
       <Modal isOpen={isOpen} onClose={onClose} title="Notificaciones" variant="side">
         <div className="flex items-center justify-between mb-3 px-1">
           <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            {notificaciones.length === 0
-              ? 'No tienes notificaciones'
-              : `${notificaciones.length} en total`}
+            {pendientes.length === 0
+              ? 'No tienes solicitudes pendientes'
+              : `${pendientes.length} pendiente${pendientes.length === 1 ? '' : 's'}`}
           </p>
-          {notificaciones.some((n) => !n.leido) && (
+          {pendientes.some((n) => !n.leido) && (
             <button
               onClick={marcarTodasLeidas}
               className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
@@ -109,7 +105,7 @@ export default function NotificacionesModal({ isOpen, onClose }) {
             );
           })}
 
-          {notificaciones.length === 0 && (
+          {pendientes.length === 0 && (
             <div className="text-center py-10">
               <i className="fas fa-inbox text-2xl mb-2" style={{ color: 'var(--text-secondary)' }} />
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -118,12 +114,38 @@ export default function NotificacionesModal({ isOpen, onClose }) {
             </div>
           )}
         </div>
+
+        <button
+          onClick={() => setHistorialAbierto(true)}
+          className="w-full mt-3 px-3 py-2.5 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+          style={{ background: 'var(--bg-color)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}
+        >
+          <i className="fas fa-clock-rotate-left text-xs" />
+          Ver historial de solicitudes
+        </button>
       </Modal>
 
       <SolicitudResolverModal
         isOpen={idMovimientoSeleccionado !== null}
         idMovimiento={idMovimientoSeleccionado}
         onClose={() => setIdMovimientoSeleccionado(null)}
+      />
+
+      <PasswordResolverModal
+        isOpen={idUsuarioPasswordSeleccionado !== null}
+        idUsuario={idUsuarioPasswordSeleccionado}
+        onClose={() => setIdUsuarioPasswordSeleccionado(null)}
+      />
+
+      <AsistenciaSolicitudResolverModal
+        isOpen={idSolicitudAsistenciaSeleccionada !== null}
+        idSolicitud={idSolicitudAsistenciaSeleccionada}
+        onClose={() => setIdSolicitudAsistenciaSeleccionada(null)}
+      />
+
+      <HistorialSolicitudesModal
+        isOpen={historialAbierto}
+        onClose={() => setHistorialAbierto(false)}
       />
     </>
   );

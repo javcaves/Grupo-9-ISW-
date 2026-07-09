@@ -306,6 +306,14 @@ export const resolverSolicitud = async (id_mov, dataResolucion) => {
     if (!err) {
         const [, errNotif] = await NotificacionService.notificarResolucionSolicitud(actualizado);
         if (errNotif) console.error('error al notificar resolucion de solicitud:', errNotif);
+    
+        // NUEVO: cierra la notificación original (la que vieron los aprobadores)
+        const [, errResuelto] = await NotificacionService.marcarResueltasPorReferencia({
+            tipo_referencia: 'MOVIMIENTO_INVENTARIO',
+            id_referencia: actualizado.id_mov,
+            tipo: 'SOLICITUD_PENDIENTE',
+        });
+        if (errResuelto) console.error('error al marcar notificacion de item como resuelta:', errResuelto);
     }
 
     return resultado;
