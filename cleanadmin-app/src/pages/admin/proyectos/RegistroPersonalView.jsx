@@ -319,42 +319,40 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   );
 
   const tablaContenido = loading ? (
-    <div className="flex items-center justify-center py-16">
-      <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
-    </div>
-  ) : (
-    <>
-      
-      <Table
-        columns={COLUMNAS_PERSONAL}
-        data={usuariosFiltrados}
-        emptyMessage={
-          usuarios.length === 0
-            ? "No hay personal registrado en este proyecto."
-            : "Nadie coincide con la búsqueda o el filtro aplicado."
+  <div className="flex items-center justify-center py-16">
+    <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
+  </div>
+) : (
+  <>
+    <Table
+      columns={COLUMNAS_PERSONAL}
+      data={usuariosFiltrados}
+      emptyMessage={
+        usuarios.length === 0
+          ? "No hay personal registrado en este proyecto."
+          : "Nadie coincide con la búsqueda o el filtro aplicado."
+      }
+      extraActions={[
+        {
+          icon: "fa-chart-line",
+          title: "Ver hoja de vida",
+          show: (u) => u.rol === "EMPLEADO",
+          onClick: (u) => { setEmpleadoHojaDeVida(u); setAbrirHojaDeVida(true); },
+          hoverBg: "#dbeafe",
+          hoverText: "#2563eb",
+        },
+      ]}
+      onDelete={(item) => {
+        if (!puedeDesvincular(rolEjecutor, item.rol)) {
+          alert(`No tienes permisos para desvincular a un usuario con rol ${item.rol}.`);
+          return;
         }
-        extraActions={[
-          {
-            icon: "fa-chart-line",
-            title: "Ver hoja de vida",
-            show: (u) => u.rol === "EMPLEADO",
-            onClick: (u) => { setEmpleadoHojaDeVida(u); setAbrirHojaDeVida(true); },
-            hoverBg: "#dbeafe",
-            hoverText: "#2563eb",
-          },
-        ]}
-        onDelete={(item) => {
-          if (!puedeDesvincular(rolEjecutor, item.rol)) {
-            alert(`No tienes permisos para desvincular a un usuario con rol ${item.rol}.`);
-            return;
-          }
-          setUsuarioADesvincular(item);
-          setModalEliminarAbierto(true);
-        }}
-      />
-      {barraBusquedaFiltro}
-    </>
-  );
+        setUsuarioADesvincular(item);
+        setModalEliminarAbierto(true);
+      }}
+    />
+  </>
+);
 
   const status = getEstadoPersonal();
 
@@ -423,6 +421,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
             })}
           </>
         }
+        toolbar={barraBusquedaFiltro}
         table={tablaContenido}
       />
 

@@ -33,7 +33,7 @@ const Usuario = new EntitySchema({
         },
         observacion:{
             type:"text",
-            nullable:false,
+            nullable:true,
         },
         email:{
             type: "varchar",
