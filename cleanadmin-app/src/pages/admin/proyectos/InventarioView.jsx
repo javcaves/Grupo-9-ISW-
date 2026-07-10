@@ -9,7 +9,7 @@ import RegistrarMovimientoModal from "../../../components/modals/RegistrarMovimi
 import CrearItemProyectoModal   from "../../../components/modals/CrearItemProyectoModal";
 import AgregarItemExistenteModal from "../../../components/modals/AgregarItemExistenteModal";
 import { FaBoxesStacked, FaTriangleExclamation, FaArrowRightArrowLeft, FaCircleCheck } from "react-icons/fa6";
-
+import EditarItemProyectoModal from "../../../components/modals/EditarItemProyectoModal";
 const COLUMNAS_ITEMS = [
   {
     key:   "nombre",
@@ -478,6 +478,14 @@ export default function InventarioView({ proyecto }) {
           actualizarLista={cargarDatos}
         />
       )}
+      {modalEditarAbierto && (
+     <EditarItemProyectoModal
+       isOpen={modalEditarAbierto}
+       onClose={() => setModalEditarAbierto(false)}
+       item={itemAEditar}
+       actualizarLista={cargarDatos}
+     />
+   )}
     </>
   );
 }
