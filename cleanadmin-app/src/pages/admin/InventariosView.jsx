@@ -39,7 +39,7 @@ const COLUMNAS_ITEMS = [
     key:   "unidad_medida",
     label: "Unidad de Medida",
     icon:  "fa-ruler",
-    render: (val) => val ?? "—",
+    render: (val) => val ? <span className="inline-block lowercase first-letter:uppercase">{val}</span> : "—",
   },
   {
     key:   "control",
@@ -94,7 +94,7 @@ const COLUMNAS_BAJO_STOCK = [
     render: (val, item) => (
       <span className="font-semibold text-red-500">
         {val ?? 0}
-        {item.unidad_medida ? ` ${item.unidad_medida}` : ""}
+        {item.unidad_medida ? <>{" "}<span className="inline-block lowercase first-letter:uppercase">{item.unidad_medida}</span></> : ""}
         <i className="fas fa-triangle-exclamation ml-1 text-xs text-red-400" />
       </span>
     ),
