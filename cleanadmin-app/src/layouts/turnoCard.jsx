@@ -78,11 +78,11 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr, onManageColaciones, onEl
             style={{
               color: "#fff",
               background: tieneQrActivo
-                ? "linear-gradient(135deg,#059669,#10b981)"
+                ? "linear-gradient(135deg,#7c3aed,#3b82f6)"
                 : "linear-gradient(135deg,#7c3aed,#3b82f6)",
             }}
           >
-            {tieneQrActivo ? "👁️ Ver QR de Entrada" : "📱 Generar QR de Entrada"}
+            {tieneQrActivo ? "ⓘ Ver QR de Entrada" : "⛶ Generar QR de Entrada"}
           </button>
 
           <button
@@ -91,18 +91,18 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr, onManageColaciones, onEl
             style={{
               color: "#fff",
               background: tieneQrActivo
-                ? "linear-gradient(135deg,#059669,#10b981)"
+                ? "linear-gradient(135deg,#9333ea,#a855f7)"
                 : "linear-gradient(135deg,#9333ea,#a855f7)",
             }}
           >
-            {tieneQrActivo ? "👁️ Ver QR de Salida" : "📱 Generar QR de Salida"}
+            {tieneQrActivo ? "ⓘ Ver QR de Salida" : "⛶ Generar QR de Salida"}
           </button>
 
           <button
             onClick={() => onManageColaciones?.(turno)}
             className="w-full py-2 text-sm font-medium rounded-xl transition-colors duration-200 focus:outline-none bg-amber-100 hover:bg-amber-200 text-amber-800"
           >
-            🍔 Gestionar Colaciones
+            ☕︎ Gestionar Colaciones
           </button>
 
           <div className="flex gap-2">
@@ -116,7 +116,7 @@ export const TurnoCard = ({ turno, onEdit, onGenerarQr, onManageColaciones, onEl
               onMouseEnter={(e) => { e.currentTarget.style.background = "var(--turno-btn-bg-hover)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "var(--turno-btn-bg)"; }}
             >
-              ✏️ Modificar
+              ✎ Modificar
             </button>
 
             <button
