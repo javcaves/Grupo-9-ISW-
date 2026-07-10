@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Modal } from "../Modal";
 import { FormContainer } from "../Formulario";
 import { UsuarioService } from "../../api/usuario.service";
+import PasswordInput from "../PasswordInput";
 
 export default function CambiarPasswordModal({ isOpen, onClose, usuario, onSuccess }) {
   const [password, setPassword]                 = useState("");
@@ -45,11 +46,7 @@ export default function CambiarPasswordModal({ isOpen, onClose, usuario, onSucce
       onClose();
     } catch (err) {
       console.error("CambiarPasswordModal:", err);
-      setError(
-        err?.response?.data?.errorDetails ??
-        err?.response?.data?.message ??
-        "Ocurrió un error al actualizar la contraseña."
-      );
+      setError(err?.message || "Ocurrió un error al actualizar la contraseña.");
     } finally {
       setGuardando(false);
     }
@@ -72,8 +69,7 @@ export default function CambiarPasswordModal({ isOpen, onClose, usuario, onSucce
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
-          <input
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -83,8 +79,7 @@ export default function CambiarPasswordModal({ isOpen, onClose, usuario, onSucce
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
-          <input
-            type="password"
+          <PasswordInput
             value={confirmarPassword}
             onChange={(e) => setConfirmarPassword(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"

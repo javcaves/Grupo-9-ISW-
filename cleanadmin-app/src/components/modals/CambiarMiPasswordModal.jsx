@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Modal } from "../Modal";
 import { FormContainer } from "../Formulario";
 import { UsuarioService } from "../../api/usuario.service";
+import PasswordInput from "../PasswordInput";
 
 export default function CambiarMiPasswordModal({ isOpen, onClose }) {
   const [passwordActual, setPasswordActual]           = useState("");
@@ -51,11 +52,7 @@ export default function CambiarMiPasswordModal({ isOpen, onClose }) {
       onClose();
     } catch (err) {
       console.error("CambiarMiPasswordModal:", err);
-      setError(
-        err?.response?.data?.errorDetails ??
-        err?.response?.data?.message ??
-        "No se pudo cambiar la contraseña. Verifica que la contraseña actual sea correcta."
-      );
+      setError(err?.message || "No se pudo cambiar la contraseña. Verifica que la contraseña actual sea correcta.");
     } finally {
       setGuardando(false);
     }
@@ -78,8 +75,7 @@ export default function CambiarMiPasswordModal({ isOpen, onClose }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña actual</label>
-          <input
-            type="password"
+          <PasswordInput
             value={passwordActual}
             onChange={(e) => setPasswordActual(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -88,8 +84,7 @@ export default function CambiarMiPasswordModal({ isOpen, onClose }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
-          <input
-            type="password"
+          <PasswordInput
             value={passwordNueva}
             onChange={(e) => setPasswordNueva(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -99,8 +94,7 @@ export default function CambiarMiPasswordModal({ isOpen, onClose }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar nueva contraseña</label>
-          <input
-            type="password"
+          <PasswordInput
             value={confirmarPasswordNueva}
             onChange={(e) => setConfirmarPasswordNueva(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"

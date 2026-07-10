@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { FaLayerGroup, FaShieldHalved, FaChartLine, FaUsers, FaBoxesStacked, FaEnvelope, FaLock, FaRightToBracket } from "react-icons/fa6";
 import { Modal } from "../components/Modal";
+import PasswordInput from "../components/PasswordInput";
 import { NotificacionesService } from "../api/notificaciones.service";
 
 export default function Login() {
@@ -143,11 +144,11 @@ export default function Login() {
             <div className="space-y-2">
               <label className="font-semibold text-xs text-[#334155]">Contraseña</label>
               <div className="relative">
-                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
-                <input 
-                  type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 text-sm rounded-[14px] border border-[#0f172a]/10 bg-white focus:ring-4 focus:ring-[#7c3aed]/10 focus:border-[#7c3aed] transition-all outline-none" 
-                  placeholder="••••••••" 
+                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94a3b8] z-10" />
+                <PasswordInput
+                  required value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 py-3 text-sm rounded-[14px] border border-[#0f172a]/10 bg-white focus:ring-4 focus:ring-[#7c3aed]/10 focus:border-[#7c3aed] transition-all outline-none"
+                  placeholder="••••••••"
                 />
               </div>
             </div>

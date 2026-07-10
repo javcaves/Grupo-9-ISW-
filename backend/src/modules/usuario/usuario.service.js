@@ -200,6 +200,32 @@ export const eliminarUsuarioService = async(id, ejecutor) =>{
  * ya que la acción real la puede ejecutar cualquier ADMIN/SUPERVISOR/ROOT.
  * No se genera ninguna notificación de vuelta (gestión fuera del sistema).
  */
+// Cambio de contraseña por el propio usuario (requiere validar la actual)
+export const cambiarMiPassword = async (id_usuario, passwordActual, passwordNueva) => {
+    try {
+        const usuarioRepository = AppDataSource.getRepository("Usuario");
+        
+        const usuario = await usuarioRepository.findOne({
+            select: { id_usuario: true, password: true },
+            where: { id_usuario: parseInt(id_usuario) },
+        });
+        if (!usuario) throw new Error("Usuario no encontrado.");
+
+        const coincide = await bcrypt.compare(passwordActual, usuario.password);
+        if (!coincide) throw new Error("La contraseña actual no es correcta.");
+
+        const saltRounds = 10;
+        usuario.password = await bcrypt.hash(passwordNueva, saltRounds);
+        usuario.fecha_actualizacion = new Date();
+        await usuarioRepository.save(usuario);
+
+        return [{ message: "Contraseña actualizada con éxito." }, null];
+    } catch (error) {
+        console.log("error en cambiarMiPassword", error);
+        return [null, error.message || "error interno del servidor"];
+    }
+};
+
 export const resetearPasswordUsuario = async (id_usuario, nuevaPassword) => {
     try {
         const usuarioRepository = AppDataSource.getRepository("Usuario");
