@@ -44,6 +44,9 @@ export const movimientoCreateValidation = Joi.object({
             })
         }),
     item_sugerido:   Joi.string().max(100).allow(null, ''),
+    tipo:            Joi.string().valid(...TIPOS_ITEM).allow(null, ''),
+    unidad_medida:   Joi.string().valid(...UNIDADES_MEDIDA).allow(null, ''),
+    control:         Joi.string().valid(...TIPOS_CONTROL).allow(null, ''),
     id_proyecto:     Joi.number().integer().positive().required()
                         .messages({ "any.required": "Debe indicar el proyecto afectado." }),
     id_emisor:       Joi.number().integer().positive().required(),
