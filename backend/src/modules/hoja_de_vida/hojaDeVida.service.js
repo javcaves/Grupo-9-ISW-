@@ -9,7 +9,8 @@ const actividadRepository = AppDataSource.getRepository("Actividad");
 const categoriaRepository = AppDataSource.getRepository("Categoria");
 const calificacionEmpleadoRepository = AppDataSource.getRepository("CalificacionEmpleado");
 const asistenciaEmpleadoRepository = AppDataSource.getRepository("AsistenciaEmpleado");
-const TurnoEmpleadoRepository = AppDataSource.getRepository("TurnoEmpleado");
+const turnoEmpleadoRepository = AppDataSource.getRepository("TurnoEmpleado");
+const EvaluacionDesempenoRepository = AppDataSource.getRepository("EvaluacionDesempeno");
 
 export const hojaDeVidaService = {
     async obtenerHojaDeVida(idEmpleado){
@@ -103,45 +104,68 @@ export const hojaDeVidaService = {
                 };
             });
 
-            //=========CALIFICACIONES POR CATEGORIA============
-            const calificaciones = await calificacionEmpleadoRepository.find({
-                where: { id_empleado: idEmpleado, activo: true },
-                relations: ["categoria", "otorgadoPor"],
-                order: { fecha: "DESC" }
+            //==========EVLUACION DESEMPEÑO============
+            const evaluaciones = await EvaluacionDesempenoRepository.find({
+                where: { 
+                    empleado: { id_usuario: idEmpleado }, 
+                    activo: true 
+                },
+                relations: ["tarea", "tarea.actividad", "tarea.actividad.categoria", "evaluador"],
+                order: { fecha_evaluacion: "DESC" }
             });
+            const evaluacionesPorCategoria = {};
 
-            const calificacionesPorCategoria = {};
-            calificaciones.forEach(c =>{
-                const nombreCat = c.categoria?.nombre || "Sin categoría";
-                if(!calificacionesPorCategoria[nombreCat]){
-                    calificacionesPorCategoria[nombreCat] = {
+            evaluaciones.forEach(e =>{
+                const nombreCat = e.tarea?.actividad?.categoria?.nombre || "Sin categoría";
+                if(!evaluacionesPorCategoria[nombreCat]){
+                    evaluacionesPorCategoria[nombreCat] = {
                         total: 0,
                         suma: 0,
-                        calificaciones: []
+                        cumplio: 0,
+                        noCumplio: 0,
+                        evaluaciones: []
                     };
                 }
-                calificacionesPorCategoria[nombreCat].total++;
-                calificacionesPorCategoria[nombreCat].suma += c.calificacion;
-                calificacionesPorCategoria[nombreCat].push({
-                    calificacion: c.calificacion,
-                    comentario: c.comentario,
-                    fecha: c.fecha,
-                    otorgadoPor: c.otorgadoPor?.nombre || "Desconocido"
+                evaluacionesPorCategoria[nombreCat].total++;
+                evaluacionesPorCategoria[nombreCat].suma += e.calificacion;
+
+                if (e.noCumplio){
+                    evaluacionesPorCategoria[nombreCat].cumplio++;
+                }else{
+                    evaluacionesPorCategoria[nombreCat].noCumplio++;
+                }
+
+                evaluacionesPorCategoria[nombreCat].push({
+                    id_evaluacion: e.id_evaluacion,
+                    id_tarea: e.tarea?.id_tarea,
+                    descripcion_tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
+                    cumplio: e.cumplio,
+                    calificacion: e.calificacion,
+                    comentario: e.comentario,
+                    fecha_evaluacion: e.fecha_evaluacion,
+                    evaluador: e.evaluador?.nombre || "Desconocido"
                 });
             });
 
-            const desempenoPorCategoria = Object.keys(calificacionesPorCategoria).map(cat => ({
+            const desempenoPorCategoria = Object.keys(evaluacionesPorCategoria).map(cat => ({
                 categoria: cat,
-                promedio: (calificacionesPorCategoria[cat].suma / calificacionesPorCategoria[cat].total).toFixed(1),
-                totalCalificaciones: calificacionesPorCategoria[cat].total,
-                calificaciones: calificacionesPorCategoria[cat].calificaciones
+                promedio: (evaluacionesPorCategoria[cat].suma / evaluacionesPorCategoria[cat].total).toFixed(1),
+                totalEvaluaciones: evaluacionesPorCategoria[cat].total,
+                cumplio: evaluacionesPorCategoria[cat].cumplio,
+                noCumplio: evaluacionesPorCategoria[cat].noCumplio,
+                tasaCumplimiento: evaluacionesPorCategoria[cat].total > 0
+                    ? Math.round((evaluacionesPorCategoria[cat].cumplio / evaluacionesPorCategoria[cat].total) * 100)
+                    : 0,
+                evaluaciones: evaluacionesPorCategoria[cat].evaluaciones
             }));
 
             //======DESEMPEÑO GENERAL, DATOS PUROS======
-            const todasLasCalificaciones = calificaciones.map(c=> c.calificacion);
+            const todasCalificaciones = evaluaciones.map(e=> e.calificacion);
             const promedioGeneral = todasCalificaciones.length > 0
                 ? (todasCalificaciones.reduce((a, b) => a + b, 0) / todasCalificaciones.length).toFixed(1)
                 : null;
+            const totalCumplio = evaluaciones.filter(e => e.cumplio).length;
+            const totalNoCumplio = evaluaciones.filter(e => !e.cumplio).length;
             const getNivelDesempeno = (prom) =>{
                 if (prom === null) return null;
                 const p = parseFloat(prom);
@@ -169,24 +193,36 @@ export const hojaDeVidaService = {
                 asistencias: resumenAsistencias,
                 turnos: turnosFormateados,
                 tareas,
-                desempenoPorCategoria,
+                evaluaciones: {
+                    porCategoria: desempenoPorCategoria,
+                    resumen: {
+                        total: evaluaciones.length,
+                        cumplio: totalCumplio,
+                        noCumplio: totalNoCumplio,
+                        tasaCumplimiento: evaluaciones.length > 0
+                            ? Math.round((totalCumplio / evaluaciones.length) * 100)
+                            : 0,
+                        ultimas: evaluaciones.slice(0, 5).map(e => ({
+                            id_evaluacion: e.id_evaluacion,
+                            tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
+                            cumplio: e.cumplio,
+                            calificacion: e.calificacion,
+                            comentario: e.comentario,
+                            fecha: e.fecha_evaluacion,
+                            evaluador: e.evaluador?.nombre || "Desconocido"
+                        }))
+                    }
+                },
                 desempenoGeneral:{
                     promedio: promedioGeneral,
                     nivel: getNivelDesempeno(promedioGeneral),
-                    totalCalificaciones: todasCalificaciones.length,
-                    ultimasCalificaciones: calificaciones.slice(0, 5).map(c=>({
-                        categoria: c.categoria?.nombre || "Sin categoría",
-                        calificacion: c.calificacion,
-                        comentario: c.comentario,
-                        fecha: c.fecha,
-                        otorgadoPor: c.otorgadoPor?.nombre || "Desconocido"
-                    }))
+                    totalCalificaciones: todasCalificaciones.length
                 },
                 resumen: {
                     totalProyectos: proyectos.length,
                     totalTareas: tareas.length,
                     totalAsistencias: asistencias.length,
-                    totalCalificaciones: calificaciones.length,
+                    totalEvaluaciones: evaluaciones.length,
                     tasaAsistencia: asistencias.length > 0
                     ? Math.round((asistencias.filter(a => a.estado === "ASISTIDO").length / asistencias.length) * 100)
                     : null
@@ -312,46 +348,68 @@ export const hojaDeVidaService = {
             }));
 
             //========CALIFICACIONES FILTRADAS X PROYECTO
-            //misma funcion que en global, solo cambio que busco con id proyecto y filtra lo demas
-            const calificaciones = await calificacionEmpleadoRepository.find({
+           //==========EVLUACION DESEMPEÑO============
+            const evaluaciones = await EvaluacionDesempenoRepository.find({
                 where: { 
-                    id_empleado: idEmpleado, 
-                    id_proyecto: parseInt(idProyecto),  
+                    empleado: { id_usuario: idEmpleado }, 
                     activo: true 
                 },
-                relations: ["categoria", "otorgadoPor"],
-                order: { fecha: "DESC" }
+                relations: ["tarea", "tarea.actividad", "tarea.actividad.categoria", "evaluador"],
+                order: { fecha_evaluacion: "DESC" }
             });
 
-            const calificacionesPorCategoria = {};
-            calificaciones.forEach(c =>{
-                const nombreCat = c.categoria?.nombre || "Sin categoría";
-                if(!calificacionesPorCategoria[nombreCat]){
-                    calificacionesPorCategoria[nombreCat] = {
+            const evaluacionesFiltradas = evaluaciones.filter(e => 
+                e.tarea?.actividad?.id_proyecto === parseInt(idProyecto)
+            );
+
+            const evaluacionesPorCategoria = {};
+
+           evaluacionesFiltradas.forEach(e =>{
+                const nombreCat = e.tarea?.actividad?.categoria?.nombre || "Sin categoría";
+                if(!evaluacionesPorCategoria[nombreCat]){
+                    evaluacionesPorCategoria[nombreCat] = {
                         total: 0,
                         suma: 0,
-                        calificaciones: []
+                        cumplio: 0,
+                        noCumplio: 0,
+                        evaluaciones: []
                     };
                 }
-                calificacionesPorCategoria[nombreCat].total++;
-                calificacionesPorCategoria[nombreCat].suma += c.calificacion;
-                calificacionesPorCategoria[nombreCat].push({
-                    calificacion: c.calificacion,
-                    comentario: c.comentario,
-                    fecha: c.fecha,
-                    otorgadoPor: c.otorgadoPor?.nombre || "Desconocido"
+                evaluacionesPorCategoria[nombreCat].total++;
+                evaluacionesPorCategoria[nombreCat].suma += e.calificacion;
+
+                if (e.noCumplio){
+                    evaluacionesPorCategoria[nombreCat].cumplio++;
+                }else{
+                    evaluacionesPorCategoria[nombreCat].noCumplio++;
+                }
+
+                evaluacionesPorCategoria[nombreCat].push({
+                    id_evaluacion: e.id_evaluacion,
+                    id_tarea: e.tarea?.id_tarea,
+                    descripcion_tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
+                    cumplio: e.cumplio,
+                    calificacion: e.calificacion,
+                    comentario: e.comentario,
+                    fecha_evaluacion: e.fecha_evaluacion,
+                    evaluador: e.evaluador?.nombre || "Desconocido"
                 });
             });
 
-            const desempenoPorCategoria = Object.keys(calificacionesPorCategoria).map(cat => ({
+            const desempenoPorCategoria = Object.keys(evaluacionesPorCategoria).map(cat => ({
                 categoria: cat,
-                promedio: (calificacionesPorCategoria[cat].suma / calificacionesPorCategoria[cat].total).toFixed(1),
-                totalCalificaciones: calificacionesPorCategoria[cat].total,
-                calificaciones: calificacionesPorCategoria[cat].calificaciones
+                promedio: (evaluacionesPorCategoria[cat].suma / evaluacionesPorCategoria[cat].total).toFixed(1),
+                totalEvaluaciones: evaluacionesPorCategoria[cat].total,
+                cumplio: evaluacionesPorCategoria[cat].cumplio,
+                noCumplio: evaluacionesPorCategoria[cat].noCumplio,
+                tasaCumplimiento: evaluacionesPorCategoria[cat].total > 0
+                    ? Math.round((evaluacionesPorCategoria[cat].cumplio / evaluacionesPorCategoria[cat].total) * 100)
+                    : 0,
+                evaluaciones: evaluacionesPorCategoria[cat].evaluaciones
             }));
 
             //======DESEMPEÑO GENERAL, DATOS PUROS======
-            const todasLasCalificaciones = calificaciones.map(c=> c.calificacion);
+            const todasCalificaciones = calificaciones.map(c=> c.calificacion);
             const promedioGeneral = todasCalificaciones.length > 0
                 ? (todasCalificaciones.reduce((a, b) => a + b, 0) / todasCalificaciones.length).toFixed(1)
                 : null;
@@ -382,23 +440,35 @@ export const hojaDeVidaService = {
                 asistencias: resumenAsistencias,
                 turnos: turnosFormateados,
                 tareas,
-                desempenoPorCategoria,
+                evaluaciones: {
+                    porCategoria: desempenoPorCategoria,
+                    resumen: {
+                        total: evaluacionesFiltradas.length,
+                        cumplio: totalCumplio,
+                        noCumplio: totalNoCumplio,
+                        tasaCumplimiento: evaluacionesFiltradas.length > 0
+                            ? Math.round((totalCumplio / evaluacionesFiltradas.length) * 100)
+                            : 0,
+                        ultimas: evaluacionesFiltradas.slice(0, 5).map(e => ({
+                            id_evaluacion: e.id_evaluacion,
+                            tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
+                            cumplio: e.cumplio,
+                            calificacion: e.calificacion,
+                            comentario: e.comentario,
+                            fecha: e.fecha_evaluacion,
+                            evaluador: e.evaluador?.nombre || "Desconocido"
+                        }))
+                    }
+                },
                 desempenoGeneral:{
                     promedio: promedioGeneral,
                     nivel: getNivelDesempeno(promedioGeneral),
-                    totalCalificaciones: todasCalificaciones.length,
-                    ultimasCalificaciones: calificaciones.slice(0, 5).map(c=>({
-                        categoria: c.categoria?.nombre || "Sin categoría",
-                        calificacion: c.calificacion,
-                        comentario: c.comentario,
-                        fecha: c.fecha,
-                        otorgadoPor: c.otorgadoPor?.nombre || "Desconocido"
-                    }))
+                    totalCalificaciones: todasCalificaciones.length
                 },
                 resumen: {
                     totalTareas: tareas.length,
                     totalAsistencias: asistencias.length,
-                    totalCalificaciones: calificaciones.length,
+                    totalEvaluaciones: evaluacionesFiltradas.length,
                     tasaAsistencia: asistencias.length > 0
                     ? Math.round((asistencias.filter(a => a.estado === "ASISTIDO").length / asistencias.length) * 100)
                     : null
