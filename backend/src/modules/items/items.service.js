@@ -172,6 +172,9 @@ export const registrarMovimiento = async (data) => {
                 const movimiento = repoMov.create({
                     item: itemRel,
                     item_sugerido: data.item_sugerido || null,
+                    tipo: data.tipo || null,
+                    unidad_medida: data.unidad_medida || null,
+                    control: data.control || null,
                     id_proyecto: data.id_proyecto,
                     id_emisor: data.id_emisor,
                     id_receptor: data.id_receptor || null,
@@ -277,38 +280,7 @@ export const resolverSolicitud = async (id_mov, dataResolucion) => {
                     mov.item = itemFinal;
                 }
 
-                if (mov.id_proyecto === ID_BODEGA_CENTRAL) {
-                    return [null, 'La Bodega Central no puede solicitarse a sí misma.'];
-                }
-
-                // 1. Validar y restar stock de Bodega Central (origen)
-                const bodegaCentral = await repoItemProj.findOne({
-                    where: { id_proyecto: ID_BODEGA_CENTRAL, id_item: itemFinal.id_item }
-                });
-
-                if (!bodegaCentral || bodegaCentral.cantidad < mov.cantidad) {
-                    return [null, `Stock insuficiente en Bodega Central para abastecer esta solicitud. Disponible: ${bodegaCentral?.cantidad ?? 0}.`];
-                }
-
-                // 2. Sumar stock al proyecto que solicitó (destino)
-                let itemProjDestino = await repoItemProj.findOne({
-                    where: { id_proyecto: mov.id_proyecto, id_item: itemFinal.id_item }
-                });
-                if (!itemProjDestino) {
-                    itemProjDestino = repoItemProj.create({
-                        id_proyecto: mov.id_proyecto,
-                        id_item: itemFinal.id_item,
-                        cantidad: 0,
-                        stock_minimo: 0,
-                        activo: true
-                    });
-                }
-
-                bodegaCentral.cantidad -= mov.cantidad;
-                itemProjDestino.cantidad += mov.cantidad;
-
-                await repoItemProj.save(bodegaCentral);
-                await repoItemProj.save(itemProjDestino);
+                mov.item = itemFinal;
             }
 
             mov.estado_solicitud = dataResolucion.decision;
@@ -453,7 +425,11 @@ export const obtenerMovimientos = async () => {
 };
 
 export const obtenerSolicitudesPendientes = async () => {
-    return await movRepo().find({ where: { tipo_movimiento: 'SOLICITUD', estado_solicitud: 'PENDIENTE' }, order: { fecha: 'ASC' } });
+    return await movRepo().find({
+        where: { tipo_movimiento: 'SOLICITUD', estado_solicitud: 'PENDIENTE' },
+        relations: { proyecto: true, emisor: true },
+        order: { fecha: 'ASC' }
+    });
 };
 
 export const obtenerMovimientosPorItem = async (id_item) => {

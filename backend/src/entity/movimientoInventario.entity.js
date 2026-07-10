@@ -14,6 +14,21 @@ export const MovimientoInventario = new EntitySchema({
             length: 100,
             nullable: true,
         },
+        tipo: {
+            type: "enum",
+            enum: ["MAQUINARIA", "HERRAMIENTA", "UTENSILIO", "PRODUCTO"],
+            nullable: true,
+        },
+        unidad_medida: {
+            type: "enum",
+            enum: ["LITROS", "UNIDADES", "KILOS", "SACOS", "BOLSAS", "METROS"],
+            nullable: true,
+        },
+        control: {
+            type: "enum",
+            enum: ["CONSUMO", "PRESTAMO"],
+            nullable: true,
+        },
         id_proyecto: {
             type: "int",
             nullable: false,

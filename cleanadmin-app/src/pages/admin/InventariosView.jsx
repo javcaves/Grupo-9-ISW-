@@ -175,13 +175,13 @@ const COLUMNAS_SOLICITUDES = [
     key:   "item",
     label: "Ítem",
     icon:  "fa-box",
-    render: (val) => val?.nombre ?? "—",
+    render: (val, row) => val?.nombre ?? row.item_sugerido ?? "—",
   },
   {
     key:   "item",
     label: "Proyecto",
     icon:  "fa-diagram-project",
-    render: (val) => val?.proyecto?.nombre_proy ?? "Sin asignar",
+    render: (val, row) => row.proyecto?.nombre_proy ?? "Sin asignar",
   },
   {
     key:   "tipo",
@@ -333,10 +333,12 @@ export default function InventariosView() {
     });
 
   const solicitudesFiltradas = solicitudes
-    .filter((s) => coincideBusqueda(s.item?.nombre))
-    .filter((s) => !filtroProyecto || s.item?.proyecto?.id_proyecto === parseInt(filtroProyecto, 10))
+    .filter((s) => coincideBusqueda(s.item?.nombre ?? s.item_sugerido))
+    .filter((s) => !filtroProyecto || s.proyecto?.id_proyecto === parseInt(filtroProyecto, 10))
     .sort((a, b) => {
-      const cmp = (a.item?.nombre ?? "").localeCompare(b.item?.nombre ?? "");
+      const nombreA = a.item?.nombre ?? a.item_sugerido ?? "";
+      const nombreB = b.item?.nombre ?? b.item_sugerido ?? "";
+      const cmp = nombreA.localeCompare(nombreB);
       return ordenDescendente ? -cmp : cmp;
     });
 

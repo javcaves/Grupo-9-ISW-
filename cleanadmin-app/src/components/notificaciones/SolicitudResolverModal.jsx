@@ -23,6 +23,7 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
   const [cargando, setCargando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [noEncontrada, setNoEncontrada] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -39,6 +40,7 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
     (async () => {
       setCargando(true);
       setNoEncontrada(false);
+      setErrorMessage(null);
       setSolicitud(null);
       setItemExistente(null);
 
@@ -61,17 +63,20 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
           const resItem = await ItemsService.obtener(match.id_item);
           if (!cancelado) setItemExistente(extraerData(resItem));
         } else {
-          // item nuevo: pre-llenamos el nombre propuesto, el resto lo define quien aprueba
+          // item nuevo: pre-llenamos los campos propuestos por quien solicitó
           setFormData({
             nombre: match.item_sugerido || '',
-            tipo: '',
-            unidad_medida: '',
-            control: '',
+            tipo: match.tipo || '',
+            unidad_medida: match.unidad_medida || '',
+            control: match.control || '',
           });
         }
       } catch (error) {
-        console.error('Error al cargar la solicitud:', error);
-        setNoEncontrada(true);
+        if (!cancelado) {
+          console.error('Error al cargar la solicitud:', error);
+          setErrorMessage(error?.message || 'Error al cargar la solicitud.');
+          setNoEncontrada(false);
+        }
       } finally {
         if (!cancelado) setCargando(false);
       }
@@ -87,12 +92,13 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
   const resolver = async (decision) => {
     if (decision === 'APROBADO' && esItemNuevo) {
       if (!formData.nombre || !formData.tipo || !formData.unidad_medida || !formData.control) {
-        alert('Completa nombre, tipo, unidad de medida y control antes de aprobar un item nuevo.');
+        setErrorMessage('Completa nombre, tipo, unidad de medida y control antes de aprobar un item nuevo.');
         return;
       }
     }
 
     setEnviando(true);
+    setErrorMessage(null);
     try {
       const payload = decision === 'APROBADO' && esItemNuevo
         ? { decision, ...formData }
@@ -102,8 +108,9 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
       await refrescar();
       onClose();
     } catch (error) {
+      const message = error?.response?.data?.message || error?.message || 'No se pudo resolver la solicitud.';
+      setErrorMessage(message);
       console.error('Error al resolver la solicitud:', error);
-      alert('No se pudo resolver la solicitud. Revisa la consola para más detalle.');
     } finally {
       setEnviando(false);
     }
@@ -131,14 +138,30 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
         </div>
       )}
 
+      {!cargando && !solicitud && errorMessage && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
       {!cargando && solicitud && (
         <div className="space-y-4">
           <div
             className="rounded-2xl p-4 border space-y-2"
             style={{ background: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
           >
-            <Dato label="Proyecto" valor={`#${solicitud.id_proyecto}`} />
-            <Dato label="Solicitado por" valor={`Usuario #${solicitud.id_emisor}`} />
+            <Dato
+              label="Proyecto"
+              valor={solicitud.proyecto?.nombre_proy ?? `#${solicitud.id_proyecto}`}
+            />
+            <Dato
+              label="Solicitado por"
+              valor={
+                solicitud.emisor
+                  ? `${solicitud.emisor.nombre} ${solicitud.emisor.apellido}`
+                  : `Usuario #${solicitud.id_emisor}`
+              }
+            />
             <Dato label="Cantidad solicitada" valor={solicitud.cantidad} />
             {solicitud.descripcion && <Dato label="Descripción" valor={solicitud.descripcion} />}
           </div>
@@ -220,6 +243,12 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
                   {TIPOS_CONTROL.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMessage}
             </div>
           )}
 

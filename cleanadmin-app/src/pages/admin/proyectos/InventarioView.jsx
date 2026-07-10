@@ -11,7 +11,7 @@ import AgregarItemExistenteModal from "../../../components/modals/AgregarItemExi
 import EditarItemModal from "../../../components/modals/EditarItemModal";
 import Eliminar from "../../../components/modals/Eliminar";
 import { FaBoxesStacked, FaTriangleExclamation, FaArrowRightArrowLeft, FaCircleCheck } from "react-icons/fa6";
-
+import EditarItemProyectoModal from "../../../components/modals/EditarItemProyectoModal";
 const COLUMNAS_ITEMS = [
   {
     key:   "nombre",
@@ -300,9 +300,51 @@ const COLUMNAS_MOVIMIENTOS = [
     <div className="flex items-center justify-center py-16"><div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" /></div>
   ) : (
     <>
-      {vistaActiva === "items" && <Table columns={COLUMNAS_ITEMS} data={itemsFiltrados} emptyMessage="No hay ítems registrados." onEdit={handleEditar} onDelete={iniciarDesvinculacion} />}
-      {vistaActiva === "movimientos" && <Table columns={COLUMNAS_MOVIMIENTOS} data={movimientosFiltrados} emptyMessage="No hay movimientos registrados." />}
-      {vistaActiva === "bajo-stock" && <Table columns={COLUMNAS_ITEMS} data={bajoStockFiltrado} emptyMessage="No hay ítems bajo stock." onEdit={handleEditar} onDelete={iniciarDesvinculacion} />}
+      {vistaActiva === "items" && (
+        <Table
+          columns={COLUMNAS_ITEMS}
+          data={itemsFiltrados}
+          emptyMessage={
+            items.length === 0
+              ? "No hay ítems registrados para este proyecto."
+              : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
+          }
+          onEdit={(item) => {
+            setItemAEditar(item);
+            setModalEditarAbierto(true);
+          }}
+          onDelete={handleDesvincular}
+        />
+      )}
+
+      {vistaActiva === "movimientos" && (
+        <Table
+          columns={COLUMNAS_MOVIMIENTOS}
+          data={movimientosFiltrados}
+          emptyMessage={
+            movimientos.length === 0
+              ? "No hay movimientos registrados."
+              : "Ningún movimiento coincide con la búsqueda aplicada."
+          }
+        />
+      )}
+
+      {vistaActiva === "bajo-stock" && (
+        <Table
+          columns={COLUMNAS_ITEMS}
+          data={bajoStockFiltrado}
+          emptyMessage={
+            bajoStock.length === 0
+              ? "No hay ítems bajo stock mínimo. ✓"
+              : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
+          }
+          onEdit={(item) => {
+            setItemAEditar(item);
+            setModalEditarAbierto(true);
+          }}
+          onDelete={handleDesvincular}
+        />
+      )}
     </>
   );
 
@@ -325,6 +367,23 @@ const COLUMNAS_MOVIMIENTOS = [
         mensajeConfirmacion="Esta acción desvinculará el ítem del proyecto. Podrás volver a agregarlo más adelante si es necesario."
         mensajeExito="¡Ítem desvinculado correctamente del proyecto!"
       />
+      {modalEditarAbierto && (
+        <EditarItemProyectoModal
+          isOpen={modalEditarAbierto}
+          onClose={() => setModalEditarAbierto(false)}
+          proyecto={proyecto}
+          item={itemAEditar}
+          actualizarLista={cargarDatos}
+        />
+      )}
+      {modalEditarAbierto && (
+     <EditarItemProyectoModal
+       isOpen={modalEditarAbierto}
+       onClose={() => setModalEditarAbierto(false)}
+       item={itemAEditar}
+       actualizarLista={cargarDatos}
+     />
+   )}
     </>
   );
 }
