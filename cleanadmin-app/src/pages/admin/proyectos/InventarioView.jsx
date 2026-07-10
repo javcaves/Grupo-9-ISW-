@@ -26,12 +26,6 @@ const COLUMNAS_ITEMS = [
     render: (val) => val ?? "—",
   },
   {
-    key:   "categoria",
-    label: "Categoría",
-    icon:  "fa-tag",
-    render: (val) => val?.nombre ?? val ?? "—",
-  },
-  {
     key:   "control",
     label: "Control",
     icon:  "fa-sliders",
