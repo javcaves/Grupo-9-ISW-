@@ -118,6 +118,28 @@ export const eliminarUsuario = async (req, res) => {
     }
 };
 
+// Cambio de contraseña por el propio usuario autenticado
+export const cambiarMiPassword = async (req, res) => {
+    try {
+        const id_usuario = req.user?.id_usuario;
+        const { passwordActual, passwordNueva } = req.body;
+
+        if (!passwordActual || typeof passwordActual !== "string") {
+            return handleErrorClient(res, 400, "error de validacion", "Debes ingresar tu contraseña actual.");
+        }
+        if (!passwordNueva || typeof passwordNueva !== "string" || passwordNueva.length < 6) {
+            return handleErrorClient(res, 400, "error de validacion", "La nueva contraseña debe tener al menos 6 caracteres.");
+        }
+
+        const [resultado, err] = await UsuarioService.cambiarMiPassword(id_usuario, passwordActual, passwordNueva);
+        if (err) return handleErrorClient(res, 400, "no se pudo actualizar la contraseña", err);
+
+        return handleSuccess(res, 200, resultado.message, null);
+    } catch (error) {
+        return handleErrorServer(res, 500, "error de servidor", error.message);
+    }
+};
+
 export const resetearPassword = async (req, res) => {
     try {
         const { id_usuario } = req.params;

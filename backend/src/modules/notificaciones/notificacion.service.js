@@ -164,16 +164,22 @@ const obtenerAdminsYRoot = async () => {
 };
 
 /**
- * Genera una notificación por cada ADMIN/ROOT avisando que un usuario
- * solicitó recuperar su contraseña.
+ * Genera una notificación por cada ADMIN/ROOT/SUPERVISOR avisando que un
+ * usuario solicitó recuperar su contraseña.
  */
 export const notificarSolicitudPassword = async (usuario) => {
     try {
-        const adminsYRoot = await obtenerAdminsYRoot();
+        const destinatarios = await usuarioRepository.find({
+            where: [
+                { rol: "ADMIN", activo: true },
+                { rol: "ROOT", activo: true },
+                { rol: "SUPERVISOR", activo: true },
+            ],
+        });
 
         const mensaje = `${usuario.nombre} ${usuario.apellido} (RUT ${usuario.rut}) solicitó recuperar su contraseña.`;
 
-        const notificaciones = adminsYRoot.map((admin) =>
+        const notificaciones = destinatarios.map((admin) =>
             notificacionRepository.create({
                 id_usuario_destinatario: admin.id_usuario,
                 tipo: "SOLICITUD_PASSWORD",
