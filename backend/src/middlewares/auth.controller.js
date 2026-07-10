@@ -76,7 +76,8 @@ export const login = async (req, res) => {
             success: true,
             message: "Inicio de sesión exitoso",
             user: {
-                id_usuario: user.id_usuario, 
+                id_usuario: user.id_usuario,
+                rut: user.rut, 
                 nombre: user.nombre,
                 rol: user.rol
             }
