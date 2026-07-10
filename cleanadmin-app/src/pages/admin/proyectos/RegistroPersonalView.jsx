@@ -11,7 +11,7 @@ import { Card } from "../../../components/Card";
 import { ProyectoUsuarioService } from "../../../api/proyecto_usuario.service";
 import NuevoPersonalModal from "../../../components/modals/NuevoPersonalModal";
 import VincularPersonalModal from "../../../components/modals/VincularPersonalModal";
-import HojaDeVida from "../../../components/modals/HojaDeVida";
+import HojaDeVidaModal from "../../../components/modals/HojaDeVidaModal";
 import ConfirmarEliminacion from "../../../components/modals/Eliminar";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
 
@@ -443,7 +443,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
       />
 
       {abrirHojaDeVida && (
-        <HojaDeVida
+        <HojaDeVidaModal
           isOpen={abrirHojaDeVida}
           onClose={() => { setAbrirHojaDeVida(false); setEmpleadoHojaDeVida(null); }}
           empleado={empleadoHojaDeVida}

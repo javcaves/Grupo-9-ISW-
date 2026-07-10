@@ -7,7 +7,7 @@ import { ListToolbar }         from "../../components/ListToolbar";
 import { Card }                from "../../components/Card";
 import { UsuarioService }      from "../../api/usuario.service";
 import ConfirmarEliminacion    from "../../components/modals/Eliminar";
-import HojaDeVida              from "../../components/modals/HojaDeVida";
+import HojaDeVidaModal              from "../../components/modals/HojaDeVidaModal";
 import NuevoPersonalModal      from "../../components/modals/NuevoPersonalModal";
 import CambiarPasswordModal    from "../../components/modals/CambiarPasswordModal";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
@@ -266,7 +266,7 @@ export default function PersonalView() {
       />
 
       {abrirHojaDeVida && (
-        <HojaDeVida
+        <HojaDeVidaModal
           isOpen={abrirHojaDeVida}
           onClose={() => { setAbrirHojaDeVida(false); setEmpleadoHojaDeVida(null); }}
           empleado={empleadoHojaDeVida}
