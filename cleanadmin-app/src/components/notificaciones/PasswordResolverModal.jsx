@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { UsuarioService } from '../../api/usuario.service';
+import PasswordInput from '../PasswordInput';
 import { useNotificaciones } from '../../context/NotificacionesContext';
 import { extraerData } from '../../utils/apiResponse';
 
@@ -113,8 +114,7 @@ export default function PasswordResolverModal({ isOpen, idUsuario, onClose }) {
             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
               Nueva contraseña
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={nuevaPassword}
               onChange={(e) => setNuevaPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
@@ -127,8 +127,7 @@ export default function PasswordResolverModal({ isOpen, idUsuario, onClose }) {
             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
               Confirmar contraseña
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={confirmarPassword}
               onChange={(e) => setConfirmarPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
