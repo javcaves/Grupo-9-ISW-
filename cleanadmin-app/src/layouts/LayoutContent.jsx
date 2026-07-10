@@ -8,7 +8,7 @@ export default function LayoutContent({
   table, 
   actions = [],
   statsCols = 4, // cantidad de columnas de la grilla de tarjetas en desktop (lg). Default 4 para no afectar a las demás vistas.
-  toolbarPosition = "bottom",
+  toolbarPosition = "middle",
 }) {
   const COLS_LG = {
     2: "lg:grid-cols-2",
@@ -66,6 +66,12 @@ export default function LayoutContent({
         </div>
       )}
 
+      {toolbar && toolbarPosition !== "top" && (
+        <div className="mt-6">
+          {toolbar}
+        </div>
+      )}
+
       {/* Contenedor de la Tabla */}
       {table && (
         <div 
@@ -76,12 +82,6 @@ export default function LayoutContent({
           }}
         >
           {table}
-        </div>
-      )}
-
-      {toolbar && toolbarPosition !== "top" && (
-        <div className="mt-6">
-          {toolbar}
         </div>
       )}
     </section>

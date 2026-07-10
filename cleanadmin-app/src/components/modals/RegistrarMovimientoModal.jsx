@@ -63,6 +63,11 @@ export default function RegistrarMovimientoModal({ isOpen, onClose, proyecto, it
         descripcion: formData.descripcion,
       };
 
+      console.log("Datos que se están enviando al servidor:", {
+        ...base,
+        tipo_movimiento: modo === 'directo' ? formData.tipo_movimiento : 'SOLICITUD'
+      });
+
       if (modo === 'directo') {
         await ItemsService.registrarMovimiento({
           ...base,

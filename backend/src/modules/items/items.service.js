@@ -418,7 +418,10 @@ export const eliminarMovimiento = async (id_mov) => {
 
 // ================= LECTURAS ADICIONALES =================
 export const obtenerMovimientos = async () => {
-    return await movRepo().find({ order: { fecha: 'DESC' } });
+    return await movRepo().find({ 
+        order: { fecha: 'DESC' },
+        relations: { emisor: true }
+    });
 };
 
 export const obtenerSolicitudesPendientes = async () => {
