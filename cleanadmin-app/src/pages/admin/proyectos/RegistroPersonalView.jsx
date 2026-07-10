@@ -278,7 +278,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     });
 
   const barraBusqueda = (
-    <div className="relative mb-4 max-w-sm">
+    <div className="relative flex-1 min-w-0">
       <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" />
       <input
         type="text"
@@ -291,7 +291,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   );
 
   const filtroBar = (
-    <div className="flex items-center gap-2 mb-4 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap">
       {FILTROS_ROL.map((f) => {
         const activo = filtroRol === f.key;
         return (
@@ -311,14 +311,20 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     </div>
   );
 
+  const barraBusquedaFiltro = (
+    <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      {barraBusqueda}
+      <div className="min-w-0 md:ml-4">{filtroBar}</div>
+    </div>
+  );
+
   const tablaContenido = loading ? (
     <div className="flex items-center justify-center py-16">
       <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
     </div>
   ) : (
     <>
-      {barraBusqueda}
-      {filtroBar}
+      
       <Table
         columns={COLUMNAS_PERSONAL}
         data={usuariosFiltrados}
@@ -346,6 +352,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
           setModalEliminarAbierto(true);
         }}
       />
+      {barraBusquedaFiltro}
     </>
   );
 

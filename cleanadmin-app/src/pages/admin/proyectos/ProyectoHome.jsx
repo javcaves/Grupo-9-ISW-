@@ -377,6 +377,7 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
           subtitle: esAdmin ? "Todos los proyectos del sistema" : "Proyectos en los que participas",
         }}
         actions={acciones}
+        toolbarPosition="top"
         toolbar={
           <div className="flex flex-col gap-3">
             {barraHerramientas}

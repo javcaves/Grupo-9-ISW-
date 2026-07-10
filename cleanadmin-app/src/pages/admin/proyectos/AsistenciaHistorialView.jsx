@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card } from "../../../components/Card";
 import { Table } from "../../../components/Table";
+import { ListToolbar } from "../../../components/ListToolbar";
 import { AsistenciaService } from "../../../api/asistencia.service";
 import { formatearFecha } from "../../../utils/formatters";
 import { Pencil } from "lucide-react";
@@ -96,6 +97,40 @@ export default function AsistenciaHistorialView({ proyecto }) {
         return coincidePersona && coincideFecha && coincideEstado;
     });
 
+    const fechasDisponibles = Array.from(new Set(datosTabla.map((fila) => fila.fecha).filter(Boolean))).sort();
+    const opcionesFechas = fechasDisponibles.map((fecha) => ({ value: fecha, label: formatearFecha(fecha) }));
+
+    const barraHerramientas = (
+        <ListToolbar
+            searchValue={filtroPersona}
+            onSearchChange={setFiltroPersona}
+            searchPlaceholder="Buscar por empleado..."
+            filters={[
+                {
+                    label: "Estado",
+                    allLabel: "Todos",
+                    value: filtroEstado,
+                    onChange: setFiltroEstado,
+                    options: [
+                        { value: "PRESENTE", label: "PRESENTE" },
+                        { value: "ATRASO", label: "ATRASO" },
+                        { value: "FALTA_INJUSTIFICADA", label: "FALTA INJUSTIFICADA" },
+                        { value: "FALTA_JUSTIFICADA", label: "FALTA JUSTIFICADA" },
+                        { value: "ESPERANDO", label: "ESPERANDO" },
+                        { value: "RETIRADO", label: "RETIRADO" },
+                    ],
+                },
+                {
+                    label: "Fecha",
+                    allLabel: "Todas",
+                    value: filtroFecha,
+                    onChange: setFiltroFecha,
+                    options: [{ value: "", label: "Todas" }, ...opcionesFechas],
+                },
+            ]}
+        />
+    );
+
     const columnas = [
         {
             key: "fecha",
@@ -164,43 +199,6 @@ export default function AsistenciaHistorialView({ proyecto }) {
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-wrap gap-4 mb-2">
-                <input
-                    type="text"
-                    placeholder="Buscar por empleado..."
-                    value={filtroPersona}
-                    onChange={(e) => setFiltroPersona(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto min-w-[200px]"
-                />
-                <input
-                    type="date"
-                    value={filtroFecha}
-                    onChange={(e) => setFiltroFecha(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto text-gray-600"
-                />
-                <select
-                    value={filtroEstado}
-                    onChange={(e) => setFiltroEstado(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto text-gray-600"
-                >
-                    <option value="">Todos los estados</option>
-                    <option value="PRESENTE">PRESENTE</option>
-                    <option value="ATRASO">ATRASO</option>
-                    <option value="FALTA_INJUSTIFICADA">FALTA INJUSTIFICADA</option>
-                    <option value="FALTA_JUSTIFICADA">FALTA JUSTIFICADA</option>
-                    <option value="ESPERANDO">ESPERANDO</option>
-                    <option value="RETIRADO">RETIRADO</option>
-                </select>
-                {(filtroPersona || filtroFecha || filtroEstado) && (
-                    <button
-                        onClick={() => { setFiltroPersona(""); setFiltroFecha(""); setFiltroEstado(""); }}
-                        className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                    >
-                        Limpiar filtros
-                    </button>
-                )}
-            </div>
-
             <Card title="Historial de Asistencias" icon="fa-calendar-days">
                 <Table
                     columns={columnas}
@@ -208,6 +206,18 @@ export default function AsistenciaHistorialView({ proyecto }) {
                     emptyMessage="No hay registros de asistencia que coincidan con los filtros."
                 />
             </Card>
+
+            <div className="pt-4">
+                {barraHerramientas}
+                {(filtroPersona || filtroFecha || filtroEstado) && (
+                    <button
+                        onClick={() => { setFiltroPersona(""); setFiltroFecha(""); setFiltroEstado(""); }}
+                        className="mt-4 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                        Limpiar filtros
+                    </button>
+                )}
+            </div>
 
             <EditarAsistenciaModal
                 isOpen={!!editarRegistro}
