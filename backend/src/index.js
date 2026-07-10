@@ -1,6 +1,7 @@
 import app from './app.js';
 
 import { connectDB } from './config/ConfigDB.js';
+import { ensureRootUser } from './seed/ensureRoot.js';
 import { iniciarSchedulerTareas } from './scheduler/tareaScheduler.js';
 
 const PORT = process.env.PORT || 3000;
@@ -18,6 +19,16 @@ const startServer = async () => {
         // =============================
 
         await connectDB();
+
+
+        // =============================
+        // GARANTIZAR USUARIO ROOT
+        // =============================
+        // Corre en CADA arranque, sin depender del seed. Si el ROOT ya
+        // existe, no hace nada; si no existe, lo crea. Esto asegura que
+        // el sistema siempre tenga un ROOT utilizable incluso si nunca se
+        // corrió `npm run seed` (o si el seed se elimina más adelante).
+        await ensureRootUser();
 
 
         // =============================
