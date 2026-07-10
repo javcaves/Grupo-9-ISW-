@@ -70,6 +70,9 @@ export default function PersonalView() {
   const [modalEliminarAbierto, setModalEliminarAbierto] = useState(false);
   const [usuarioADesactivar, setUsuarioADesactivar]     = useState(null);
 
+  // Registrar nuevo ingreso (crear usuario)
+  const [modalCrearAbierto, setModalCrearAbierto] = useState(false);
+
   // Editar usuario (usa el mismo modal de "Agregar Personal" en modo edición)
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
   const [usuarioAEditar, setUsuarioAEditar]         = useState(null);
@@ -218,11 +221,16 @@ export default function PersonalView() {
     />
   );
 
+  const acciones = content.actions.map((accion) => ({
+    ...accion,
+    onClick: () => setModalCrearAbierto(true),
+  }));
+
   return (
     <>
       <LayoutContent
         header={{ title: content.title, subtitle: content.subtitle }}
-        actions={content.actions}
+        actions={acciones}
         toolbar={barraHerramientas}
         stats={
           <>
@@ -295,6 +303,13 @@ export default function PersonalView() {
           onSuccess={cargarDatos}
         />
       )}
+
+      <NuevoPersonalModal
+        isOpen={modalCrearAbierto}
+        onClose={() => setModalCrearAbierto(false)}
+        modo="crear"
+        onSuccess={cargarDatos}
+      />
 
       {modalPasswordAbierto && (
         <CambiarPasswordModal
