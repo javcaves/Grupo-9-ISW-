@@ -9,7 +9,6 @@ import RegistrarMovimientoModal from "../../../components/modals/RegistrarMovimi
 import CrearItemProyectoModal   from "../../../components/modals/CrearItemProyectoModal";
 import AgregarItemExistenteModal from "../../../components/modals/AgregarItemExistenteModal";
 import { FaBoxesStacked, FaTriangleExclamation, FaArrowRightArrowLeft, FaCircleCheck } from "react-icons/fa6";
-import { useToast } from "../../../context/ToastContext";
 
 const COLUMNAS_ITEMS = [
   {
@@ -86,7 +85,6 @@ const COLUMNAS_ITEMS = [
 ];
 
 export default function InventarioView({ proyecto }) {
-  const toast = useToast();
   const [items,       setItems]       = useState([]);
   const [bajoStock,   setBajoStock]   = useState([]);
   const [movimientos, setMovimientos] = useState([]);
@@ -137,7 +135,7 @@ export default function InventarioView({ proyecto }) {
     } catch (err) {
       console.error("InventarioView handleDesvincular:", err);
       const detalle = err?.response?.data?.errorDetails || err?.data?.errorDetails || err?.message;
-      toast.error(detalle || "No se pudo desvincular el item, revisa la consola.");
+      alert(detalle || "No se pudo desvincular el item, revisa la consola.");
     }
   }
 
