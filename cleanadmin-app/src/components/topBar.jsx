@@ -31,10 +31,6 @@ export default function TopBar({
           </p>
         </div>
 
-        <div className="flex-1 flex justify-center">
-          {search}
-        </div>
-
         <div className="flex items-center gap-4 min-w-fit">
           {actionButton}
           <UserMenu
