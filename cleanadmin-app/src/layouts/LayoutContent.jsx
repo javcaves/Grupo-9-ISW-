@@ -52,20 +52,17 @@ export default function LayoutContent({
         </div>
       </div>
 
+      {/* Barra de herramientas y filtros */}
+      {toolbar && (
+        <div className="mb-6">
+          {toolbar}
+        </div>
+      )}
+
       {/* Grilla de Stats (tarjetas) */}
       {stats && (
         <div className={`stats-grid grid grid-cols-1 md:grid-cols-2 ${claseColsLg} gap-6 mb-8`}>
           {stats}
-        </div>
-      )}
-
-      {/* FIX: antes esta prop se recibía pero nunca se renderizaba —
-          ActividadesView.jsx (y ahora ProyectoHome.jsx) le pasan
-          `toolbar` esperando ver la barra de búsqueda/filtros, y se
-          perdía en silencio. Ahora se muestra debajo de las tarjetas. */}
-      {toolbar && (
-        <div className="mb-6">
-          {toolbar}
         </div>
       )}
       
