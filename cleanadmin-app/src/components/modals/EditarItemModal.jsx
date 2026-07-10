@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Modal } from "../Modal";
 import { FormContainer } from "../Formulario";
 import { ItemsService } from "../../api/items.service";
+import { useToast } from "../../context/ToastContext";
 
 const TIPOS_ITEM = [
   "MAQUINARIA",
@@ -39,6 +40,7 @@ export default function EditarItemModal({
   item,
   actualizarLista,
 }) {
+  const toast = useToast();
 
   const [formData, setFormData] = useState(FORM_INICIAL);
   const [guardando, setGuardando] = useState(false);
@@ -91,6 +93,7 @@ export default function EditarItemModal({
       );
 
       actualizarLista?.();
+      toast.success("¡Ítem actualizado con éxito!");
       handleClose();
 
     } catch(error) {
@@ -100,15 +103,7 @@ export default function EditarItemModal({
         error
       );
 
-      const detalle =
-        error?.response?.data?.errorDetails ||
-        error?.response?.data?.message ||
-        error?.message;
-
-      alert(
-        detalle ||
-        "No se pudo actualizar el item."
-      );
+      toast.error(error?.message || "No se pudo actualizar el item.");
 
     } finally {
       setGuardando(false);
