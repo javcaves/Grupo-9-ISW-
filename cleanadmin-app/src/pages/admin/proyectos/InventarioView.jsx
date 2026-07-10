@@ -313,7 +313,7 @@ const COLUMNAS_MOVIMIENTOS = [
             setItemAEditar(item);
             setModalEditarAbierto(true);
           }}
-          onDelete={handleDesvincular}
+          onDelete={iniciarDesvinculacion}
         />
       )}
 
@@ -342,7 +342,7 @@ const COLUMNAS_MOVIMIENTOS = [
             setItemAEditar(item);
             setModalEditarAbierto(true);
           }}
-          onDelete={handleDesvincular}
+          onDelete={iniciarDesvinculacion}
         />
       )}
     </>
