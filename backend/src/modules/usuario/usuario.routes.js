@@ -12,7 +12,7 @@ const router = Router();
  */
 
 // --- REGISTRO PROTEGIDO ---
-router.post('/', authenticateJwt, checkRole(['ROOT', 'ADMIN']), UsuarioController.registrarUsuario);
+router.post('/', authenticateJwt, checkRole(['ROOT', 'ADMIN','SUPERVISOR','ENCARGADO']), UsuarioController.registrarUsuario);
 
 // --- BÚSQUEDA Y LISTADO ---
 // Soporta queries: ?nombre=...&rol=...&poder=...&rut=...
