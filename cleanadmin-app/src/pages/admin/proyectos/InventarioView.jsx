@@ -49,7 +49,7 @@ const COLUMNAS_ITEMS = [
           style={bajo ? undefined : { color: "var(--table-row-text)" }}
         >
           {val ?? 0}
-          {item.unidad_medida ? ` ${item.unidad_medida}` : ""}
+          {item.unidad_medida ? <>{" "}<span className="inline-block lowercase first-letter:uppercase">{item.unidad_medida}</span></> : ""}
           {bajo && (
             <i className="fas fa-triangle-exclamation ml-1 text-xs text-red-400" />
           )}
