@@ -229,6 +229,7 @@ export default function InventariosView() {
   const [vistaActiva, setVistaActiva] = useState("items"); // "items" | "movimientos" | "bajo-stock" | "solicitudes"
 
   const [modalItemAbierto, setModalItemAbierto] = useState(false);
+  const [itemEditar, setItemEditar]             = useState(null);
   const [modalResolverAbierto, setModalResolverAbierto] = useState(false);
   const [idMovimientoResolver, setIdMovimientoResolver] = useState(null);
 
@@ -270,6 +271,24 @@ export default function InventariosView() {
     setModalResolverAbierto(false);
     setIdMovimientoResolver(null);
     cargarDatos(); // refresca la tabla haya sido aprobada, rechazada o simplemente cerrada
+  }
+
+  // Elimina (soft-delete) un item del catálogo -- backend lo marca
+  // activo=false, no lo borra físicamente.
+  async function handleEliminarItem(item) {
+    const confirmado = window.confirm(
+      `¿Eliminar "${item.nombre}" del catálogo? Quedará marcado como inactivo, no se borra su historial.`
+    );
+    if (!confirmado) return;
+
+    try {
+      await ItemsService.eliminar(item.id_item);
+      cargarDatos();
+    } catch (err) {
+      console.error("InventariosView handleEliminarItem:", err);
+      const detalle = err?.response?.data?.errorDetails || err?.data?.errorDetails || err?.message;
+      alert(detalle || "No se pudo eliminar el item, revisa la consola.");
+    }
   }
 
   // ── Categorías ya no existen en Item -- se filtra por Tipo, que sí
@@ -456,8 +475,8 @@ export default function InventariosView() {
               ? "No hay ítems registrados en el sistema."
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
-          onEdit={(item)   => console.log("Editar ítem:", item)}
-          onDelete={(item) => console.log("Eliminar ítem:", item)}
+          onEdit={(item)   => setItemEditar(item)}
+          onDelete={handleEliminarItem}
         />
       )}
 
@@ -558,6 +577,14 @@ export default function InventariosView() {
       <CrearItemModal
         isOpen={modalItemAbierto}
         onClose={() => setModalItemAbierto(false)}
+        actualizarLista={cargarDatos}
+      />
+
+      <CrearItemModal
+        isOpen={!!itemEditar}
+        onClose={() => setItemEditar(null)}
+        modo="editar"
+        item={itemEditar}
         actualizarLista={cargarDatos}
       />
 

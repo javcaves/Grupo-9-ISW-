@@ -1,65 +1,45 @@
 // src/seed.js
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
 import { AppDataSource, connectDB } from "../config/ConfigDB.js";
 import { JWT_SECRET } from "../config/ConfigEnv.js";
-import { loadSeed } from "./seedLoader.js";
+import { ensureRootUser } from "./ensureRoot.js";
+import { resetSeedTables, loadSeedSql } from "./seedLoader.js";
 
 async function seed() {
     try {
         console.log("🔄 Iniciando carga dinámica de entidades y conexión a BD...");
         await connectDB();
 
-        const usuarioRepository = AppDataSource.getRepository("Usuario");
+        // ══════════════════════════════════════════════════════════════════════
+        // 1. RESET DE TABLAS DE SEED
+        //    ⚠️ Destructivo: vacía usuario, proyecto, turno, asistencia, item,
+        //    etc. (ver TABLAS_SEED en seedLoader.js) para que cada corrida
+        //    parta de cero y el ROOT quede determinísticamente en id_usuario=1.
+        // ══════════════════════════════════════════════════════════════════════
+        console.log("\n🧹 Reiniciando tablas de datos de prueba...");
+        await resetSeedTables();
 
         // ══════════════════════════════════════════════════════════════════════
-        // 1. CATÁLOGO MAESTRO DE PODERES
+        // 2. USUARIO ROOT (misma lógica que usa index.js en cada arranque --
+        //    ver seed/ensureRoot.js. Acá siempre lo va a crear, porque la
+        //    tabla usuario recién quedó vacía por el reset de arriba.)
         // ══════════════════════════════════════════════════════════════════════
-        console.log("\n⚡ Verificando catálogo de poderes...");
+        console.log("\n👤 Verificando/creando usuario ROOT...");
+        const rootUser = await ensureRootUser();
 
-        // ══════════════════════════════════════════════════════════════════════
-        // 2. USUARIO ROOT
-        // ══════════════════════════════════════════════════════════════════════
-        const rootRut = "11111111-1";
-        let rootUser  = await usuarioRepository.findOne({ where: { rut: rootRut } });
-
-        if (!rootUser) {
-            console.log("\n👤 Creando usuario ROOT inicial...");
-            const hashedAdminPassword = await bcrypt.hash("admin123", 10);
-
-            rootUser = usuarioRepository.create({
-                rut:         rootRut,
-                nombre:      "Zak",
-                apellido:    "Admin",
-                password:    hashedAdminPassword,
-                observacion: "Usuario administrador inicial generado por el sistema",
-                email:       "admin@cleanadmin.com",
-                rol:         "ROOT",
-                activo:      true,
-                numero:      "+56912345678",
-            });
-
-            rootUser = await usuarioRepository.save(rootUser);
-            console.log("✅ Usuario ROOT guardado con ID:", rootUser.id_usuario);
-        } else {
-            console.log("\nℹ️  El usuario ROOT ya existe en la base de datos.");
+        if (rootUser.id_usuario !== 1) {
+            console.warn(
+                `⚠️  El ROOT quedó con id_usuario=${rootUser.id_usuario} en vez de 1. ` +
+                `seed.sql asume id_usuario=1 para el ROOT -- revisa si la secuencia de ` +
+                `"usuario" se reinició correctamente antes de continuar.`
+            );
         }
 
         // ══════════════════════════════════════════════════════════════════════
-        // 3. DATOS DE PRUEBA (minimal_seed.json)
+        // 3. DATOS DE PRUEBA (seed.sql)
         // ══════════════════════════════════════════════════════════════════════
-        console.log("\n📦 Cargando datos de prueba desde minimal_seed.json...");
-        const resumen = await loadSeed();
-
-        // Mostrar resumen final del seed
-        const ok     = resumen.filter(r => r.status === "ok");
-        const errors = resumen.filter(r => r.status === "error");
-
-        console.log(`\n📊 Resumen de seed: ${ok.length} entidades OK, ${errors.length} con error.`);
-        if (errors.length > 0) {
-            console.warn("⚠️  Entidades con error:");
-            errors.forEach(r => console.warn(`   - ${r.entity}: ${r.error}`));
-        }
+        console.log("\n📦 Cargando datos de prueba desde seed.sql...");
+        await loadSeedSql();
 
         // ══════════════════════════════════════════════════════════════════════
         // 4. TOKEN JWT PARA DESARROLLO
