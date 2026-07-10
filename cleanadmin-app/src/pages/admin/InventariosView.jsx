@@ -149,7 +149,7 @@ const COLUMNAS_MOVIMIENTOS = [
     render: (val) => val ?? "—",
   },
   {
-    key:   "usuario",
+    key:   "emisor",
     label: "Registrado por",
     icon:  "fa-user",
     render: (val) => val ? `${val.nombre} ${val.apellido}` : "—",
