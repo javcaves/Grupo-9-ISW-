@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { Card } from "../../components/Card";
 import { TareaService } from "../../api/tareas.service";
 import { formatearFecha } from "../../utils/formatters";
+import { useToast } from "../../context/ToastContext";
 
 export default function EmployeeTareas() {
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
 
@@ -74,7 +76,7 @@ export default function EmployeeTareas() {
       await cargarTareas();
     } catch (err) {
       console.error("[Tareas] Error al completar la tarea:", err);
-      alert(err?.message || "No se pudo marcar la tarea como completada.");
+      toast.error(err?.message || "No se pudo marcar la tarea como completada.");
     } finally {
       setCompletandoId(null);
     }

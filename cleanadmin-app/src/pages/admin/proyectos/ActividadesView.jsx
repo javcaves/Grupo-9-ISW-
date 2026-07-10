@@ -10,6 +10,7 @@ import ConfirmarEliminacion     from "../../../components/modals/Eliminar";
 import { CategoriaService }     from "../../../api/categorias.service";
 import { ActividadesService }   from "../../../api/actividades.service";
 import { FaClipboardCheck, FaListCheck, FaCalendarDay, FaRotate } from "react-icons/fa6";
+import { useToast } from "../../../context/ToastContext";
 
 const COLUMNAS_ACTIVIDADES_BASE = [
   {
@@ -55,6 +56,7 @@ function construirColumnas() {
 }
 
 export default function ActividadesView({ proyecto }) {
+  const toast = useToast();
   const [listaCategorias,  setListaCategorias]  = useState([]);
   const [listaActividades, setListaActividades] = useState([]);
   const [loading,          setLoading]          = useState(true);
@@ -104,11 +106,11 @@ export default function ActividadesView({ proyecto }) {
   async function handleReactivar(actividad) {
     try {
       await ActividadesService.reactivar(actividad.id_act);
-      alert("¡Actividad reactivada con éxito!");
+      toast.success("¡Actividad reactivada con éxito!");
       cargarDatos();
     } catch (error) {
       console.error("Error al reactivar la actividad:", error);
-      alert(`No se pudo reactivar:\n\n${error.message}`);
+      toast.error(`No se pudo reactivar:\n\n${error.message}`);
     }
   }
 

@@ -14,6 +14,7 @@ import VincularPersonalModal from "../../../components/modals/VincularPersonalMo
 import HojaDeVida from "../../../components/modals/HojaDeVida";
 import ConfirmarEliminacion from "../../../components/modals/Eliminar";
 import { FaUsers, FaUserShield, FaUserCheck, FaUserXmark } from "react-icons/fa6";
+import { useToast } from "../../../context/ToastContext";
 
 const TABS = [
   { key: "personal", label: "Registro Personal" },
@@ -40,6 +41,7 @@ function puedeDesvincular(rolEjecutor, rolObjetivo) {
 }
 
 export default function RegistroPersonalView({ proyecto, onVolver, rolEjecutor }) {
+  const toast = useToast();
   const [tabActiva, setTab] = useState("personal");
 
   return (
@@ -278,7 +280,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     });
 
   const barraBusqueda = (
-    <div className="relative flex-1 min-w-0">
+    <div className="relative mb-4 max-w-sm">
       <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" />
       <input
         type="text"
@@ -291,7 +293,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   );
 
   const filtroBar = (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2 mb-4 flex-wrap">
       {FILTROS_ROL.map((f) => {
         const activo = filtroRol === f.key;
         return (
@@ -311,48 +313,43 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     </div>
   );
 
-  const barraBusquedaFiltro = (
-    <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      {barraBusqueda}
-      <div className="min-w-0 md:ml-4">{filtroBar}</div>
-    </div>
-  );
-
   const tablaContenido = loading ? (
-  <div className="flex items-center justify-center py-16">
-    <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
-  </div>
-) : (
-  <>
-    <Table
-      columns={COLUMNAS_PERSONAL}
-      data={usuariosFiltrados}
-      emptyMessage={
-        usuarios.length === 0
-          ? "No hay personal registrado en este proyecto."
-          : "Nadie coincide con la búsqueda o el filtro aplicado."
-      }
-      extraActions={[
-        {
-          icon: "fa-chart-line",
-          title: "Ver hoja de vida",
-          show: (u) => u.rol === "EMPLEADO",
-          onClick: (u) => { setEmpleadoHojaDeVida(u); setAbrirHojaDeVida(true); },
-          hoverBg: "#dbeafe",
-          hoverText: "#2563eb",
-        },
-      ]}
-      onDelete={(item) => {
-        if (!puedeDesvincular(rolEjecutor, item.rol)) {
-          alert(`No tienes permisos para desvincular a un usuario con rol ${item.rol}.`);
-          return;
+    <div className="flex items-center justify-center py-16">
+      <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
+    </div>
+  ) : (
+    <>
+      {barraBusqueda}
+      {filtroBar}
+      <Table
+        columns={COLUMNAS_PERSONAL}
+        data={usuariosFiltrados}
+        emptyMessage={
+          usuarios.length === 0
+            ? "No hay personal registrado en este proyecto."
+            : "Nadie coincide con la búsqueda o el filtro aplicado."
         }
-        setUsuarioADesvincular(item);
-        setModalEliminarAbierto(true);
-      }}
-    />
-  </>
-);
+        extraActions={[
+          {
+            icon: "fa-chart-line",
+            title: "Ver hoja de vida",
+            show: (u) => u.rol === "EMPLEADO",
+            onClick: (u) => { setEmpleadoHojaDeVida(u); setAbrirHojaDeVida(true); },
+            hoverBg: "#dbeafe",
+            hoverText: "#2563eb",
+          },
+        ]}
+        onDelete={(item) => {
+          if (!puedeDesvincular(rolEjecutor, item.rol)) {
+            toast.error(`No tienes permisos para desvincular a un usuario con rol ${item.rol}.`);
+            return;
+          }
+          setUsuarioADesvincular(item);
+          setModalEliminarAbierto(true);
+        }}
+      />
+    </>
+  );
 
   const status = getEstadoPersonal();
 
@@ -421,7 +418,6 @@ function PersonalTab({ proyecto, rolEjecutor }) {
             })}
           </>
         }
-        toolbar={barraBusquedaFiltro}
         table={tablaContenido}
       />
 

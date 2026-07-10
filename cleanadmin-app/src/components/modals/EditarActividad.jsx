@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { ActividadesService } from '../../api/actividades.service';
+import { useToast } from "../../context/ToastContext";
 
 export default function EditarActividad({ isOpen, onClose, categorias, actualizarLista, actividadActual }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     descripcion_esp: '',
     id_cat: '',
@@ -33,12 +35,12 @@ export default function EditarActividad({ isOpen, onClose, categorias, actualiza
 
     try {
       await ActividadesService.actualizar(actividadActual.id_act, datosProcesados);
-      alert("¡Actividad actualizada con éxito!");
+      toast.success("¡Actividad actualizada con éxito!");
       actualizarLista();
       onClose();
     } catch (error) {
       console.error("Error al editar la actividad:", error);
-      alert(`No se pudo actualizar la actividad:\n\n${error.message || "Ocurrió un error inesperado."}`);
+      toast.error(`No se pudo actualizar la actividad:\n\n${error.message || "Ocurrió un error inesperado."}`);
     }
   };
 

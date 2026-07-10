@@ -1,5 +1,6 @@
 import React from "react";
 import { Modal } from "../Modal";
+import { useToast } from "../../context/ToastContext";
 
 export default function ConfirmarEliminacion({
   isOpen,
@@ -11,16 +12,18 @@ export default function ConfirmarEliminacion({
   mensajeConfirmacion = "Esta acción lo deshabilitará del sistema.",
   mensajeExito        = "¡Elemento eliminado correctamente del sistema!",
 }) {
+  const toast = useToast();
+
   const handleEliminar = async () => {
     try {
       await servicioEliminar(idElemento);
 
-      alert(mensajeExito);
+      toast.success(mensajeExito);
       actualizarLista();
       onClose();
     } catch (error) {
       console.error("Error al eliminar el elemento:", error);
-      alert(`No se pudo completar la operación:\n\n${error.message}`);
+      toast.error(`No se pudo completar la operación:\n\n${error.message}`);
     }
   };
 

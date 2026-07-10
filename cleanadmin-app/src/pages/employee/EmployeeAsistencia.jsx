@@ -7,6 +7,7 @@ import QRScannerModal from "../../components/qr/QRScannerModal";
 import SolicitarCorreccionAsistenciaModal from "../../components/modals/SolicitarCorreccionAsistenciaModal";
 import { formatHora } from "../../utils/formatTime";
 import { formatearFecha } from "../../utils/formatters";
+import { useToast } from "../../context/ToastContext";
 
 const ETIQUETAS_ESTADO_SOLICITUD = {
   PENDIENTE: { label: "Pendiente", className: "bg-amber-100 text-amber-700" },
@@ -15,6 +16,7 @@ const ETIQUETAS_ESTADO_SOLICITUD = {
 };
 
 export default function EmployeeAsistencia() {
+  const toast = useToast();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -172,7 +174,7 @@ export default function EmployeeAsistencia() {
 //
 // Además: QRScannerModal ya NO llama a la API por su cuenta (ver ese archivo);
 // esta es ahora la ÚNICA llamada real a /asistencia/marcar. Por eso lanzamos
-// el error (throw) en vez de hacer alert() acá: el modal lo captura y lo
+// el error (throw) en vez de hacer toast.error() acá: el modal lo captura y lo
 // muestra, evitando la doble-llamada con datos cruzados que había antes.
 async function registrarQR(datosQR) {
 
@@ -192,7 +194,7 @@ async function registrarQR(datosQR) {
         throw new Error(res?.message || "No fue posible registrar la asistencia.");
     }
 
-    alert("✅ " + (res.mensaje ?? "Asistencia registrada."));
+    toast.success("✅ " + (res.mensaje ?? "Asistencia registrada."));
     window.location.reload();
 }
 

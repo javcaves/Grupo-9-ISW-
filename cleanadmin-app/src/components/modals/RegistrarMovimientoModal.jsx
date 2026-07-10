@@ -3,6 +3,7 @@ import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { ItemsService } from '../../api/items.service';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from "../../context/ToastContext";
 
 const FORM_INICIAL = {
   id_item: '',
@@ -28,6 +29,7 @@ const FORM_INICIAL = {
  * ItemsService.listar({ id_proyecto }) en el padre).
  */
 export default function RegistrarMovimientoModal({ isOpen, onClose, proyecto, items = [], actualizarLista }) {
+  const toast = useToast();
   const { user } = useAuth();
   const esEncargado = user?.rol === 'ENCARGADO';
 
@@ -63,11 +65,6 @@ export default function RegistrarMovimientoModal({ isOpen, onClose, proyecto, it
         descripcion: formData.descripcion,
       };
 
-      console.log("Datos que se están enviando al servidor:", {
-        ...base,
-        tipo_movimiento: modo === 'directo' ? formData.tipo_movimiento : 'SOLICITUD'
-      });
-
       if (modo === 'directo') {
         await ItemsService.registrarMovimiento({
           ...base,
@@ -85,7 +82,7 @@ export default function RegistrarMovimientoModal({ isOpen, onClose, proyecto, it
     } catch (error) {
       console.error(error);
       const detalle = error?.response?.data?.errorDetails || error?.data?.errorDetails || error?.message;
-      alert(detalle || 'Ocurrió un error, revisa la consola.');
+      toast.error(detalle || 'Ocurrió un error, revisa la consola.');
     } finally {
       setEnviando(false);
     }

@@ -4,6 +4,7 @@ import { FormContainer } from '../Formulario';
 import { ItemsService } from '../../api/items.service';
 import { useAuth } from '../../context/AuthContext';
 import { extraerData } from '../../utils/apiResponse';
+import { useToast } from "../../context/ToastContext";
 
 const TIPOS_ITEM = ['MAQUINARIA', 'HERRAMIENTA', 'UTENSILIO', 'PRODUCTO'];
 const UNIDADES_MEDIDA = ['LITROS', 'UNIDADES', 'KILOS', 'SACOS', 'BOLSAS', 'METROS'];
@@ -32,6 +33,7 @@ const FORM_INICIAL = {
  *   (vía un MovimientoInventario tipo ENTRADA).
  */
 export default function CrearItemProyectoModal({ isOpen, onClose, proyecto, actualizarLista }) {
+  const toast = useToast();
   const { user } = useAuth();
   const esEncargado = user?.rol === 'ENCARGADO';
 
@@ -94,7 +96,7 @@ export default function CrearItemProyectoModal({ isOpen, onClose, proyecto, actu
     } catch (error) {
       console.error(error);
       const detalle = error?.response?.data?.errorDetails || error?.data?.errorDetails || error?.message;
-      alert(detalle || 'Ocurrió un error, revisa la consola.');
+      toast.error(detalle || 'Ocurrió un error, revisa la consola.');
     } finally {
       setEnviando(false);
     }

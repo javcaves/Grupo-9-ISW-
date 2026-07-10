@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { TareaService } from '../../api/tareas.service';
+import { useToast } from "../../context/ToastContext";
 
 export default function ProgramarTarea({ isOpen, onClose, actividades, actualizarLista }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({ id_act: '', fecha: '', hora: '', comentario: ''});
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -16,13 +18,13 @@ export default function ProgramarTarea({ isOpen, onClose, actividades, actualiza
     try {
       await TareaService.crear(datosProcesados);
 
-      alert("¡Tarea programada con éxito!");
+      toast.success("¡Tarea programada con éxito!");
       actualizarLista();
       onClose();
       setFormData({ id_act: '', fecha: '', hora: '', comentario: ''});
     } catch (error) {
       console.error("Error al programar la tarea", error);
-      alert(`No se pudo programar la tarea:\n\n${error.message}`);
+      toast.error(`No se pudo programar la tarea:\n\n${error.message}`);
     }
   };
 

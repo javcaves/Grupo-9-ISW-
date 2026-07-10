@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "../Modal";
 import { EvaluacionService } from "../../api/evaluacion.service";
 import { formatearTimestamp } from "../../utils/formatters";
+import { useToast } from "../../context/ToastContext";
 
 export default function HojaDeVida({ isOpen, onClose, empleado }) {
+  const toast = useToast();
   const [evaluaciones, setEvaluaciones] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +32,7 @@ export default function HojaDeVida({ isOpen, onClose, empleado }) {
       cargar();
     } catch (error) {
       console.error("Error al revocar evaluación:", error);
-      alert(`No se pudo revocar:\n\n${error.message}`);
+      toast.error(`No se pudo revocar:\n\n${error.message}`);
     }
   }
 

@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { ActividadesService } from '../../api/actividades.service';
+import { useToast } from "../../context/ToastContext";
 
 export default function CrearActividad({ isOpen, onClose, categorias, actualizarLista,idProyecto }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({ descripcion_esp: '', id_cat: '', recurrencia: 'DIARIA' });
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -18,13 +20,13 @@ export default function CrearActividad({ isOpen, onClose, categorias, actualizar
     try {
       await ActividadesService.crear(datosProcesados);
       
-      alert("¡Actividad base creada con éxito!");
+      toast.success("¡Actividad base creada con éxito!");
       actualizarLista();
       onClose();
       setFormData({ descripcion_esp: '', id_cat: '', recurrencia: 'DIARIA' });
     } catch (error) {
       console.error(error);
-      alert(`No se pudo crear la actividad:\n\n${error.message}`);
+      toast.error(`No se pudo crear la actividad:\n\n${error.message}`);
     }
   };
 
