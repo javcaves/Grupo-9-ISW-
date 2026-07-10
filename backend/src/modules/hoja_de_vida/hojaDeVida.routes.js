@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { hojaDeVidaController } from './hojaDeVida.controller';
+import { hojaDeVidaController } from './hojaDeVida.controller.js';
 import { authenticateJwt } from "../../../middlewares/auth.middleware.js";
 import { checkRole } from "../../../middlewares/role.middleware.js";
 
