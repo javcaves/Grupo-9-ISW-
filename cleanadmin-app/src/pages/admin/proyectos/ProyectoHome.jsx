@@ -132,7 +132,7 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
     ? [
         {
           text:      mostrarInactivos ? "Ocultar Inactivos" : "Ver Inactivos",
-          className: "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
+          variant:   "secondary",
           onClick:   () => setMostrarInactivos((v) => !v),
         },
         {

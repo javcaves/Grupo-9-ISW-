@@ -151,7 +151,7 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
               <p className="text-xs font-bold uppercase tracking-wide text-indigo-500">Item existente</p>
               <Dato label="Nombre" valor={itemExistente.nombre} />
               <Dato label="Tipo" valor={itemExistente.tipo} />
-              <Dato label="Unidad de medida" valor={itemExistente.unidad_medida} />
+              <Dato label="Unidad de medida" valor={<span className="inline-block lowercase first-letter:uppercase">{itemExistente.unidad_medida}</span>} />
             </div>
           )}
 
@@ -200,7 +200,9 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="">Selecciona...</option>
-                  {UNIDADES_MEDIDA.map((u) => <option key={u} value={u}>{u}</option>)}
+                  {UNIDADES_MEDIDA.map((u) => (
+                    <option key={u} value={u}>{u.charAt(0)}{u.slice(1).toLowerCase()}</option>
+                  ))}
                 </select>
               </div>
 

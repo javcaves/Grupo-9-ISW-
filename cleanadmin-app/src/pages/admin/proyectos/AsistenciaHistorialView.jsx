@@ -17,12 +17,12 @@ const COLORES_ESTADO = {
 };
 
 const LABEL_ESTADO = {
-    PRESENTE: "Presente",
-    ATRASO: "Atraso",
-    FALTA_INJUSTIFICADA: "Injustificada",
-    FALTA_JUSTIFICADA: "Justificada",
-    ESPERANDO: "Esperando",
-    RETIRADO: "Retirado"
+    PRESENTE: "PRESENTE",
+    ATRASO: "ATRASO",
+    FALTA_INJUSTIFICADA: "FALTA INJUSTIFICADA",
+    FALTA_JUSTIFICADA: "FALTA JUSTIFICADA",
+    ESPERANDO: "ESPERANDO",
+    RETIRADO: "RETIRADO"
 };
 
 export default function AsistenciaHistorialView({ proyecto }) {
@@ -117,11 +117,14 @@ export default function AsistenciaHistorialView({ proyecto }) {
         {
             key: "estado",
             label: "Estado",
-            render: (val) => (
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${COLORES_ESTADO[val] || "bg-gray-100 text-gray-700"}`}>
-                    {LABEL_ESTADO[val] || val}
-                </span>
-            )
+            render: (val) => {
+                const label = LABEL_ESTADO[val] || String(val ?? "").toUpperCase();
+                return (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${COLORES_ESTADO[val] || "bg-gray-100 text-gray-700"}`}>
+                        {label}
+                    </span>
+                );
+            }
         },
         {
             key: "jornada_activa",
@@ -181,12 +184,12 @@ export default function AsistenciaHistorialView({ proyecto }) {
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto text-gray-600"
                 >
                     <option value="">Todos los estados</option>
-                    <option value="PRESENTE">Presente</option>
-                    <option value="ATRASO">Atraso</option>
-                    <option value="FALTA_INJUSTIFICADA">Injustificada</option>
-                    <option value="FALTA_JUSTIFICADA">Justificada</option>
-                    <option value="ESPERANDO">Esperando</option>
-                    <option value="RETIRADO">Retirado</option>
+                    <option value="PRESENTE">PRESENTE</option>
+                    <option value="ATRASO">ATRASO</option>
+                    <option value="FALTA_INJUSTIFICADA">FALTA INJUSTIFICADA</option>
+                    <option value="FALTA_JUSTIFICADA">FALTA JUSTIFICADA</option>
+                    <option value="ESPERANDO">ESPERANDO</option>
+                    <option value="RETIRADO">RETIRADO</option>
                 </select>
                 {(filtroPersona || filtroFecha || filtroEstado) && (
                     <button

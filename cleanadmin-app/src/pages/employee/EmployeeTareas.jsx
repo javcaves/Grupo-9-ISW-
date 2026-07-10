@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 import { Card } from "../../components/Card";
 import { TareaService } from "../../api/tareas.service";
-import { ItemsService } from "../../api/items.service";
 import { formatearFecha } from "../../utils/formatters";
 
 export default function EmployeeTareas() {
@@ -15,7 +14,6 @@ export default function EmployeeTareas() {
   });
 
   const [list, setList] = useState([]);
-  const [inventory, setInventory] = useState([]);
 
   // Id de la tarea que se está marcando como completada en este momento
   // (para deshabilitar solo ese botón y evitar doble clic, no toda la lista).
@@ -46,24 +44,6 @@ export default function EmployeeTareas() {
         assigned,
         completed,
       });
-
-      // =========================
-      // INVENTARIO
-      // =========================
-      const itemsRes = await ItemsService.listarActivos().catch(err => {
-        console.error("❌ Error cargando inventario:", err);
-        return [];
-      });
-
-      const items = itemsRes?.data ?? itemsRes ?? [];
-
-      setInventory(
-        items.map(i => ({
-          id: i.id_item,
-          name: i.nombre,
-          stock: i.stock,
-        }))
-      );
 
     } catch (err) {
       console.error("[Tareas] Error cargando datos en la pantalla:", err);
@@ -266,29 +246,6 @@ export default function EmployeeTareas() {
             );
           })}
 
-        </div>
-      </Card>
-
-      {/* INVENTARIO */}
-      <Card title="Inventario Relacionado" icon="fa-box">
-        <div className="space-y-3">
-          {inventory.length === 0 && (
-            <div className="text-center text-gray-500 py-2 text-sm">
-              Sin inventario activo registrado en el sistema
-            </div>
-          )}
-
-          {inventory.map((item) => (
-            <div key={item.id} className="flex justify-between items-center p-3 border rounded-2xl bg-white/40">
-              <div className="flex items-center gap-3 text-sm">
-                <i className="fas fa-box text-blue-500" />
-                <span>{item.name ?? "--"}</span>
-              </div>
-              <span className={`px-2.5 py-0.5 font-bold rounded-lg text-xs ${item.stock > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                {item.stock ?? 0} Unidades
-              </span>
-            </div>
-          ))}
         </div>
       </Card>
 

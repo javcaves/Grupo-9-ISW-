@@ -4,7 +4,15 @@ import { Card } from "../../components/Card";
 import { AuthService } from "../../api/auth.service";
 import { AsistenciaService } from "../../api/asistencia.service";
 import QRScannerModal from "../../components/qr/QRScannerModal";
+import SolicitarCorreccionAsistenciaModal from "../../components/modals/SolicitarCorreccionAsistenciaModal";
 import { formatHora } from "../../utils/formatTime";
+import { formatearFecha } from "../../utils/formatters";
+
+const ETIQUETAS_ESTADO_SOLICITUD = {
+  PENDIENTE: { label: "Pendiente", className: "bg-amber-100 text-amber-700" },
+  APROBADO: { label: "Aprobada", className: "bg-green-100 text-green-700" },
+  RECHAZADO: { label: "Rechazada", className: "bg-red-100 text-red-700" },
+};
 
 export default function EmployeeAsistencia() {
   const location = useLocation();
@@ -22,6 +30,8 @@ export default function EmployeeAsistencia() {
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [tipoMarcaje, setTipoMarcaje] = useState(null);
+  const [registroActual, setRegistroActual] = useState(null);
+  const [modalCorreccionAbierto, setModalCorreccionAbierto] = useState(false);
 
   useEffect(() => {
     async function cargarDatos() {
@@ -66,6 +76,17 @@ export default function EmployeeAsistencia() {
           if (codigoApi) setApiCode(codigoApi);
 
           if (registroDb) {
+            // Guardamos el registro "crudo" (con su id_asistencia real) para
+            // poder pasarlo tal cual a SolicitarCorreccionAsistenciaModal --
+            // mismo shape que usa EmployeeHistorial.jsx.
+            setRegistroActual({
+              id_asistencia: registroDb.id_asistencia,
+              fecha: registroDb.asistencia?.fecha ?? new Date().toISOString().slice(0, 10),
+              hora_ingreso: registroDb.hora_ingreso,
+              hora_egreso: registroDb.hora_egreso,
+              estado: registroDb.estado,
+            });
+
             // FIX: registroDb.hora_ingreso / hora_egreso son la hora REAL de
             // marcaje (normalmente un timestamp completo), no la hora
             // PROGRAMADA del turno. Antes se mostraban crudas (sin formatear),
@@ -106,6 +127,7 @@ export default function EmployeeAsistencia() {
             // backend quien decide PRESENTE vs ATRASO al procesar el scan.
             const estadoSinRegistro = codigoApi === "SIN_TURNO_ASIGNADO" ? "FUERA_DE_HORARIO" : "EN_ESPERA";
             setCurrentRecord({ checkIn: "--", checkOut: "Pendiente", estado: estadoSinRegistro });
+            setRegistroActual(null);
             setCurrentShift({
               nombre: objetoTurnoAux?.nombre                  ?? "Turno General",
               start:  formatHora(objetoTurnoAux?.hora_ingreso) ?? "--:--",
@@ -118,7 +140,12 @@ export default function EmployeeAsistencia() {
           }
         }
 
-        setCorrections([]);
+        // Solicitudes de corrección ya elevadas (para no dejarlo siempre vacío)
+        const solicitudesRes = await AsistenciaService.listarMisSolicitudes().catch((err) => {
+          console.error("❌ Error cargando solicitudes de corrección:", err);
+          return [];
+        });
+        setCorrections(solicitudesRes?.data ?? solicitudesRes ?? []);
       } catch (err) {
         console.error("[Asistencia] Error crítico:", err);
       } finally {
@@ -355,12 +382,13 @@ async function registrarQR(datosQR) {
       {/* CORRECCIONES */}
       <Card title="Solicitudes y Correcciones" icon="fa-file-signature">
         <button
-          className="w-full rounded-xl py-3.5 text-white font-semibold mb-4 cursor-pointer hover:opacity-95 transition-opacity text-sm"
+          className="w-full rounded-xl py-3.5 text-white font-semibold mb-4 cursor-pointer hover:opacity-95 transition-opacity text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ background: "linear-gradient(135deg,#6b21a8,#7c3aed)" }}
-          onClick={() => alert("Módulo de justificaciones y apelación de atrasos en desarrollo.")}
+          disabled={!registroActual}
+          onClick={() => setModalCorreccionAbierto(true)}
         >
           <i className="fas fa-file-contract mr-2"></i>
-          Ingresar Justificativo / Apelación
+          {registroActual ? "Solicitar Corrección de Hoy" : "Aún no hay registro de hoy para corregir"}
         </button>
         <div className="space-y-3">
           {corrections.length === 0 && (
@@ -368,8 +396,36 @@ async function registrarQR(datosQR) {
               No tienes solicitudes pendientes de revisión para este período.
             </div>
           )}
+          {corrections.map((solicitud) => {
+            const meta = ETIQUETAS_ESTADO_SOLICITUD[solicitud.estado_solicitud] || ETIQUETAS_ESTADO_SOLICITUD.PENDIENTE;
+            return (
+              <div key={solicitud.id_solicitud}
+                className="flex items-center justify-between rounded-2xl p-3"
+                style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+                <div className="min-w-0">
+                  <span className="text-xs font-medium">{formatearFecha(solicitud.fecha_solicitud)}</span>
+                  <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]">{solicitud.motivo}</div>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${meta.className}`}>
+                  {meta.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </Card>
+
+      <SolicitarCorreccionAsistenciaModal
+        isOpen={modalCorreccionAbierto}
+        registro={registroActual}
+        onClose={() => setModalCorreccionAbierto(false)}
+        onSuccess={() => {
+          setModalCorreccionAbierto(false);
+          AsistenciaService.listarMisSolicitudes()
+            .then((res) => setCorrections(res?.data ?? res ?? []))
+            .catch(() => {});
+        }}
+      />
 
       <QRScannerModal
 

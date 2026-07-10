@@ -112,7 +112,7 @@ export default function AgregarItemExistenteModal({ isOpen, onClose, proyecto, i
               <option value="">{cargandoCatalogo ? 'Cargando...' : 'Selecciona...'}</option>
               {catalogoDisponible.map((i) => (
                 <option key={i.id_item} value={i.id_item}>
-                  {i.nombre}{i.unidad_medida ? ` (${i.unidad_medida})` : ''}
+                  {i.nombre}{i.unidad_medida ? ` (${i.unidad_medida.charAt(0)}${i.unidad_medida.slice(1).toLowerCase()})` : ''}
                 </option>
               ))}
             </select>

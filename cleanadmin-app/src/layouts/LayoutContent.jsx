@@ -44,6 +44,7 @@ export default function LayoutContent({
               key={index}
               text={btn.text}
               className={btn.className}
+              variant={btn.variant}
               onClick={btn.onClick}
               icon={btn.icon} 
             />
