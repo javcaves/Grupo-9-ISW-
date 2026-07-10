@@ -93,6 +93,8 @@ export default function InventarioView({ proyecto }) {
   const [modalMovimientoAbierto, setModalMovimientoAbierto] = useState(false);
   const [modalCrearItemAbierto, setModalCrearItemAbierto]   = useState(false);
   const [modalAgregarExistenteAbierto, setModalAgregarExistenteAbierto] = useState(false);
+  const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
+  const [itemAEditar, setItemAEditar] = useState(null);
 
   // ── Búsqueda + filtros + orden ──────────────────────────────────
   const [busqueda, setBusqueda]             = useState("");
@@ -356,7 +358,10 @@ export default function InventarioView({ proyecto }) {
               ? "No hay ítems registrados para este proyecto."
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
-          onEdit={(item)   => console.log("Editar ítem:", item)}
+          onEdit={(item) => {
+            setItemAEditar(item);
+            setModalEditarAbierto(true);
+          }}
           onDelete={handleDesvincular}
         />
       )}
@@ -382,7 +387,10 @@ export default function InventarioView({ proyecto }) {
               ? "No hay ítems bajo stock mínimo. ✓"
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
-          onEdit={(item) => console.log("Editar ítem:", item)}
+          onEdit={(item) => {
+            setItemAEditar(item);
+            setModalEditarAbierto(true);
+          }}
           onDelete={handleDesvincular}
         />
       )}
@@ -461,6 +469,15 @@ export default function InventarioView({ proyecto }) {
         itemsEnProyecto={items}
         actualizarLista={cargarDatos}
       />
+      {modalEditarAbierto && (
+        <EditarItemProyectoModal
+          isOpen={modalEditarAbierto}
+          onClose={() => setModalEditarAbierto(false)}
+          proyecto={proyecto}
+          item={itemAEditar}
+          actualizarLista={cargarDatos}
+        />
+      )}
     </>
   );
 }
