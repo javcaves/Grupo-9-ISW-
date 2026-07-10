@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Card } from "../../components/Card";
@@ -22,6 +22,7 @@ export default function EmployeeHistorial() {
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [solicitudes, setSolicitudes] = useState([]);
   const [registroParaCorregir, setRegistroParaCorregir] = useState(null);
+  const [filtroFecha, setFiltroFecha] = useState("");
 
   const [monthlySummary, setMonthlySummary] = useState({
     workedDays: 0,
@@ -84,6 +85,32 @@ export default function EmployeeHistorial() {
     navigate("/login");
   };
 
+  // ── Historial organizado: filtro por fecha exacta + agrupado por mes
+  // (colapsable), para que no colapse la vista al tener muchos registros.
+  const historialFiltrado = useMemo(
+    () => attendanceHistory.filter(
+      (r) => !filtroFecha || String(r.fecha).slice(0, 10) === filtroFecha
+    ),
+    [attendanceHistory, filtroFecha]
+  );
+
+  const gruposPorMes = useMemo(() => {
+    const mapa = new Map();
+    for (const r of historialFiltrado) {
+      const fecha = new Date(r.fecha);
+      const clave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}`;
+      if (!mapa.has(clave)) {
+        mapa.set(clave, {
+          etiqueta: fecha.toLocaleDateString("es-CL", { month: "long", year: "numeric" }),
+          registros: [],
+        });
+      }
+      mapa.get(clave).registros.push(r);
+    }
+    // Más reciente primero
+    return Array.from(mapa.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [historialFiltrado]);
+
   if (loading) {
     return <div className="p-4">Cargando historial...</div>;
   }
@@ -133,41 +160,85 @@ export default function EmployeeHistorial() {
 
       {/* ASISTENCIA */}
       <Card title="Historial de Asistencia" icon="fa-calendar-days">
-        <div className="space-y-3">
-
-          {attendanceHistory.length === 0 && (
-            <div className="text-sm text-gray-500">
-              No hay registros de asistencia.
-            </div>
-          )}
-
-          {attendanceHistory.map((record) => (
-            <div key={record.id_asistencia}
-              className="rounded-2xl p-4"
-              style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
-
-              <div className="font-semibold mb-3">{formatearFecha(record.fecha)}</div>
-
-              <div className="flex justify-between text-sm">
-                <span>Entrada</span>
-                <strong>{record.hora_ingreso ?? "--:--"}</strong>
-              </div>
-
-              <div className="flex justify-between text-sm mt-2">
-                <span>Salida</span>
-                <strong>{record.hora_egreso ?? "--:--"}</strong>
-              </div>
-
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-500 block mb-1">
+            Buscar por fecha
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={filtroFecha}
+              onChange={(e) => setFiltroFecha(e.target.value)}
+              className="flex-1 px-3 py-2 border rounded-xl text-sm bg-white outline-none focus:border-violet-400"
+              style={{ borderColor: "var(--card-border)" }}
+            />
+            {filtroFecha && (
               <button
-                onClick={() => setRegistroParaCorregir(record)}
-                className="w-full mt-3 px-3 py-2 rounded-xl text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                onClick={() => setFiltroFecha("")}
+                className="px-3 py-2 rounded-xl text-xs font-semibold bg-gray-100 hover:bg-gray-200"
               >
-                <i className="fas fa-pen mr-1.5" />
-                Solicitar corrección
+                Limpiar
               </button>
-            </div>
-          ))}
+            )}
+          </div>
+        </div>
 
+        {gruposPorMes.length === 0 && (
+          <div className="text-sm text-gray-500">
+            {filtroFecha
+              ? "No hay asistencia registrada en esa fecha."
+              : "No hay registros de asistencia."}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {gruposPorMes.map(([clave, grupo], i) => (
+            <details
+              key={clave}
+              open={i === 0}
+              className="rounded-2xl border overflow-hidden"
+              style={{ borderColor: "var(--card-border)" }}
+            >
+              <summary
+                className="cursor-pointer select-none px-4 py-3 text-sm font-semibold flex items-center justify-between"
+                style={{ background: "rgba(255,255,255,.5)" }}
+              >
+                <span className="capitalize">{grupo.etiqueta}</span>
+                <span className="text-xs font-normal text-gray-400">
+                  {grupo.registros.length} registro{grupo.registros.length !== 1 ? "s" : ""}
+                </span>
+              </summary>
+
+              <div className="p-3 space-y-3">
+                {grupo.registros.map((record) => (
+                  <div key={record.id_asistencia}
+                    className="rounded-2xl p-4"
+                    style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+
+                    <div className="font-semibold mb-3">{formatearFecha(record.fecha)}</div>
+
+                    <div className="flex justify-between text-sm">
+                      <span>Entrada</span>
+                      <strong>{record.hora_ingreso ?? "--:--"}</strong>
+                    </div>
+
+                    <div className="flex justify-between text-sm mt-2">
+                      <span>Salida</span>
+                      <strong>{record.hora_egreso ?? "--:--"}</strong>
+                    </div>
+
+                    <button
+                      onClick={() => setRegistroParaCorregir(record)}
+                      className="w-full mt-3 px-3 py-2 rounded-xl text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                    >
+                      <i className="fas fa-pen mr-1.5" />
+                      Solicitar corrección
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ))}
         </div>
       </Card>
 
