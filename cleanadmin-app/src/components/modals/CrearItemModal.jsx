@@ -5,6 +5,7 @@ import { ItemsService } from '../../api/items.service';
 import { ProyectoService } from '../../api/proyecto.service';
 import { useAuth } from '../../context/AuthContext';
 import { extraerListado } from '../../utils/apiResponse';
+import { useToast } from "../../context/ToastContext";
 
 const TIPOS_ITEM = ['MAQUINARIA', 'HERRAMIENTA', 'UTENSILIO', 'PRODUCTO'];
 const UNIDADES_MEDIDA = ['LITROS', 'UNIDADES', 'KILOS', 'SACOS', 'BOLSAS', 'METROS'];
@@ -30,6 +31,7 @@ const FORM_INICIAL = {
  * completo del catálogo.
  */
 export default function CrearItemModal({ isOpen, onClose, actualizarLista }) {
+  const toast = useToast();
   const { user } = useAuth();
   const esEncargado = user?.rol === 'ENCARGADO';
 
@@ -56,7 +58,7 @@ export default function CrearItemModal({ isOpen, onClose, actualizarLista }) {
         const miProyecto = extraerListado(resProyectos)[0];
 
         if (!miProyecto) {
-          alert('No tienes un proyecto asignado, no se puede enviar la solicitud.');
+          toast.warning('No tienes un proyecto asignado, no se puede enviar la solicitud.');
           setEnviando(false);
           return;
         }
@@ -84,7 +86,7 @@ export default function CrearItemModal({ isOpen, onClose, actualizarLista }) {
     } catch (error) {
       console.error(error);
       const detalle = error?.response?.data?.errorDetails || error?.data?.errorDetails || error?.message;
-      alert(detalle || 'Ocurrió un error, revisa la consola.');
+      toast.error(detalle || 'Ocurrió un error, revisa la consola.');
     } finally {
       setEnviando(false);
     }

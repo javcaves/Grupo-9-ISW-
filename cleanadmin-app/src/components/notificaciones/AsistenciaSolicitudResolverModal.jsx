@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { AsistenciaService } from '../../api/asistencia.service';
 import { useNotificaciones } from '../../context/NotificacionesContext';
+import { useToast } from "../../context/ToastContext";
 
 const ETIQUETAS_ESTADO = {
   PRESENTE: 'Presente',
@@ -14,6 +15,7 @@ const ETIQUETAS_ESTADO = {
 };
 
 export default function AsistenciaSolicitudResolverModal({ isOpen, idSolicitud, onClose }) {
+  const toast = useToast();
   const { refrescar } = useNotificaciones();
 
   const [solicitud, setSolicitud] = useState(null);
@@ -59,7 +61,7 @@ export default function AsistenciaSolicitudResolverModal({ isOpen, idSolicitud, 
       onClose();
     } catch (error) {
       console.error('Error al resolver la solicitud de asistencia:', error);
-      alert('No se pudo resolver la solicitud. Revisa la consola para más detalle.');
+      toast.error('No se pudo resolver la solicitud. Revisa la consola para más detalle.');
     } finally {
       setEnviando(false);
     }

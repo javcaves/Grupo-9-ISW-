@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../Modal";
 import { CalificacionService } from "../../api/calificacion.service";
+import { useToast } from "../../context/ToastContext";
 
 // Gestiona qué empleados están calificados para una categoría que "requiere_calificacion".
 // Se abre desde CategoriasView, sobre una categoría puntual.
 export default function GestionarCalificaciones({ isOpen, onClose, categoria, empleados, actualizarLista }) {
+  const toast = useToast();
   const [calificados, setCalificados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [idEmpleadoNuevo, setIdEmpleadoNuevo] = useState("");
@@ -47,7 +49,7 @@ export default function GestionarCalificaciones({ isOpen, onClose, categoria, em
       actualizarLista?.();
     } catch (error) {
       console.error("Error al otorgar calificación:", error);
-      alert(`No se pudo otorgar la calificación:\n\n${error.message}`);
+      toast.error(`No se pudo otorgar la calificación:\n\n${error.message}`);
     }
   };
 
@@ -59,7 +61,7 @@ export default function GestionarCalificaciones({ isOpen, onClose, categoria, em
       actualizarLista?.();
     } catch (error) {
       console.error("Error al revocar calificación:", error);
-      alert(`No se pudo revocar:\n\n${error.message}`);
+      toast.error(`No se pudo revocar:\n\n${error.message}`);
     }
   };
 

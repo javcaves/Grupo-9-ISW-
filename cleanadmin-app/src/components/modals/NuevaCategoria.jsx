@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { CategoriaService } from '../../api/categorias.service';
+import { useToast } from "../../context/ToastContext";
 
 export default function NuevaCategoria({ isOpen, onClose, actualizarLista }) {
+  const toast = useToast();
     const [formData, setFormData] = useState({ nombre: '', descripcion: '', requiereCertificacion: 'false' });
     
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -16,13 +18,13 @@ export default function NuevaCategoria({ isOpen, onClose, actualizarLista }) {
                 descripcion: formData.descripcion,
                 requiere_calificacion: formData.requiereCertificacion === 'true'
             });
-        alert("¡Categoría creada con éxito!");
+        toast.success("¡Categoría creada con éxito!");
         actualizarLista(); 
         onClose();
         setFormData({ nombre: '', descripcion: '', requiereCertificacion: 'false' });
         } catch (error) {
             console.error("Error de conexión:", error);
-            alert(`No se pudo guardar la categoría:\n\n${error.message}`);
+            toast.error(`No se pudo guardar la categoría:\n\n${error.message}`);
         }
     };
 

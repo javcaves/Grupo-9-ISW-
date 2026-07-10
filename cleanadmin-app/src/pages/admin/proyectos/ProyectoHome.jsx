@@ -8,6 +8,7 @@ import { ListToolbar }     from "../../../components/ListToolbar";
 import ProyectoFormModal   from "../../../components/modals/ProyectoFormModal";
 import ConfirmDeleteProyectoModal from "../../../components/modals/ConfirmDeleteProyectoModal";
 import CambiarFaseProyectoModal from "../../../components/modals/CambiarFaseProyectoModal";
+import { useToast } from "../../../context/ToastContext";
 
 const ESTADO_BADGE = {
   EN_PREPARACION: { label: "En Preparación", cls: "bg-amber-100 text-amber-700" },
@@ -37,6 +38,7 @@ function faseAnterior(estado) {
 }
 
 export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
+  const toast = useToast();
   const [proyectos, setProyectos] = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
@@ -95,7 +97,7 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
       await ProyectoService.reactivar(proyecto.id_proyecto);
       await cargar();
     } catch (err) {
-      alert(err?.message || "No se pudo reactivar el proyecto.");
+      toast.error(err?.message || "No se pudo reactivar el proyecto.");
     } finally {
       setReactivandoId(null);
     }
@@ -377,7 +379,6 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
           subtitle: esAdmin ? "Todos los proyectos del sistema" : "Proyectos en los que participas",
         }}
         actions={acciones}
-        toolbarPosition="top"
         toolbar={
           <div className="flex flex-col gap-3">
             {barraHerramientas}

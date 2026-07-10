@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../Modal';
 import { ProyectoService } from '../../api/proyecto.service';
+import { useToast } from "../../context/ToastContext";
 
 const ETIQUETAS_ESTADO = {
   EN_PREPARACION: 'En Preparación',
@@ -9,6 +10,7 @@ const ETIQUETAS_ESTADO = {
 };
 
 export default function CambiarFaseProyectoModal({ isOpen, onClose, proyecto, nuevoEstado, direccion, onSuccess }) {
+  const toast = useToast();
   const [enviando, setEnviando] = useState(false);
 
   if (!proyecto || !nuevoEstado) return null;
@@ -26,7 +28,7 @@ export default function CambiarFaseProyectoModal({ isOpen, onClose, proyecto, nu
       onClose();
     } catch (error) {
       console.error('Error al cambiar la fase del proyecto:', error);
-      alert(error?.message || 'No se pudo actualizar el estado del proyecto.');
+      toast.error(error?.message || 'No se pudo actualizar el estado del proyecto.');
     } finally {
       setEnviando(false);
     }

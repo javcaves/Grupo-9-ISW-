@@ -12,6 +12,7 @@ import { CategoriaService }     from "../../api/categorias.service";
 import { UsuarioService }       from "../../api/usuario.service";
 import { CalificacionService }  from "../../api/calificacion.service";
 import { FaTags, FaStar, FaCircleCheck, FaUserGroup } from "react-icons/fa6";
+import { useToast } from "../../context/ToastContext";
 
 function construirColumnas() {
   return [
@@ -51,6 +52,7 @@ function construirColumnas() {
 }
 
 export default function CategoriasView() {
+  const toast = useToast();
   const [listaCategorias, setListaCategorias] = useState([]);
   const [empleados,        setEmpleados]        = useState([]);
   const [calificaciones,   setCalificaciones]    = useState([]);
@@ -93,11 +95,11 @@ export default function CategoriasView() {
   async function handleReactivar(categoria) {
     try {
       await CategoriaService.reactivar(categoria.id_cat);
-      alert("¡Categoría reactivada con éxito!");
+      toast.success("¡Categoría reactivada con éxito!");
       cargarDatos();
     } catch (error) {
       console.error("Error al reactivar la categoría:", error);
-      alert(`No se pudo reactivar:\n\n${error.message}`);
+      toast.error(`No se pudo reactivar:\n\n${error.message}`);
     }
   }
 

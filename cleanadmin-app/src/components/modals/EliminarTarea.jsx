@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { TareaService } from '../../api/tareas.service';
+import { useToast } from "../../context/ToastContext";
 
 export default function EliminarTarea({ isOpen, onClose, tareaSeleccionada, actualizarLista }) {
+  const toast = useToast();
   const [comentario, setComentario] = useState('');
 
   const handleSubmit = async (e) => {
@@ -11,7 +13,7 @@ export default function EliminarTarea({ isOpen, onClose, tareaSeleccionada, actu
     
     // Validación de seguridad en el frontend
     if (comentario.trim().length < 5) {
-      alert("La justificación debe tener al menos 5 caracteres.");
+      toast.error("La justificación debe tener al menos 5 caracteres.");
       return;
     }
 
@@ -26,13 +28,13 @@ export default function EliminarTarea({ isOpen, onClose, tareaSeleccionada, actu
 
       await TareaService.cancelar(tareaSeleccionada?.id_tarea, payload);
 
-      alert(`¡La tarea ha sido marcada como ${estadoFinal} con éxito!`);
+      toast.success(`¡La tarea ha sido marcada como ${estadoFinal} con éxito!`);
       actualizarLista();
       onClose();
       setComentario('');
     } catch (error) {
       console.error("Error al cancelar la tarea:", error);
-      alert(`Error del servidor: ${error.message}`);
+      toast.error(`Error del servidor: ${error.message}`);
     }
   };
 

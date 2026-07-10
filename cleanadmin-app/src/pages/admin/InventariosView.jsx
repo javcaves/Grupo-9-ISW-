@@ -8,6 +8,7 @@ import { ListToolbar }         from "../../components/ListToolbar";
 import { ItemsService }        from "../../api/items.service";
 import CrearItemModal          from "../../components/modals/CrearItemModal";
 import SolicitudResolverModal  from "../../components/notificaciones/SolicitudResolverModal";
+import { useToast } from "../../context/ToastContext";
 import {
   FaBoxesStacked,
   FaTriangleExclamation,
@@ -175,13 +176,13 @@ const COLUMNAS_SOLICITUDES = [
     key:   "item",
     label: "Ítem",
     icon:  "fa-box",
-    render: (val, row) => val?.nombre ?? row.item_sugerido ?? "—",
+    render: (val) => val?.nombre ?? "—",
   },
   {
     key:   "item",
     label: "Proyecto",
     icon:  "fa-diagram-project",
-    render: (val, row) => row.proyecto?.nombre_proy ?? "Sin asignar",
+    render: (val) => val?.proyecto?.nombre_proy ?? "Sin asignar",
   },
   {
     key:   "tipo",
@@ -219,6 +220,7 @@ const COLUMNAS_SOLICITUDES = [
 ];
 
 export default function InventariosView() {
+  const toast = useToast();
   const { content } = ADMIN_CONFIG.inventarios;
 
   const [items,       setItems]       = useState([]);
@@ -287,7 +289,7 @@ export default function InventariosView() {
     } catch (err) {
       console.error("InventariosView handleEliminarItem:", err);
       const detalle = err?.response?.data?.errorDetails || err?.data?.errorDetails || err?.message;
-      alert(detalle || "No se pudo eliminar el item, revisa la consola.");
+      toast.error(detalle || "No se pudo eliminar el item, revisa la consola.");
     }
   }
 
@@ -333,12 +335,10 @@ export default function InventariosView() {
     });
 
   const solicitudesFiltradas = solicitudes
-    .filter((s) => coincideBusqueda(s.item?.nombre ?? s.item_sugerido))
-    .filter((s) => !filtroProyecto || s.proyecto?.id_proyecto === parseInt(filtroProyecto, 10))
+    .filter((s) => coincideBusqueda(s.item?.nombre))
+    .filter((s) => !filtroProyecto || s.item?.proyecto?.id_proyecto === parseInt(filtroProyecto, 10))
     .sort((a, b) => {
-      const nombreA = a.item?.nombre ?? a.item_sugerido ?? "";
-      const nombreB = b.item?.nombre ?? b.item_sugerido ?? "";
-      const cmp = nombreA.localeCompare(nombreB);
+      const cmp = (a.item?.nombre ?? "").localeCompare(b.item?.nombre ?? "");
       return ordenDescendente ? -cmp : cmp;
     });
 

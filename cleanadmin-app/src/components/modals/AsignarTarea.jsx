@@ -4,6 +4,7 @@ import { FormContainer } from '../Formulario';
 import { AsignacionService } from '../../api/asignacion.service';
 import { TareaService } from '../../api/tareas.service';
 import { formatearFechaHora } from '../../utils/formatters';
+import { useToast } from "../../context/ToastContext";
 
 const ESTADOS_ASIGNABLES = ['PLANIFICADA', 'ASIGNADA', 'EN_PROCESO'];
 
@@ -17,6 +18,7 @@ function empleadoActualDe(tarea) {
 }
 
 export default function AsignarTarea({ isOpen, onClose, tareasPendientes, tareaPreseleccionada, actualizarLista }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({ id_tarea: '', id_empleado: '' });
   const [empleadosDisponibles, setEmpleadosDisponibles] = useState([]);
   const [cargandoEmpleados, setCargandoEmpleados] = useState(false);
@@ -104,7 +106,7 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, tareaP
     e.preventDefault();
 
     if (!formData.id_tarea || !formData.id_empleado) {
-      alert("Debes seleccionar una tarea y un empleado antes de continuar.");
+      toast.warning("Debes seleccionar una tarea y un empleado antes de continuar.");
       return;
     }
 
@@ -117,13 +119,13 @@ export default function AsignarTarea({ isOpen, onClose, tareasPendientes, tareaP
     try {
       await AsignacionService.crear(datosProcesados);
 
-      alert(yaTieneEmpleado ? "¡Tarea reasignada con éxito!" : "¡Empleado asignado a la tarea con éxito!");
+      toast.success(yaTieneEmpleado ? "¡Tarea reasignada con éxito!" : "¡Empleado asignado a la tarea con éxito!");
       actualizarLista();
       onClose();
       setFormData({ id_tarea: '', id_empleado: '' });
     } catch (error) {
       console.error("Fallo al asignar:", error);
-      alert(`Asignación rechazada por el sistema:\n\n${error.message}`);
+      toast.error(`Asignación rechazada por el sistema:\n\n${error.message}`);
     }
   };
 

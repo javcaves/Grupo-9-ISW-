@@ -3,9 +3,11 @@ import { Modal } from "../Modal";
 import { FormContainer } from "../Formulario";
 import { EvaluacionService } from "../../api/evaluacion.service";
 import { formatearFecha } from "../../utils/formatters";
+import { useToast } from "../../context/ToastContext";
 
 // Se abre desde una fila de TareasView, sobre la tarea + el empleado asignado a ella
 export default function EvaluarDesempeno({ isOpen, onClose, tarea, empleado, actualizarLista }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({ cumplio: "true", calificacion: "5", comentario: "" });
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -16,7 +18,7 @@ export default function EvaluarDesempeno({ isOpen, onClose, tarea, empleado, act
     const cumplio = formData.cumplio === "true";
 
     if (!cumplio && formData.comentario.trim().length < 5) {
-      alert("Cuando la tarea no se cumplió, la justificación es obligatoria (mínimo 5 caracteres).");
+      toast.warning("Cuando la tarea no se cumplió, la justificación es obligatoria (mínimo 5 caracteres).");
       return;
     }
 
@@ -29,13 +31,13 @@ export default function EvaluarDesempeno({ isOpen, onClose, tarea, empleado, act
         comentario: formData.comentario.trim() || undefined,
       });
 
-      alert("¡Evaluación registrada con éxito!");
+      toast.success("¡Evaluación registrada con éxito!");
       actualizarLista?.();
       onClose();
       setFormData({ cumplio: "true", calificacion: "5", comentario: "" });
     } catch (error) {
       console.error("Error al registrar evaluación:", error);
-      alert(`No se pudo registrar la evaluación:\n\n${error.message}`);
+      toast.error(`No se pudo registrar la evaluación:\n\n${error.message}`);
     }
   };
 

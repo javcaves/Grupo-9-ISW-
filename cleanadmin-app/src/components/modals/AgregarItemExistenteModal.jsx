@@ -3,6 +3,7 @@ import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { ItemsService } from '../../api/items.service';
 import { extraerData } from '../../utils/apiResponse';
+import { useToast } from "../../context/ToastContext";
 
 const FORM_INICIAL = {
   id_item: '',
@@ -20,6 +21,7 @@ const FORM_INICIAL = {
  * fila en vez de intentar crear una nueva (la PK es id_item+id_proyecto).
  */
 export default function AgregarItemExistenteModal({ isOpen, onClose, proyecto, itemsEnProyecto = [], actualizarLista }) {
+  const toast = useToast();
   const [catalogo, setCatalogo] = useState([]);
   const [cargandoCatalogo, setCargandoCatalogo] = useState(false);
   const [formData, setFormData] = useState(FORM_INICIAL);
@@ -62,7 +64,7 @@ export default function AgregarItemExistenteModal({ isOpen, onClose, proyecto, i
     } catch (error) {
       console.error(error);
       const detalle = error?.response?.data?.errorDetails || error?.data?.errorDetails || error?.message;
-      alert(detalle || 'Ocurrió un error, revisa la consola.');
+      toast.error(detalle || 'Ocurrió un error, revisa la consola.');
     } finally {
       setEnviando(false);
     }

@@ -8,10 +8,9 @@ import { ItemsService }         from "../../../api/items.service";
 import RegistrarMovimientoModal from "../../../components/modals/RegistrarMovimientoModal";
 import CrearItemProyectoModal   from "../../../components/modals/CrearItemProyectoModal";
 import AgregarItemExistenteModal from "../../../components/modals/AgregarItemExistenteModal";
-import EditarItemModal from "../../../components/modals/EditarItemModal";
-import Eliminar from "../../../components/modals/Eliminar";
 import { FaBoxesStacked, FaTriangleExclamation, FaArrowRightArrowLeft, FaCircleCheck } from "react-icons/fa6";
-import EditarItemProyectoModal from "../../../components/modals/EditarItemProyectoModal";
+import { useToast } from "../../../context/ToastContext";
+
 const COLUMNAS_ITEMS = [
   {
     key:   "nombre",
@@ -87,6 +86,7 @@ const COLUMNAS_ITEMS = [
 ];
 
 export default function InventarioView({ proyecto }) {
+  const toast = useToast();
   const [items,       setItems]       = useState([]);
   const [bajoStock,   setBajoStock]   = useState([]);
   const [movimientos, setMovimientos] = useState([]);
@@ -95,12 +95,6 @@ export default function InventarioView({ proyecto }) {
   const [modalMovimientoAbierto, setModalMovimientoAbierto] = useState(false);
   const [modalCrearItemAbierto, setModalCrearItemAbierto]   = useState(false);
   const [modalAgregarExistenteAbierto, setModalAgregarExistenteAbierto] = useState(false);
-  const [itemEditar, setItemEditar] = useState(null);
-  const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
-  
-  // Estado para el modal de eliminación
-  const [modalEliminarAbierto, setModalEliminarAbierto] = useState(false);
-  const [itemADesvincular, setItemADesvincular] = useState(null);
 
   // ── Búsqueda + filtros + orden ──────────────────────────────────
   const [busqueda, setBusqueda]             = useState("");
@@ -128,16 +122,22 @@ export default function InventarioView({ proyecto }) {
   }
 
   useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
-  
-  function handleEditar(item) {
-    setItemEditar(item);
-    setModalEditarAbierto(true);
-  }
 
-  // ── Preparar para desvincular mediante modal ──
-  function iniciarDesvinculacion(item) {
-    setItemADesvincular(item);
-    setModalEliminarAbierto(true);
+  // ── Desvincular un item de este proyecto (no lo borra del catálogo,
+  // solo marca inactivo su vínculo ItemProyecto) ─────────────────
+  async function handleDesvincular(item) {
+    const confirmado = window.confirm(
+      `¿Desvincular "${item.nombre}" de este proyecto? Podrás volver a agregarlo más adelante si es necesario.`
+    );
+    if (!confirmado) return;
+
+    try {
+      await ItemsService.desvincularProyecto(proyecto.id_proyecto, item.id_item);
+      cargarDatos();
+    } catch (err) {
+      console.error("InventarioView handleDesvincular:", err);
+      toast.error(err?.message || "No se pudo desvincular el item, revisa la consola.");
+    }
   }
 
   // ── Categorías disponibles (derivadas de los ítems cargados) ──
@@ -180,6 +180,9 @@ export default function InventarioView({ proyecto }) {
     { key: "bajo-stock",   label: "Bajo Stock"    },
   ];
 
+  // LayoutContent ahora sí renderiza `toolbar`, así que aprovechamos
+  // ese slot para el selector de vista + la barra de búsqueda/filtros,
+  // en vez de dejarlos metidos dentro de la tabla.
   const barraHerramientas = (
     <div className="flex flex-col gap-4">
       <div className="flex gap-2">
@@ -236,68 +239,113 @@ export default function InventarioView({ proyecto }) {
     </div>
   );
 
+  // ── Stats derivadas ───────────────────────────────────────────
+  const totalItems     = items.length;
+  const itemsActivos   = items.filter((i) => i.activo).length;
+  const totalMov       = movimientos.length;
+
   const statsCards = [
-    { title: "Ítems Registrados", number: items.length, icon: FaBoxesStacked, detail: items.length === 0 ? "Sin ítems aún" : `${items.filter((i) => i.activo).length} activos` },
-    { title: "Bajo Stock", number: bajosStock, icon: FaTriangleExclamation, detail: bajosStock === 0 ? "Stock en orden" : "Requieren reposición" },
-    { title: "Movimientos", number: movimientos.length, icon: FaArrowRightArrowLeft, detail: movimientos.length === 0 ? "Sin movimientos" : "Entradas y salidas" },
-    { title: "Ítems Activos", number: items.filter((i) => i.activo).length, icon: FaCircleCheck, detail: items.length === 0 ? "Sin datos aún" : `${Math.round((items.filter((i) => i.activo).length / items.length) * 100)}% del total` },
+    {
+      title:  "Ítems Registrados",
+      number: totalItems,
+      icon:   FaBoxesStacked,
+      detail: totalItems === 0 ? "Sin ítems aún" : `${itemsActivos} activos`,
+    },
+    {
+      title:  "Bajo Stock",
+      number: bajosStock,
+      icon:   FaTriangleExclamation,
+      detail: bajosStock === 0 ? "Stock en orden" : "Requieren reposición",
+    },
+    {
+      title:  "Movimientos",
+      number: totalMov,
+      icon:   FaArrowRightArrowLeft,
+      detail: totalMov === 0 ? "Sin movimientos" : "Entradas y salidas",
+    },
+    {
+      title:  "Ítems Activos",
+      number: itemsActivos,
+      icon:   FaCircleCheck,
+      detail: totalItems === 0 ? "Sin datos aún"
+        : `${Math.round((itemsActivos / totalItems) * 100)}% del total`,
+    },
   ];
 
   const acciones = [
-    { text: "Registrar Movimiento", onClick: () => setModalMovimientoAbierto(true) },
-    { text: "Crear Item", variant: "accent", className: "bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200", onClick: () => setModalCrearItemAbierto(true) },
-    { text: "Agregar Item Existente", variant: "accent", className: "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200", onClick: () => setModalAgregarExistenteAbierto(true) },
+    {
+      text:      "Registrar Movimiento",
+      onClick:   () => setModalMovimientoAbierto(true),
+    },
+    {
+      text:      "Crear Item",
+      variant:   "accent",
+      className: "bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200",
+      onClick:   () => setModalCrearItemAbierto(true),
+    },
+    {
+      text:      "Agregar Item Existente",
+      variant:   "accent",
+      className: "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200",
+      onClick:   () => setModalAgregarExistenteAbierto(true),
+    },
   ];
 
-const COLUMNAS_MOVIMIENTOS = [
-    { 
-      key: "fecha", 
-      label: "Fecha", 
-      icon: "fa-calendar", 
-      render: (val) => val ? new Date(val).toLocaleDateString("es-CL") : "—" 
+  const COLUMNAS_MOVIMIENTOS = [
+    {
+      key:   "fecha",
+      label: "Fecha",
+      icon:  "fa-calendar",
+      render: (val) => val ? new Date(val).toLocaleDateString("es-CL") : "—",
     },
-    { 
-      key: "item_sugerido", // CAMBIADO: Usamos la llave que viene en el log
-      label: "Ítem", 
-      icon: "fa-box", 
-      render: (val, row) => val ?? row.nombre_item ?? "—" 
+    {
+      key:   "item",
+      label: "Ítem",
+      icon:  "fa-box",
+      render: (val, row) => val?.nombre || row?.Item?.nombre || row?.nombre_item || (typeof val === 'string' ? val : "—"),
     },
-    { 
-      key: "tipo_movimiento", // CAMBIADO: La llave correcta según tu log
-      label: "Tipo", 
-      icon: "fa-arrows-left-right", 
+    {
+      key:   "tipo",
+      label: "Tipo",
+      icon:  "fa-arrows-left-right",
       render: (val) => (
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-          val === "ENTRADA" ? "bg-green-50 text-green-600" : 
-          val === "SALIDA" ? "bg-red-50 text-red-500" : 
-          "bg-amber-50 text-amber-600"
+          val === "ENTRADA"
+            ? "bg-green-50 text-green-600"
+            : val === "SALIDA"
+            ? "bg-red-50 text-red-500"
+            : "bg-amber-50 text-amber-600"
         }`}>
           {val ?? "—"}
         </span>
-      ) 
+      ),
     },
-    { 
-      key: "cantidad", 
-      label: "Cantidad", 
-      icon: "fa-hashtag", 
-      render: (val) => val ?? "—" 
+    {
+      key:   "cantidad",
+      label: "Cantidad",
+      icon:  "fa-hashtag",
+      render: (val) => val ?? "—",
     },
-    { 
-      key: "emisor",
-      label: "Registrado por", 
-      icon: "fa-user", 
-      render: (val) => val?.rut ? `${val.nombre} ${val.apellido} (${val.rut})` : "—"
+    {
+      key:   "usuario",
+      label: "Registrado por",
+      icon:  "fa-user",
+      render: (val) => val ? `${val.nombre} ${val.apellido}` : "—",
     },
-    { 
-      key: "descripcion", // CAMBIADO: En el formulario lo guardas como descripcion
-      label: "Comentario", 
-      icon: "fa-comment", 
-      render: (val) => <span className="text-xs line-clamp-1" style={{ color: "var(--card-subtitle)" }}>{val ?? "—"}</span> 
+    {
+      key:   "comentario",
+      label: "Comentario",
+      icon:  "fa-comment",
+      render: (val) => (
+        <span className="text-xs line-clamp-1" style={{ color: "var(--card-subtitle)" }}>{val ?? "—"}</span>
+      ),
     },
   ];
 
   const tablaContenido = loading ? (
-    <div className="flex items-center justify-center py-16"><div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" /></div>
+    <div className="flex items-center justify-center py-16">
+      <div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" />
+    </div>
   ) : (
     <>
       {vistaActiva === "items" && (
@@ -344,19 +392,59 @@ const COLUMNAS_MOVIMIENTOS = [
 
   return (
     <>
-      <LayoutContent header={{ title: "Inventario del Proyecto", subtitle: proyecto?.nombre_proy ?? "Stock de materiales asignados" }} actions={acciones} toolbar={barraHerramientas} table={tablaContenido} />
+      <LayoutContent
+        header={{
+          title:    "Inventario del Proyecto",
+          subtitle: proyecto?.nombre_proy ?? "Stock de materiales asignados",
+        }}
+        actions={acciones}
+        toolbar={barraHerramientas}
+        stats={
+          <>
+            {statsCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <Card
+                  key={card.title}
+                  hoverable
+                  className="rounded-[28px] overflow-hidden relative min-h-[170px]"
+                  decorator={
+                    <div
+                      className="absolute top-[-20px] right-[-20px] w-[110px] h-[110px] rounded-full"
+                      style={{ backgroundColor: "var(--card-decorator-bg)" }}
+                    />
+                  }
+                >
+                  <div className="relative z-10 flex flex-col h-full">
+                    <span style={{ color: "var(--card-label-text)" }} className="font-semibold text-[1rem]">
+                      {card.title}
+                    </span>
+                    <h2 className="text-[3rem] leading-none font-bold mt-5" style={{ color: "var(--card-number-text)" }}>
+                      {card.number}
+                    </h2>
+                    <div className="flex items-center gap-2 mt-5 text-sm" style={{ color: "var(--card-detail-text)" }}>
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: "var(--card-icon-wrapper-bg)", color: "var(--card-icon-wrapper-text)" }}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      <span>{card.detail}</span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </>
+        }
+        table={tablaContenido}
+      />
 
-      <RegistrarMovimientoModal isOpen={modalMovimientoAbierto} onClose={() => setModalMovimientoAbierto(false)} proyecto={proyecto} items={items} actualizarLista={cargarDatos} />
-      <CrearItemProyectoModal isOpen={modalCrearItemAbierto} onClose={() => setModalCrearItemAbierto(false)} proyecto={proyecto} actualizarLista={cargarDatos} />
-      <AgregarItemExistenteModal isOpen={modalAgregarExistenteAbierto} onClose={() => setModalAgregarExistenteAbierto(false)} proyecto={proyecto} itemsEnProyecto={items} actualizarLista={cargarDatos} />
-      <EditarItemModal isOpen={modalEditarAbierto} item={itemEditar} onClose={() => { setModalEditarAbierto(false); setItemEditar(null); }} actualizarLista={cargarDatos} />
-      
-      <Eliminar
-        isOpen={modalEliminarAbierto}
-        onClose={() => { setModalEliminarAbierto(false); setItemADesvincular(null); }}
-        tituloElemento={itemADesvincular?.nombre}
-        idElemento={itemADesvincular?.id_item}
-        servicioEliminar={(id) => ItemsService.desvincularProyecto(proyecto.id_proyecto, id)}
+      <RegistrarMovimientoModal
+        isOpen={modalMovimientoAbierto}
+        onClose={() => setModalMovimientoAbierto(false)}
+        proyecto={proyecto}
+        items={items}
         actualizarLista={cargarDatos}
         mensajeConfirmacion="Esta acción desvinculará el ítem del proyecto. Podrás volver a agregarlo más adelante si es necesario."
         mensajeExito="¡Ítem desvinculado correctamente del proyecto!"

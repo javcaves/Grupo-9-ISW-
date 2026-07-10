@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { CategoriaService } from '../../api/categorias.service';
+import { useToast } from "../../context/ToastContext";
 
 export default function EditarCategoria({ isOpen, onClose, categoriaSeleccionada, actualizarLista }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({ nombre: '', descripcion: '', requiereCertificacion: 'false' });
 
   useEffect(() => {
@@ -26,12 +28,12 @@ export default function EditarCategoria({ isOpen, onClose, categoriaSeleccionada
           descripcion: formData.descripcion,
           requiere_calificacion: formData.requiereCertificacion === 'true'
       });
-      alert("¡Categoría actualizada con éxito!");
+      toast.success("¡Categoría actualizada con éxito!");
       actualizarLista();
       onClose();
     } catch (error) {
       console.error("Error al actualizar:", error);
-      alert(`No se pudo actualizar la categoría:\n\n${error.message}`);
+      toast.error(`No se pudo actualizar la categoría:\n\n${error.message}`);
     }
   };
 

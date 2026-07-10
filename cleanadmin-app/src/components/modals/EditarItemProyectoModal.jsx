@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { ItemsService } from '../../api/items.service';
+import { useToast } from '../../context/ToastContext';
 
 const TIPOS_ITEM = ['MAQUINARIA', 'HERRAMIENTA', 'UTENSILIO', 'PRODUCTO'];
 const UNIDADES_MEDIDA = ['LITROS', 'UNIDADES', 'KILOS', 'SACOS', 'BOLSAS', 'METROS'];
 const TIPOS_CONTROL = ['CONSUMO', 'PRESTAMO'];
 
 export default function EditarItemProyectoModal({ isOpen, onClose, item, actualizarLista }) {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
@@ -39,11 +41,11 @@ export default function EditarItemProyectoModal({ isOpen, onClose, item, actuali
       // Usamos la función de actualizar del servicio
       await ItemsService.actualizar(item.id_item, formData);
       actualizarLista?.();
+      toast.success("¡Ítem actualizado con éxito!");
       onClose(); // Cierra el modal si fue exitoso
     } catch (error) {
       console.error(error);
-      const detalle = error?.response?.data?.errorDetails || error?.data?.errorDetails || error?.message;
-      alert(detalle || 'Error al actualizar el ítem. Revisa la consola.');
+      toast.error(error?.message || 'Error al actualizar el ítem. Revisa la consola.');
     } finally {
       setEnviando(false);
     }

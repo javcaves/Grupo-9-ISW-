@@ -4,8 +4,10 @@ import { Modal } from "../Modal";
 import { FormContainer } from "../Formulario";
 import { UsuarioService } from "../../api/usuario.service";
 import PasswordInput from "../PasswordInput";
+import { useToast } from "../../context/ToastContext";
 
 export default function CambiarPasswordModal({ isOpen, onClose, usuario, onSuccess }) {
+  const toast = useToast();
   const [password, setPassword]                 = useState("");
   const [confirmarPassword, setConfirmarPassword] = useState("");
   const [guardando, setGuardando]                = useState(false);
@@ -41,7 +43,7 @@ export default function CambiarPasswordModal({ isOpen, onClose, usuario, onSucce
 
     try {
       await UsuarioService.cambiarPassword(usuario.id_usuario, password);
-      alert("¡Contraseña actualizada correctamente!");
+      toast.success("¡Contraseña actualizada correctamente!");
       onSuccess?.();
       onClose();
     } catch (err) {
