@@ -8,7 +8,6 @@ export default function LayoutContent({
   table, 
   actions = [],
   statsCols = 4, // cantidad de columnas de la grilla de tarjetas en desktop (lg). Default 4 para no afectar a las demás vistas.
-  toolbarPosition = "middle",
 }) {
   const COLS_LG = {
     2: "lg:grid-cols-2",
@@ -53,25 +52,23 @@ export default function LayoutContent({
         </div>
       </div>
 
-      {toolbar && toolbarPosition === "top" && (
-        <div className="mb-6">
-          {toolbar}
-        </div>
-      )}
-
       {/* Grilla de Stats (tarjetas) */}
       {stats && (
-        <div className={`stats-grid grid grid-cols-1 md:grid-cols-2 ${claseColsLg} gap-6 mb-8`}>
+        <div
+          className={`stats-grid grid grid-cols-1 md:grid-cols-2 ${claseColsLg} gap-6`}
+          style={{ marginBottom: "2rem" }}
+        >
           {stats}
         </div>
       )}
 
-      {toolbar && toolbarPosition !== "top" && (
-        <div className="mt-6">
+      {/* Barra de herramientas y filtros -- va pegada arriba de la tabla */}
+      {toolbar && (
+        <div style={{ marginBottom: "1rem" }}>
           {toolbar}
         </div>
       )}
-
+      
       {/* Contenedor de la Tabla */}
       {table && (
         <div 

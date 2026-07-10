@@ -309,10 +309,7 @@ const COLUMNAS_MOVIMIENTOS = [
               ? "No hay ítems registrados para este proyecto."
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
-          onEdit={(item) => {
-            setItemAEditar(item);
-            setModalEditarAbierto(true);
-          }}
+          onEdit={handleEditar}
           onDelete={iniciarDesvinculacion}
         />
       )}
@@ -338,10 +335,7 @@ const COLUMNAS_MOVIMIENTOS = [
               ? "No hay ítems bajo stock mínimo. ✓"
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
-          onEdit={(item) => {
-            setItemAEditar(item);
-            setModalEditarAbierto(true);
-          }}
+          onEdit={handleEditar}
           onDelete={iniciarDesvinculacion}
         />
       )}
@@ -370,20 +364,12 @@ const COLUMNAS_MOVIMIENTOS = [
       {modalEditarAbierto && (
         <EditarItemProyectoModal
           isOpen={modalEditarAbierto}
-          onClose={() => setModalEditarAbierto(false)}
+          onClose={() => { setModalEditarAbierto(false); setItemEditar(null); }}
           proyecto={proyecto}
-          item={itemAEditar}
+          item={itemEditar}
           actualizarLista={cargarDatos}
         />
       )}
-      {modalEditarAbierto && (
-     <EditarItemProyectoModal
-       isOpen={modalEditarAbierto}
-       onClose={() => setModalEditarAbierto(false)}
-       item={itemAEditar}
-       actualizarLista={cargarDatos}
-     />
-   )}
     </>
   );
 }
