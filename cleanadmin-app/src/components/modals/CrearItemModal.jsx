@@ -174,7 +174,9 @@ export default function CrearItemModal({ isOpen, onClose, actualizarLista }) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="">Selecciona...</option>
-                  {UNIDADES_MEDIDA.map((u) => <option key={u} value={u}>{u}</option>)}
+                  {UNIDADES_MEDIDA.map((u) => (
+                    <option key={u} value={u}>{u.charAt(0)}{u.slice(1).toLowerCase()}</option>
+                  ))}
                 </select>
               </div>
 
