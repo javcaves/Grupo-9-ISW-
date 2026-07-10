@@ -301,7 +301,7 @@ export default function InventarioView({ proyecto }) {
       key:   "item",
       label: "Ítem",
       icon:  "fa-box",
-      render: (val) => val?.nombre ?? "—",
+      render: (val, row) => val?.nombre || row?.Item?.nombre || row?.nombre_item || (typeof val === 'string' ? val : "—"),
     },
     {
       key:   "tipo",
