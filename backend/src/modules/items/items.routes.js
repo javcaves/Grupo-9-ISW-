@@ -28,9 +28,8 @@ router.get('/', authenticateJwt, ItemsCtrl.listarItems);
 router.put('/proyecto/:id_proyecto/auditar', authenticateJwt, checkRole(['ROOT','SUPERVISOR', 'ENCARGADO']), ItemsCtrl.auditarInventarioProyecto);
 
 // El Supervisor (y ADMIN) vinculan items ya existentes del catálogo a un proyecto, o los desvinculan
-router.post('/proyecto/:id_proyecto/vincular', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR']), ItemsCtrl.vincularItemProyecto);
-router.delete('/proyecto/:id_proyecto/item/:id_item', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR']), ItemsCtrl.desvincularItemProyecto);
-
+router.post('/proyecto/:id_proyecto/vincular', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR','ENCARGADO']), ItemsCtrl.vincularItemProyecto);
+router.delete('/proyecto/:id_proyecto/item/:id_item', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR','ENCARGADO']), ItemsCtrl.desvincularItemProyecto);
 // ================= RUTAS DE ITEMS - ESCRITURA =================
 // El Supervisor (y ADMIN) son los facultados para crear, modificar y eliminar ítems del catálogo
 router.post('/', authenticateJwt, checkRole(['ROOT','ADMIN','SUPERVISOR']), ItemsCtrl.createItem);
