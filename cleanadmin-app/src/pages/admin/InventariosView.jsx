@@ -128,7 +128,7 @@ const COLUMNAS_MOVIMIENTOS = [
     render: (val) => val?.proyecto?.nombre_proy ?? "Sin asignar",
   },
   {
-    key:   "tipo",
+    key:   "tipo_movimiento",
     label: "Tipo",
     icon:  "fa-arrows-left-right",
     render: (val) => (
@@ -150,7 +150,7 @@ const COLUMNAS_MOVIMIENTOS = [
     render: (val) => val ?? "—",
   },
   {
-    key:   "usuario",
+    key:   "emisor",
     label: "Registrado por",
     icon:  "fa-user",
     render: (val) => val ? `${val.nombre} ${val.apellido}` : "—",

@@ -356,8 +356,8 @@ export default function InventarioView({ proyecto }) {
               ? "No hay ítems registrados para este proyecto."
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
-          onEdit={(item)   => console.log("Editar ítem:", item)}
-          onDelete={handleDesvincular}
+          onEdit={handleEditar}
+          onDelete={iniciarDesvinculacion}
         />
       )}
 
@@ -382,8 +382,8 @@ export default function InventarioView({ proyecto }) {
               ? "No hay ítems bajo stock mínimo. ✓"
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
-          onEdit={(item) => console.log("Editar ítem:", item)}
-          onDelete={handleDesvincular}
+          onEdit={handleEditar}
+          onDelete={iniciarDesvinculacion}
         />
       )}
     </>
@@ -445,22 +445,18 @@ export default function InventarioView({ proyecto }) {
         proyecto={proyecto}
         items={items}
         actualizarLista={cargarDatos}
+        mensajeConfirmacion="Esta acción desvinculará el ítem del proyecto. Podrás volver a agregarlo más adelante si es necesario."
+        mensajeExito="¡Ítem desvinculado correctamente del proyecto!"
       />
-
-      <CrearItemProyectoModal
-        isOpen={modalCrearItemAbierto}
-        onClose={() => setModalCrearItemAbierto(false)}
-        proyecto={proyecto}
-        actualizarLista={cargarDatos}
-      />
-
-      <AgregarItemExistenteModal
-        isOpen={modalAgregarExistenteAbierto}
-        onClose={() => setModalAgregarExistenteAbierto(false)}
-        proyecto={proyecto}
-        itemsEnProyecto={items}
-        actualizarLista={cargarDatos}
-      />
+      {modalEditarAbierto && (
+        <EditarItemProyectoModal
+          isOpen={modalEditarAbierto}
+          onClose={() => { setModalEditarAbierto(false); setItemEditar(null); }}
+          proyecto={proyecto}
+          item={itemEditar}
+          actualizarLista={cargarDatos}
+        />
+      )}
     </>
   );
 }

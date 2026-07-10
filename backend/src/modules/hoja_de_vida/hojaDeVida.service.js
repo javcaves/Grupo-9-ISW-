@@ -1,98 +1,202 @@
 import { AppDataSource } from "../../config/ConfigDB.js";
 
-const usuarioRepository = AppDataSource.getRepository("Usuario");
-const proyectoUsuarioRepository =AppDataSource.getRepository("ProyectoUsuario");
-const proyectoRepository = AppDataSource.getRepository("Proyecto");
-const asignacionTareaRepository = AppDataSource.getRepository("AsignacionTarea");
-const programarTareaRepository = AppDataSource.getRepository("ProgramarTarea");
-const actividadRepository = AppDataSource.getRepository("Actividad");
-const categoriaRepository = AppDataSource.getRepository("Categoria");
-const calificacionEmpleadoRepository = AppDataSource.getRepository("CalificacionEmpleado");
+const usuarioRepository          = AppDataSource.getRepository("Usuario");
+const proyectoUsuarioRepository  = AppDataSource.getRepository("ProyectoUsuario");
+const asignacionTareaRepository  = AppDataSource.getRepository("AsignacionTarea");
 const asistenciaEmpleadoRepository = AppDataSource.getRepository("AsistenciaEmpleado");
-const turnoEmpleadoRepository = AppDataSource.getRepository("TurnoEmpleado");
-const EvaluacionDesempenoRepository = AppDataSource.getRepository("EvaluacionDesempeno");
+const turnoEmpleadoRepository    = AppDataSource.getRepository("TurnoEmpleado");
+const evaluacionDesempenoRepository = AppDataSource.getRepository("EvaluacionDesempeno");
+
+// ============================================================
+// SISTEMA DE PUNTAJE (0-100)
+// La asistencia pesa igual que la calificación (50% / 50%).
+// Si falta uno de los dos componentes, se usa el otro al 100%.
+// ============================================================
+
+// Pesos de cada estado de asistencia dentro del ratio de asistencia.
+// PRESENTE y FALTA_JUSTIFICADA cuentan completo, ATRASO y RETIRADO cuentan
+// la mitad (un atraso resta la mitad que una falta injustificada),
+// FALTA_INJUSTIFICADA cuenta cero. EN_ESPERA se excluye del cálculo.
+const PESOS_ASISTENCIA = {
+    PRESENTE: 1,
+    FALTA_JUSTIFICADA: 1,
+    ATRASO: 0.5,
+    RETIRADO: 0.5,
+    FALTA_INJUSTIFICADA: 0,
+};
+
+function calcularPuntajeAsistencia(resumenAsistencias) {
+    const total = resumenAsistencias.total - resumenAsistencias.enEspera;
+    if (total <= 0) return null;
+
+    const puntosPositivos =
+        resumenAsistencias.asistido * PESOS_ASISTENCIA.PRESENTE +
+        resumenAsistencias.faltaJustificada * PESOS_ASISTENCIA.FALTA_JUSTIFICADA +
+        resumenAsistencias.atraso * PESOS_ASISTENCIA.ATRASO +
+        resumenAsistencias.retirado * PESOS_ASISTENCIA.RETIRADO +
+        resumenAsistencias.faltaInjustificada * PESOS_ASISTENCIA.FALTA_INJUSTIFICADA;
+
+    return Math.round((puntosPositivos / total) * 100 * 10) / 10;
+}
+
+function calcularPuntajeCalificacion(promedioGeneral) {
+    if (promedioGeneral === null) return null;
+    // Escala de calificación asumida 1-5 -> normalizada a 0-100
+    return Math.round((parseFloat(promedioGeneral) / 5) * 100 * 10) / 10;
+}
+
+function calcularPuntajeFinal(puntajeCalificacion, puntajeAsistencia) {
+    if (puntajeCalificacion === null && puntajeAsistencia === null) return null;
+    if (puntajeCalificacion === null) return puntajeAsistencia;
+    if (puntajeAsistencia === null) return puntajeCalificacion;
+    return Math.round((puntajeCalificacion * 0.5 + puntajeAsistencia * 0.5) * 10) / 10;
+}
+
+function getNivelPuntaje(puntaje) {
+    if (puntaje === null) return null;
+    if (puntaje >= 85) return "Excelente";
+    if (puntaje >= 70) return "Bueno";
+    if (puntaje >= 50) return "Regular";
+    return "Necesita Mejorar";
+}
+
+function construirResumenAsistencias(asistencias) {
+    return {
+        total: asistencias.length,
+        asistido: asistencias.filter((a) => a.estado === "PRESENTE").length,
+        atraso: asistencias.filter((a) => a.estado === "ATRASO").length,
+        faltaJustificada: asistencias.filter((a) => a.estado === "FALTA_JUSTIFICADA").length,
+        faltaInjustificada: asistencias.filter((a) => a.estado === "FALTA_INJUSTIFICADA").length,
+        retirado: asistencias.filter((a) => a.estado === "RETIRADO").length,
+        enEspera: asistencias.filter((a) => a.estado === "EN_ESPERA").length,
+        ultimas: asistencias.slice(0, 10).map((a) => ({
+            fecha: a.asistencia?.fecha,
+            hora_ingreso: a.hora_ingreso,
+            estado: a.estado,
+            descripcion: a.descripcion,
+        })),
+    };
+}
+
+function construirDesempenoPorCategoria(evaluaciones) {
+    const porCategoria = {};
+
+    evaluaciones.forEach((e) => {
+        const nombreCat = e.tarea?.actividad?.categoria?.nombre || "Sin categoría";
+        if (!porCategoria[nombreCat]) {
+            porCategoria[nombreCat] = { total: 0, suma: 0, cumplio: 0, noCumplio: 0, evaluaciones: [] };
+        }
+        porCategoria[nombreCat].total++;
+        porCategoria[nombreCat].suma += e.calificacion;
+
+        if (e.cumplio) {
+            porCategoria[nombreCat].cumplio++;
+        } else {
+            porCategoria[nombreCat].noCumplio++;
+        }
+
+        porCategoria[nombreCat].evaluaciones.push({
+            id_evaluacion: e.id_evaluacion,
+            id_tarea: e.tarea?.id_tarea,
+            descripcion_tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
+            cumplio: e.cumplio,
+            calificacion: e.calificacion,
+            comentario: e.comentario,
+            fecha_evaluacion: e.fecha_evaluacion,
+            evaluador: e.evaluador?.nombre || "Desconocido",
+        });
+    });
+
+    return Object.keys(porCategoria).map((cat) => ({
+        categoria: cat,
+        promedio: (porCategoria[cat].suma / porCategoria[cat].total).toFixed(1),
+        totalEvaluaciones: porCategoria[cat].total,
+        cumplio: porCategoria[cat].cumplio,
+        noCumplio: porCategoria[cat].noCumplio,
+        tasaCumplimiento: porCategoria[cat].total > 0
+            ? Math.round((porCategoria[cat].cumplio / porCategoria[cat].total) * 100)
+            : 0,
+        evaluaciones: porCategoria[cat].evaluaciones,
+    }));
+}
 
 export const hojaDeVidaService = {
-    async obtenerHojaDeVida(idEmpleado){
-        try{
-
-            //=========INFORMACION PERSONAL==============
+    // ======°°°HOJA DE VIDA GLOBAL°°°=======
+    async obtenerHojaDeVida(idEmpleado) {
+        try {
+            // =========INFORMACION PERSONAL==============
             const usuario = await usuarioRepository.findOne({
-                where: {id: id_empleado, rol: "EMPLEADO"},
-                select: ["id", "nombre", "apellido", "rut", "email", "numero", "fecha_ingreso", "rol", "activo"]
+                where: { id_usuario: idEmpleado, rol: "EMPLEADO" },
+                select: {
+                    id_usuario: true,
+                    nombre: true,
+                    apellido: true,
+                    rut: true,
+                    email: true,
+                    numero: true,
+                    fecha_ingreso: true,
+                    rol: true,
+                    activo: true,
+                },
             });
 
-            if(!usuario){
-                return[null, "empleado no encontrado"];
+            if (!usuario) {
+                return [null, "Empleado no encontrado"];
             }
 
-            //=======PROYECTOS==========
+            // =======PROYECTOS==========
             const proyectosAsignados = await proyectoUsuarioRepository.find({
-                where: {id_usuario: idEmpleado},
-                relations: ["asistencia"],
-                order: {hora_ingreso: "DESC"}
+                where: { id_usuario: idEmpleado },
+                relations: { proyecto: true },
+                order: { fecha_asignacion: "DESC" },
             });
 
-            const proyectos = proyectosAsignados.map(p =>({
+            const proyectos = proyectosAsignados.map((p) => ({
                 id_proyecto: p.id_proyecto,
-                nombre: p.proyecto?.nombre_proy || "sin nombre",
+                nombre: p.proyecto?.nombre_proy || "Sin nombre",
                 estado: p.proyecto?.estado || "DESCONOCIDO",
                 fecha_asignacion: p.fecha_asignacion,
                 fecha_termino: p.fecha_termino,
-                activo: p.activo
+                activo: p.activo,
             }));
 
-            //==========ASISTENCIAS=============
+            // ==========ASISTENCIAS=============
             const asistencias = await asistenciaEmpleadoRepository.find({
-                where: {id_empleado: idEmpleado},
-                relations: ["asistencia"],
-                order: {hora_ingreso: "DESC"}
+                where: { id_empleado: idEmpleado },
+                relations: { asistencia: true },
+                order: { hora_ingreso: "DESC" },
             });
 
-            const resumenAsistencias = {
-                total: asistencias.length,
-                asistido: asistencias.filter(a => a.estado === "PRESENTE").length,
-                atraso: asistencias.filter(a => a.estado === "ATRASO").length,
-                faltaJustificada: asistencias.filter(a => a.estado === "FALTA_JUSTIFICADA").length,
-                faltaInjustificada: asistencias.filter(a => a.estado === "FALTA_INJUSTIFICADA").length,
-                retirado: asistencias.filter(a => a.estado === "RETIRADO").length,
-                enEspera: asistencias.filter(a => a.estado === "EN_ESPERA").length,
-                ultimas: asistencias.slice(0, 10).map(a=>({
-                    fecha: a.asistencia?.fecha,
-                    hora_ingreso: a.hora_ingreso,
-                    estado: a.estado,
-                    descripcion: a.descripcion
-                }))
-            };
+            const resumenAsistencias = construirResumenAsistencias(asistencias);
 
-            //=========TURNOS============
-            const turnos = await TurnoEmpleadoRepository.find({
-                where: {id_empleado: idEmpleado, activo: true},
-                relations: ["turno"],
-                order: {hora_ingreso: "DESC"}
+            // =========TURNOS============
+            const turnos = await turnoEmpleadoRepository.find({
+                where: { id_empleado: idEmpleado, activo: true },
+                relations: { turno: true },
+                order: { fecha_ingreso: "DESC" },
             });
 
-            const turnosFormateados = turnos.map(t =>({
+            const turnosFormateados = turnos.map((t) => ({
                 id_turno: t.id_turno,
                 fecha_ingreso: t.fecha_ingreso,
                 fecha_egreso: t.fecha_egreso,
                 hora_ingreso: t.turno?.hora_ingreso,
                 hora_salida: t.turno?.hora_salida,
-                activo: t.activo
+                activo: t.activo,
             }));
 
-            //======TAREAS ASIGNADAS======
+            // ======TAREAS ASIGNADAS======
             const tareasAsignadas = await asignacionTareaRepository.find({
-                where: { id_empleado: idEmpleado, activo: true },
-                relations: ["tarea", "tarea.actividad", "tarea.actividad.categoria"],
-                order: { hora_asignacion: "DESC" }
+                where: { empleado: { id_usuario: idEmpleado } },
+                relations: { tarea: { actividad: { categoria: true } } },
+                order: { hora_asignacion: "DESC" },
             });
 
-            const tareas = tareasAsignadas.map(ta=>{
+            const tareas = tareasAsignadas.map((ta) => {
                 const tarea = ta.tarea;
                 const actividad = tarea?.actividad;
                 const categoria = actividad?.categoria;
-                return{
+                return {
                     id_tarea: ta.id_tarea,
                     fecha: tarea?.fecha,
                     estado: tarea?.estado || "DESCONOCIDO",
@@ -100,85 +204,36 @@ export const hojaDeVidaService = {
                     categoria: categoria?.nombre || "Sin categoría",
                     tipo_asignacion: ta.tipo_asignacion,
                     hora_asignacion: ta.hora_asignacion,
-                    comentario: tarea?.comentario
+                    comentario: tarea?.comentario,
                 };
             });
 
-            //==========EVLUACION DESEMPEÑO============
-            const evaluaciones = await EvaluacionDesempenoRepository.find({
-                where: { 
-                    empleado: { id_usuario: idEmpleado }, 
-                    activo: true 
-                },
-                relations: ["tarea", "tarea.actividad", "tarea.actividad.categoria", "evaluador"],
-                order: { fecha_evaluacion: "DESC" }
-            });
-            const evaluacionesPorCategoria = {};
-
-            evaluaciones.forEach(e =>{
-                const nombreCat = e.tarea?.actividad?.categoria?.nombre || "Sin categoría";
-                if(!evaluacionesPorCategoria[nombreCat]){
-                    evaluacionesPorCategoria[nombreCat] = {
-                        total: 0,
-                        suma: 0,
-                        cumplio: 0,
-                        noCumplio: 0,
-                        evaluaciones: []
-                    };
-                }
-                evaluacionesPorCategoria[nombreCat].total++;
-                evaluacionesPorCategoria[nombreCat].suma += e.calificacion;
-
-                if (e.noCumplio){
-                    evaluacionesPorCategoria[nombreCat].cumplio++;
-                }else{
-                    evaluacionesPorCategoria[nombreCat].noCumplio++;
-                }
-
-                evaluacionesPorCategoria[nombreCat].push({
-                    id_evaluacion: e.id_evaluacion,
-                    id_tarea: e.tarea?.id_tarea,
-                    descripcion_tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
-                    cumplio: e.cumplio,
-                    calificacion: e.calificacion,
-                    comentario: e.comentario,
-                    fecha_evaluacion: e.fecha_evaluacion,
-                    evaluador: e.evaluador?.nombre || "Desconocido"
-                });
+            // ==========EVALUACION DESEMPEÑO============
+            const evaluaciones = await evaluacionDesempenoRepository.find({
+                where: { empleado: { id_usuario: idEmpleado }, activo: true },
+                relations: { tarea: { actividad: { categoria: true } }, evaluador: true },
+                order: { fecha_evaluacion: "DESC" },
             });
 
-            const desempenoPorCategoria = Object.keys(evaluacionesPorCategoria).map(cat => ({
-                categoria: cat,
-                promedio: (evaluacionesPorCategoria[cat].suma / evaluacionesPorCategoria[cat].total).toFixed(1),
-                totalEvaluaciones: evaluacionesPorCategoria[cat].total,
-                cumplio: evaluacionesPorCategoria[cat].cumplio,
-                noCumplio: evaluacionesPorCategoria[cat].noCumplio,
-                tasaCumplimiento: evaluacionesPorCategoria[cat].total > 0
-                    ? Math.round((evaluacionesPorCategoria[cat].cumplio / evaluacionesPorCategoria[cat].total) * 100)
-                    : 0,
-                evaluaciones: evaluacionesPorCategoria[cat].evaluaciones
-            }));
+            const desempenoPorCategoria = construirDesempenoPorCategoria(evaluaciones);
 
-            //======DESEMPEÑO GENERAL, DATOS PUROS======
-            const todasCalificaciones = evaluaciones.map(e=> e.calificacion);
+            // ======DESEMPEÑO GENERAL======
+            const todasCalificaciones = evaluaciones.map((e) => e.calificacion);
             const promedioGeneral = todasCalificaciones.length > 0
                 ? (todasCalificaciones.reduce((a, b) => a + b, 0) / todasCalificaciones.length).toFixed(1)
                 : null;
-            const totalCumplio = evaluaciones.filter(e => e.cumplio).length;
-            const totalNoCumplio = evaluaciones.filter(e => !e.cumplio).length;
-            const getNivelDesempeno = (prom) =>{
-                if (prom === null) return null;
-                const p = parseFloat(prom);
-                if (p >= 4.5) return "Excelente";
-                if (p >= 3.5) return "Bueno";
-                if (p >= 2.5) return "Regular";
-                return "Necesita Mejorar";
-            };
+            const totalCumplio = evaluaciones.filter((e) => e.cumplio).length;
+            const totalNoCumplio = evaluaciones.filter((e) => !e.cumplio).length;
 
-            //======RESPUESTA========
+            // ======PUNTAJE 0-100======
+            const puntajeCalificacion = calcularPuntajeCalificacion(promedioGeneral);
+            const puntajeAsistencia = calcularPuntajeAsistencia(resumenAsistencias);
+            const puntajeFinal = calcularPuntajeFinal(puntajeCalificacion, puntajeAsistencia);
+
+            // ======RESPUESTA========
             const resultado = {
                 informacionPersonal: {
-                    id: usuario.id,
+                    id: usuario.id_usuario,
                     nombre: usuario.nombre,
                     apellido: usuario.apellido,
                     rut: usuario.rut,
@@ -186,8 +241,7 @@ export const hojaDeVidaService = {
                     numero: usuario.numero || null,
                     fecha_ingreso: usuario.fecha_ingreso,
                     rol: usuario.rol,
-                    activo: usuario.activo
-
+                    activo: usuario.activo,
                 },
                 proyectos,
                 asistencias: resumenAsistencias,
@@ -202,59 +256,74 @@ export const hojaDeVidaService = {
                         tasaCumplimiento: evaluaciones.length > 0
                             ? Math.round((totalCumplio / evaluaciones.length) * 100)
                             : 0,
-                        ultimas: evaluaciones.slice(0, 5).map(e => ({
+                        ultimas: evaluaciones.slice(0, 5).map((e) => ({
                             id_evaluacion: e.id_evaluacion,
                             tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
                             cumplio: e.cumplio,
                             calificacion: e.calificacion,
                             comentario: e.comentario,
                             fecha: e.fecha_evaluacion,
-                            evaluador: e.evaluador?.nombre || "Desconocido"
-                        }))
-                    }
+                            evaluador: e.evaluador?.nombre || "Desconocido",
+                        })),
+                    },
                 },
-                desempenoGeneral:{
+                desempenoGeneral: {
                     promedio: promedioGeneral,
-                    nivel: getNivelDesempeno(promedioGeneral),
-                    totalCalificaciones: todasCalificaciones.length
+                    nivel: getNivelPuntaje(puntajeFinal),
+                    totalCalificaciones: todasCalificaciones.length,
+                },
+                puntaje: {
+                    final: puntajeFinal,
+                    calificacion: puntajeCalificacion,
+                    asistencia: puntajeAsistencia,
+                    nivel: getNivelPuntaje(puntajeFinal),
                 },
                 resumen: {
                     totalProyectos: proyectos.length,
                     totalTareas: tareas.length,
                     totalAsistencias: asistencias.length,
                     totalEvaluaciones: evaluaciones.length,
-                    tasaAsistencia: asistencias.length > 0
-                    ? Math.round((asistencias.filter(a => a.estado === "ASISTIDO").length / asistencias.length) * 100)
-                    : null
-                }
+                    tasaAsistencia: puntajeAsistencia,
+                },
             };
 
             return [resultado, null];
-
-        } catch (error){
-            console.error("error en obtener hoja de vida service: ", error);
+        } catch (error) {
+            console.error("Error en obtenerHojaDeVida:", error);
             return [null, error.message];
         }
     },
 
-    async obtenerHojaDeVidaPorProyecto(idEmpleado, idProyecto){
-        try{
-            //=========INFORMACION PERSONAL (misma funcion que en global)==============
+    // ======°°°HOJA DE VIDA X PROYECTO°°°=======
+    async obtenerHojaDeVidaPorProyecto(idEmpleado, idProyecto) {
+        try {
+            // =========INFORMACION PERSONAL==============
             const usuario = await usuarioRepository.findOne({
-                where: {id: id_empleado, rol: "EMPLEADO"},
-                select: ["id", "nombre", "apellido", "rut", "email", "numero", "fecha_ingreso", "rol", "activo"]
+                where: { id_usuario: idEmpleado, rol: "EMPLEADO" },
+                select: {
+                    id_usuario: true,
+                    nombre: true,
+                    apellido: true,
+                    rut: true,
+                    email: true,
+                    numero: true,
+                    fecha_ingreso: true,
+                    rol: true,
+                    activo: true,
+                },
             });
 
-            if(!usuario){
-                return[null, "empleado no encontrado"];
+            if (!usuario) {
+                return [null, "Empleado no encontrado"];
             }
-            //==== PROYECTO ESPECIFICO======
-            const proyectoAsignado = await proyectoRepository.findOne({
+
+            // ==== PROYECTO ESPECÍFICO======
+            const proyectoAsignado = await proyectoUsuarioRepository.findOne({
                 where: { id_usuario: idEmpleado, id_proyecto: idProyecto },
-                relations: ["proyecto"]
+                relations: { proyecto: true },
             });
 
-            if(!proyectoAsignado){
+            if (!proyectoAsignado) {
                 return [null, "El empleado no está asignado a este proyecto"];
             }
 
@@ -262,59 +331,40 @@ export const hojaDeVidaService = {
                 id_proyecto: proyectoAsignado.id_proyecto,
                 nombre: proyectoAsignado.proyecto?.nombre_proy || "Sin nombre",
                 estado: proyectoAsignado.proyecto?.estado || "DESCONOCIDO",
-                fecha_asignacion: proyectoAsignado.proyecto?.fecha_asignacion,
-                fecha_termino: proyectoAsignado.proyecto?.fecha_termino,
-                activo: proyectoAsignado.proyecto?.activo  
+                fecha_asignacion: proyectoAsignado.fecha_asignacion,
+                fecha_termino: proyectoAsignado.fecha_termino,
+                activo: proyectoAsignado.activo,
             };
 
-            //=======ASISTENCIAS FILTRADAS X PROYECTO====
-            //esto es lo mismo q asistencias anterior, cambia en la filtracion
+            // =======ASISTENCIAS FILTRADAS X PROYECTO====
             const asistencias = await asistenciaEmpleadoRepository.find({
-                where: {id_empleado: idEmpleado},
-                relations: ["asistencia"],
-                order: {hora_ingreso: "DESC"}
+                where: { id_empleado: idEmpleado },
+                relations: { asistencia: true },
+                order: { hora_ingreso: "DESC" },
             });
 
-            //filtracion de asistencias x proyecto
-            const asistenciasFiltradas = asistencias.filter(a => 
-                a.asistencia?.id_proyecto === parseInt(idProyecto)
+            const asistenciasFiltradas = asistencias.filter(
+                (a) => a.asistencia?.id_proyecto === parseInt(idProyecto)
             );
 
-            const resumenAsistencias = {
-                total: asistenciasFiltradas.length,
-                asistido: asistenciasFiltradas.filter(a => a.estado === "PRESENTE").length,
-                atraso: asistenciasFiltradas.filter(a => a.estado === "ATRASO").length,
-                faltaJustificada: asistenciasFiltradas.filter(a => a.estado === "FALTA_JUSTIFICADA").length,
-                faltaInjustificada: asistenciasFiltradas.filter(a => a.estado === "FALTA_INJUSTIFICADA").length,
-                retirado: asistenciasFiltradas.filter(a => a.estado === "RETIRADO").length,
-                enEspera: asistenciasFiltradas.filter(a => a.estado === "EN_ESPERA").length,
-                ultimas: asistenciasFiltradas.slice(0, 10).map(a=>({
-                    fecha: a.asistencia?.fecha,
-                    hora_ingreso: a.hora_ingreso,
-                    estado: a.estado,
-                    descripcion: a.descripcion
-                }))
-            };
+            const resumenAsistencias = construirResumenAsistencias(asistenciasFiltradas);
 
-            //==========TAREAS FILTRADAS X PROYECTO
-            //esto es lo mismo q tareasAsignadas anterior, cambia en la filtracion
+            // ==========TAREAS FILTRADAS X PROYECTO======
             const tareasAsignadas = await asignacionTareaRepository.find({
-                where: { id_empleado: idEmpleado, activo: true },
-                relations: ["tarea", "tarea.actividad", "tarea.actividad.categoria"],
-                order: { hora_asignacion: "DESC" }
+                where: { empleado: { id_usuario: idEmpleado } },
+                relations: { tarea: { actividad: { categoria: true } } },
+                order: { hora_asignacion: "DESC" },
             });
 
-            //filtracion de tareasAsignadas x proyecto
-            const tareasFiltradas = tareasAsignadas.filter(ta => 
-                ta.tarea?.actividad?.id_proyecto === parseInt(idProyecto)
+            const tareasFiltradas = tareasAsignadas.filter(
+                (ta) => ta.tarea?.actividad?.id_proyecto === parseInt(idProyecto)
             );
 
-            //misma funcion que en global, solo cambio que mapeo las filtradas en vez de las globales
-            const tareas = tareasFiltradas.map(ta=>{
+            const tareas = tareasFiltradas.map((ta) => {
                 const tarea = ta.tarea;
                 const actividad = tarea?.actividad;
                 const categoria = actividad?.categoria;
-                return{
+                return {
                     id_tarea: ta.id_tarea,
                     fecha: tarea?.fecha,
                     estado: tarea?.estado || "DESCONOCIDO",
@@ -322,111 +372,59 @@ export const hojaDeVidaService = {
                     categoria: categoria?.nombre || "Sin categoría",
                     tipo_asignacion: ta.tipo_asignacion,
                     hora_asignacion: ta.hora_asignacion,
-                    comentario: tarea?.comentario
+                    comentario: tarea?.comentario,
                 };
             });
 
-            //=======TURNOS FILTRADOS X PROYECTO=====
-            const turnos = await TurnoEmpleadoRepository.find({
+            // =======TURNOS FILTRADOS X PROYECTO=====
+            const turnos = await turnoEmpleadoRepository.find({
                 where: { id_empleado: idEmpleado, activo: true },
-                relations: ["turno"],
-                order: { fecha_ingreso: "DESC" }
+                relations: { turno: true },
+                order: { fecha_ingreso: "DESC" },
             });
 
-            const turnosFiltrados = turnos.filter(t =>
-                t.turno?.id_proyecto === parseInt(idProyecto)
-            );
+            const turnosFiltrados = turnos.filter((t) => t.turno?.id_proyecto === parseInt(idProyecto));
 
-            //misma funcion que en global, solo cambio que mapeo las filtradas en vez de las globales
-            const turnosFormateados = turnosFiltrados.map(t => ({
+            const turnosFormateados = turnosFiltrados.map((t) => ({
                 id_turno: t.id_turno,
                 fecha_ingreso: t.fecha_ingreso,
                 fecha_egreso: t.fecha_egreso,
                 hora_ingreso: t.turno?.hora_ingreso,
                 hora_salida: t.turno?.hora_salida,
-                activo: t.activo
+                activo: t.activo,
             }));
 
-            //========CALIFICACIONES FILTRADAS X PROYECTO
-           //==========EVLUACION DESEMPEÑO============
-            const evaluaciones = await EvaluacionDesempenoRepository.find({
-                where: { 
-                    empleado: { id_usuario: idEmpleado }, 
-                    activo: true 
-                },
-                relations: ["tarea", "tarea.actividad", "tarea.actividad.categoria", "evaluador"],
-                order: { fecha_evaluacion: "DESC" }
+            // ========EVALUACIONES FILTRADAS X PROYECTO========
+            const evaluaciones = await evaluacionDesempenoRepository.find({
+                where: { empleado: { id_usuario: idEmpleado }, activo: true },
+                relations: { tarea: { actividad: { categoria: true } }, evaluador: true },
+                order: { fecha_evaluacion: "DESC" },
             });
 
-            const evaluacionesFiltradas = evaluaciones.filter(e => 
-                e.tarea?.actividad?.id_proyecto === parseInt(idProyecto)
+            const evaluacionesFiltradas = evaluaciones.filter(
+                (e) => e.tarea?.actividad?.id_proyecto === parseInt(idProyecto)
             );
 
-            const evaluacionesPorCategoria = {};
+            const desempenoPorCategoria = construirDesempenoPorCategoria(evaluacionesFiltradas);
 
-           evaluacionesFiltradas.forEach(e =>{
-                const nombreCat = e.tarea?.actividad?.categoria?.nombre || "Sin categoría";
-                if(!evaluacionesPorCategoria[nombreCat]){
-                    evaluacionesPorCategoria[nombreCat] = {
-                        total: 0,
-                        suma: 0,
-                        cumplio: 0,
-                        noCumplio: 0,
-                        evaluaciones: []
-                    };
-                }
-                evaluacionesPorCategoria[nombreCat].total++;
-                evaluacionesPorCategoria[nombreCat].suma += e.calificacion;
-
-                if (e.noCumplio){
-                    evaluacionesPorCategoria[nombreCat].cumplio++;
-                }else{
-                    evaluacionesPorCategoria[nombreCat].noCumplio++;
-                }
-
-                evaluacionesPorCategoria[nombreCat].push({
-                    id_evaluacion: e.id_evaluacion,
-                    id_tarea: e.tarea?.id_tarea,
-                    descripcion_tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
-                    cumplio: e.cumplio,
-                    calificacion: e.calificacion,
-                    comentario: e.comentario,
-                    fecha_evaluacion: e.fecha_evaluacion,
-                    evaluador: e.evaluador?.nombre || "Desconocido"
-                });
-            });
-
-            const desempenoPorCategoria = Object.keys(evaluacionesPorCategoria).map(cat => ({
-                categoria: cat,
-                promedio: (evaluacionesPorCategoria[cat].suma / evaluacionesPorCategoria[cat].total).toFixed(1),
-                totalEvaluaciones: evaluacionesPorCategoria[cat].total,
-                cumplio: evaluacionesPorCategoria[cat].cumplio,
-                noCumplio: evaluacionesPorCategoria[cat].noCumplio,
-                tasaCumplimiento: evaluacionesPorCategoria[cat].total > 0
-                    ? Math.round((evaluacionesPorCategoria[cat].cumplio / evaluacionesPorCategoria[cat].total) * 100)
-                    : 0,
-                evaluaciones: evaluacionesPorCategoria[cat].evaluaciones
-            }));
-
-            //======DESEMPEÑO GENERAL, DATOS PUROS======
-            const todasCalificaciones = calificaciones.map(c=> c.calificacion);
+            // ======DESEMPEÑO GENERAL======
+            const todasCalificaciones = evaluacionesFiltradas.map((e) => e.calificacion);
             const promedioGeneral = todasCalificaciones.length > 0
                 ? (todasCalificaciones.reduce((a, b) => a + b, 0) / todasCalificaciones.length).toFixed(1)
                 : null;
-            const getNivelDesempeno = (prom) =>{
-                if (prom === null) return null;
-                const p = parseFloat(prom);
-                if (p >= 4.5) return "Excelente";
-                if (p >= 3.5) return "Bueno";
-                if (p >= 2.5) return "Regular";
-                return "Necesita Mejorar";
-            };
+            const totalCumplio = evaluacionesFiltradas.filter((e) => e.cumplio).length;
+            const totalNoCumplio = evaluacionesFiltradas.filter((e) => !e.cumplio).length;
 
-            //======RESPUESTA========
+            // ======PUNTAJE 0-100======
+            const puntajeCalificacion = calcularPuntajeCalificacion(promedioGeneral);
+            const puntajeAsistencia = calcularPuntajeAsistencia(resumenAsistencias);
+            const puntajeFinal = calcularPuntajeFinal(puntajeCalificacion, puntajeAsistencia);
+
+            // ======RESPUESTA========
             const resultado = {
-                proyecto: proyecto,
+                proyecto,
                 informacionPersonal: {
-                    id: usuario.id,
+                    id: usuario.id_usuario,
                     nombre: usuario.nombre,
                     apellido: usuario.apellido,
                     rut: usuario.rut,
@@ -434,8 +432,7 @@ export const hojaDeVidaService = {
                     numero: usuario.numero || null,
                     fecha_ingreso: usuario.fecha_ingreso,
                     rol: usuario.rol,
-                    activo: usuario.activo
-
+                    activo: usuario.activo,
                 },
                 asistencias: resumenAsistencias,
                 turnos: turnosFormateados,
@@ -449,37 +446,40 @@ export const hojaDeVidaService = {
                         tasaCumplimiento: evaluacionesFiltradas.length > 0
                             ? Math.round((totalCumplio / evaluacionesFiltradas.length) * 100)
                             : 0,
-                        ultimas: evaluacionesFiltradas.slice(0, 5).map(e => ({
+                        ultimas: evaluacionesFiltradas.slice(0, 5).map((e) => ({
                             id_evaluacion: e.id_evaluacion,
                             tarea: e.tarea?.actividad?.descripcion_esp || "Sin descripción",
                             cumplio: e.cumplio,
                             calificacion: e.calificacion,
                             comentario: e.comentario,
                             fecha: e.fecha_evaluacion,
-                            evaluador: e.evaluador?.nombre || "Desconocido"
-                        }))
-                    }
+                            evaluador: e.evaluador?.nombre || "Desconocido",
+                        })),
+                    },
                 },
-                desempenoGeneral:{
+                desempenoGeneral: {
                     promedio: promedioGeneral,
-                    nivel: getNivelDesempeno(promedioGeneral),
-                    totalCalificaciones: todasCalificaciones.length
+                    nivel: getNivelPuntaje(puntajeFinal),
+                    totalCalificaciones: todasCalificaciones.length,
+                },
+                puntaje: {
+                    final: puntajeFinal,
+                    calificacion: puntajeCalificacion,
+                    asistencia: puntajeAsistencia,
+                    nivel: getNivelPuntaje(puntajeFinal),
                 },
                 resumen: {
                     totalTareas: tareas.length,
-                    totalAsistencias: asistencias.length,
+                    totalAsistencias: asistenciasFiltradas.length,
                     totalEvaluaciones: evaluacionesFiltradas.length,
-                    tasaAsistencia: asistencias.length > 0
-                    ? Math.round((asistencias.filter(a => a.estado === "ASISTIDO").length / asistencias.length) * 100)
-                    : null
-                }
+                    tasaAsistencia: puntajeAsistencia,
+                },
             };
 
             return [resultado, null];
-
-        } catch (error){
-            console.error("error en obtener hoja de vida por proyecto service: ", error);
+        } catch (error) {
+            console.error("Error en obtenerHojaDeVidaPorProyecto:", error);
             return [null, error.message];
         }
-    }
-}
+    },
+};
