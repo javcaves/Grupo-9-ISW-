@@ -6,7 +6,7 @@ import { checkRole } from '../../middlewares/role.middleware.js';
 const router = Router();
 
 // Todo el dashboard es exclusivo para administradores del sistema
-router.use(authenticateJwt, checkRole(['ROOT', 'ADMIN']));
+router.use(authenticateJwt, checkRole(['ROOT', 'ADMIN','SUPERVISOR']));
 
 /**
  * KPIs generales: proyectos activos, empleados, % asistencia,
