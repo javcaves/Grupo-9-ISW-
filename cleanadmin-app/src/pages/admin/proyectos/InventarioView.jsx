@@ -8,6 +8,7 @@ import { ItemsService }         from "../../../api/items.service";
 import RegistrarMovimientoModal from "../../../components/modals/RegistrarMovimientoModal";
 import CrearItemProyectoModal   from "../../../components/modals/CrearItemProyectoModal";
 import AgregarItemExistenteModal from "../../../components/modals/AgregarItemExistenteModal";
+import EditarItemProyectoModal   from "../../../components/modals/EditarItemProyectoModal";
 import { FaBoxesStacked, FaTriangleExclamation, FaArrowRightArrowLeft, FaCircleCheck } from "react-icons/fa6";
 import { useToast } from "../../../context/ToastContext";
 
@@ -95,6 +96,8 @@ export default function InventarioView({ proyecto }) {
   const [modalMovimientoAbierto, setModalMovimientoAbierto] = useState(false);
   const [modalCrearItemAbierto, setModalCrearItemAbierto]   = useState(false);
   const [modalAgregarExistenteAbierto, setModalAgregarExistenteAbierto] = useState(false);
+  const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
+  const [itemEditar, setItemEditar] = useState(null);
 
   // ── Búsqueda + filtros + orden ──────────────────────────────────
   const [busqueda, setBusqueda]             = useState("");
@@ -138,6 +141,12 @@ export default function InventarioView({ proyecto }) {
       console.error("InventarioView handleDesvincular:", err);
       toast.error(err?.message || "No se pudo desvincular el item, revisa la consola.");
     }
+  }
+
+  // ── Abrir el modal de edición para un ítem del proyecto ──────────
+  function handleEditar(item) {
+    setItemEditar(item);
+    setModalEditarAbierto(true);
   }
 
   // ── Categorías disponibles (derivadas de los ítems cargados) ──
@@ -358,7 +367,7 @@ export default function InventarioView({ proyecto }) {
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
           onEdit={handleEditar}
-          onDelete={iniciarDesvinculacion}
+          onDelete={handleDesvincular}
         />
       )}
 
@@ -384,7 +393,7 @@ export default function InventarioView({ proyecto }) {
               : "Ningún ítem coincide con la búsqueda o el filtro aplicado."
           }
           onEdit={handleEditar}
-          onDelete={iniciarDesvinculacion}
+          onDelete={handleDesvincular}
         />
       )}
     </>
@@ -458,6 +467,21 @@ export default function InventarioView({ proyecto }) {
           actualizarLista={cargarDatos}
         />
       )}
+
+      <CrearItemProyectoModal
+        isOpen={modalCrearItemAbierto}
+        onClose={() => setModalCrearItemAbierto(false)}
+        proyecto={proyecto}
+        actualizarLista={cargarDatos}
+      />
+
+      <AgregarItemExistenteModal
+        isOpen={modalAgregarExistenteAbierto}
+        onClose={() => setModalAgregarExistenteAbierto(false)}
+        proyecto={proyecto}
+        itemsEnProyecto={items}
+        actualizarLista={cargarDatos}
+      />
     </>
   );
 }
