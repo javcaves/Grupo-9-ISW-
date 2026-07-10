@@ -42,7 +42,7 @@ export default function EmployeeDashboard() {
         ]);
 
         // Tareas
-        const asignaciones = tareasRes?.data ?? [];
+        const asignaciones = tareasRes?.data ?? tareasRes ?? [];
         const total        = asignaciones.length;
         const completadas  = asignaciones.filter(a => a.tarea?.estado === "FINALIZADA").length;
         setTasks({
@@ -101,7 +101,6 @@ export default function EmployeeDashboard() {
   // columna TIME como la del turno programado; se formatea con formatHora()
   // para evitar mostrar el timestamp crudo o cortarlo mal con substring().
   const horaIngresoMarcada = formatHora(attendanceRecord?.hora_ingreso);
-  const puedeTrabajarTareas = ["PRESENTE", "ATRASO"].includes(estadoAsistencia);
   const esFinDeSemana       = apiCode === "FIN_DE_SEMANA";
   const sinTurnoAsignado    = apiCode === "SIN_TURNO_ASIGNADO" || !shift;
 
@@ -245,17 +244,12 @@ export default function EmployeeDashboard() {
             )}
 
             <button
-              disabled={!puedeTrabajarTareas}
               onClick={() => navigate("/tareas")}
-              className={`w-full rounded-xl py-3.5 font-semibold text-sm transition-all ${
-                puedeTrabajarTareas
-                  ? "text-white cursor-pointer hover:opacity-95"
-                  : "bg-gray-50 text-gray-300 cursor-not-allowed border border-dashed"
-              }`}
-              style={puedeTrabajarTareas ? { background: "linear-gradient(135deg,#7c3aed,#3b82f6)" } : {}}
+              className="w-full rounded-xl py-3.5 font-semibold text-sm text-white cursor-pointer hover:opacity-95 transition-all"
+              style={{ background: "linear-gradient(135deg,#7c3aed,#3b82f6)" }}
             >
               <i className="fas fa-list-check mr-2"></i>
-              Ver Mis Tareas{!puedeTrabajarTareas && " (requiere ingreso)"}
+              Ver Mis Tareas
             </button>
 
           </div>
@@ -264,7 +258,7 @@ export default function EmployeeDashboard() {
 
       {/* ── PROGRESO DE TAREAS ── */}
       <Card title="Progreso de Actividades" icon="fa-list-check">
-        {puedeTrabajarTareas ? (
+        {tasks.assigned > 0 ? (
           <div className="space-y-3">
             <div className="flex justify-between text-sm font-semibold">
               <span>{tasks.completed} completadas</span>
@@ -280,8 +274,8 @@ export default function EmployeeDashboard() {
           </div>
         ) : (
           <div className="text-center text-sm py-5 text-gray-400 italic">
-            <i className="fas fa-lock mr-2"></i>
-            Registra tu ingreso para acceder a tus actividades.
+            <i className="fas fa-clipboard-list mr-2"></i>
+            No tienes actividades asignadas todavía.
           </div>
         )}
       </Card>
