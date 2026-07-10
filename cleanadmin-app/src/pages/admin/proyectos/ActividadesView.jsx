@@ -168,7 +168,6 @@ export default function ActividadesView({ proyecto }) {
     {
       text: mostrarInactivas ? "Ocultar Inactivas" : "Ver Inactivas",
       variant: "secondary",
-      className: "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
       onClick: () => setMostrarInactivas(v => !v),
     },
     { text: "Crear Actividad Base", className: "bg-indigo-600 text-white", onClick: () => setAbrirActividad(true) },

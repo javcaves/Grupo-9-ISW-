@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 export const Table = ({
   columns,
@@ -11,9 +11,27 @@ export const Table = ({
   extraActions = [],
   emptyMessage = "no hay datos disponibles",
   className = "",
+  pageSize = 8,
 }) => {
   const handleEdit   = (e, item) => { e.stopPropagation(); if (onEdit)   onEdit(item);   };
   const handleDelete = (e, item) => { e.stopPropagation(); if (onDelete) onDelete(item); };
+
+  const [paginaActual, setPaginaActual] = useState(1);
+
+  const totalPaginas = Math.max(1, Math.ceil(data.length / pageSize));
+
+  useEffect(() => {
+    setPaginaActual((actual) => Math.min(actual, totalPaginas));
+  }, [totalPaginas]);
+
+  const datosPagina = useMemo(() => {
+    const inicio = (paginaActual - 1) * pageSize;
+    return data.slice(inicio, inicio + pageSize);
+  }, [data, paginaActual, pageSize]);
+
+  const mostrarPaginacion = data.length > pageSize;
+  const desde = data.length === 0 ? 0 : (paginaActual - 1) * pageSize + 1;
+  const hasta = Math.min(paginaActual * pageSize, data.length);
 
   return (
     <div
@@ -63,7 +81,7 @@ export const Table = ({
                 </td>
               </tr>
             ) : (
-              data.map((item, idx) => (
+              datosPagina.map((item, idx) => (
                 <tr
                   key={idx}
                   onClick={() => onRowClick && onRowClick(item)}
@@ -154,6 +172,50 @@ export const Table = ({
           </tbody>
         </table>
       </div>
+
+      {/* Paginación */}
+      {mostrarPaginacion && (
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-3.5"
+          style={{ borderTop: "1px solid var(--table-row-border)" }}
+        >
+          <span className="text-xs" style={{ color: "var(--table-header-text)" }}>
+            Mostrando <strong>{desde}-{hasta}</strong> de <strong>{data.length}</strong> resultados
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
+              disabled={paginaActual === 1}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-all duration-150 disabled:opacity-35 disabled:cursor-not-allowed"
+              style={{ color: "var(--table-header-text)", border: "1px solid var(--table-header-border)" }}
+              onMouseEnter={(e) => { if (paginaActual !== 1) e.currentTarget.style.background = "var(--table-row-hover)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              aria-label="Página anterior"
+            >
+              <i className="fas fa-chevron-left text-xs" />
+            </button>
+
+            <span className="text-xs px-2 font-medium" style={{ color: "var(--table-row-text)" }}>
+              Página {paginaActual} de {totalPaginas}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+              disabled={paginaActual === totalPaginas}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-all duration-150 disabled:opacity-35 disabled:cursor-not-allowed"
+              style={{ color: "var(--table-header-text)", border: "1px solid var(--table-header-border)" }}
+              onMouseEnter={(e) => { if (paginaActual !== totalPaginas) e.currentTarget.style.background = "var(--table-row-hover)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              aria-label="Página siguiente"
+            >
+              <i className="fas fa-chevron-right text-xs" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

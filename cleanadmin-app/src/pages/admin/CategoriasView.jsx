@@ -155,7 +155,6 @@ export default function CategoriasView() {
     {
       text: mostrarInactivas ? "Ocultar Inactivas" : "Ver Inactivas",
       variant: "secondary",
-      className: "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
       onClick: () => setMostrarInactivas(v => !v),
     },
     { text: "Nueva Categoría", className: "bg-indigo-600 text-white", onClick: () => setAbrirNueva(true) },
