@@ -4,9 +4,26 @@ export default function ButtonTemplate({
   text,
   icon: Icon,
   className = "",
+  variant = "primary",
   onClick,
   disabled = false
 }) {
+  //Solo el primary se ve morado
+  const esPrimario = variant === "primary";
+
+  const estiloBase = esPrimario
+    ? {
+        background: "var(--button-bg)",
+        color: "var(--button-text)",
+        borderColor: "var(--button-border)",
+        boxShadow: "var(--button-shadow)",
+      }
+    : undefined;
+
+  const claseVariante =
+    variant === "secondary" ? "btn-secondary" :
+    variant === "accent" ? "btn-accent" : "";
+
   return (
     <button
       onClick={onClick}
@@ -26,14 +43,10 @@ export default function ButtonTemplate({
         active:scale-95
         disabled:opacity-50
         disabled:cursor-not-allowed
+        ${claseVariante}
         ${className}
       `}
-      style={{
-        background: "var(--button-bg)",
-        color: "var(--button-text)",
-        borderColor: "var(--button-border)",
-        boxShadow: "var(--button-shadow)"
-      }}
+      style={estiloBase}
     >
       {Icon && <Icon size={18} />}
       <span>{text}</span>

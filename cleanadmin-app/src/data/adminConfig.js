@@ -5,7 +5,7 @@ export const ADMIN_CONFIG = {
     content: {
       title: "Personal Activo",
       subtitle: "Listado completo de colaboradores",
-      actions: [{ text: "Registrar Ingreso", className: "bg-blue-600 text-white" }]
+      actions: [{ text: "Registrar Ingreso", variant: "accent", className: "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200" }]
     }
   },
   inventarios: {
@@ -13,7 +13,7 @@ export const ADMIN_CONFIG = {
     content: {
       title: "Inventario General",
       subtitle: "Estado actual de almacén",
-      actions: [{ text: "Añadir Item", className: "bg-emerald-600 text-white" }]
+      actions: [{ text: "Añadir Item", variant: "accent", className: "bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200" }]
     }
   },
   categorias: {
@@ -21,7 +21,7 @@ export const ADMIN_CONFIG = {
     content: {
       title: "Gestión de Categorías",
       subtitle: "Definición de etiquetas",
-      actions: [{ text: "Nueva Categoría", className: "bg-blue-600 text-white" }]
+      actions: [{ text: "Nueva Categoría", variant: "accent", className: "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200" }]
     }
   },
   reportes: {
@@ -29,7 +29,7 @@ export const ADMIN_CONFIG = {
     content: {
       title: "Reportes Ejecutivos",
       subtitle: "Dashboard de rendimiento",
-      actions: [{ text: "Generar PDF", className: "bg-slate-800 text-white" }]
+      actions: [{ text: "Generar PDF", variant: "secondary" }]
     }
   }
 };

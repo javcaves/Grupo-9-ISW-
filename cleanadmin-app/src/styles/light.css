@@ -81,13 +81,13 @@
   --table-bg:                     rgba(255, 255, 255, 0.80);
   --table-border:                 rgba(255, 255, 255, 0.40);
   --table-shadow:                 0 10px 30px rgba(15, 23, 42, 0.06);
-  --table-header-from:            rgba(248, 250, 252, 0.80);
-  --table-header-to:              rgba(255, 255, 255, 0.50);
-  --table-header-text:            #475569;
-  --table-header-border:          #e2e8f0;
+  --table-header-from:            rgba(139, 92, 246, 0.10);
+  --table-header-to:              rgba(139, 92, 246, 0.02);
+  --table-header-text:            #6d28d9;
+  --table-header-border:          #ddd6fe;
   --table-row-text:               #334155;
-  --table-row-border:             rgba(241, 245, 249, 0.50);
-  --table-row-hover:              rgba(139, 92, 246, 0.06);
+  --table-row-border:             #ede9fe;
+  --table-row-hover:              rgba(139, 92, 246, 0.07);
   --table-empty-text:             #94a3b8;
   --table-action-text:            #64748b;
   --table-action-edit-hover-bg:   rgba(139, 92, 246, 0.10);
@@ -107,4 +107,25 @@
   --turno-badge-bg:         #ecfdf5;
   --turno-badge-text:       #059669;
   --turno-badge-border:     #d1fae5;
+}
+
+.theme-light .btn-secondary {
+  background-color: #ede9fe;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.12);
+}
+.theme-light .btn-secondary:hover {
+  background-color: #ddd6fe;
+  border-color: #c4b5fd;
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.18);
+}
+
+/* ---- Botón "accent" (mismo peso visual que secondary, color propio) ---- */
+.theme-light .btn-accent {
+  border-width: 1.5px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.10);
+}
+.theme-light .btn-accent:hover {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
 }

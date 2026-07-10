@@ -247,7 +247,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   const acciones = [
     {
       text: "Vincular Existente",
-      className: "bg-white border border-indigo-200 text-indigo-600",
+      variant: "secondary",
       onClick: () => setModalVincularAbierto(true),
     },
     {
