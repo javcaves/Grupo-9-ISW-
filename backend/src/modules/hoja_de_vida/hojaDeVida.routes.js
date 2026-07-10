@@ -6,7 +6,7 @@ import { checkRole } from "../../../middlewares/role.middleware.js";
 const router = Router();
 
 // ===HOJA DE VIDA GLOBAL===
-//GET /api/hoja_de_vida/:idEmpleado
+//GET /api/hoja-vida/:idEmpleado
 router.get("/:idEmpleado", 
     authenticateJwt, 
     checkRole(["ROOT", "ADMIN", "SUPERVISOR", "ENCARGADO"]), 

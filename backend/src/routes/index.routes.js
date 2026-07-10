@@ -32,6 +32,8 @@ import ProyectoUsuarioRoutes from '../modules/proyecto/proyecto_usuario.routes.j
 import UsuarioRoutes from '../modules/usuario/usuario.routes.js';
 import AsistenciaRoutes from '../modules/asistencia/asistencia.routes.js';
 import TurnoRoutes from '../modules/turno/turno.routes.js';
+import HojaDeVidaRoutes from '../modules/hoja_de_vida/HojaDeVida.routes.js';
+
 
 // DASHBOARD
 import DashboardRoutes from '../modules/dashboard/dashboard.routes.js';
@@ -75,6 +77,7 @@ router.use('/asistencia', AsistenciaRoutes);
 router.use('/turno', TurnoRoutes);
 router.use('/calificaciones', CalificacionRoutes);
 router.use('/evaluaciones', EvaluacionRoutes);
+router.use('/hoja-vida', HojaDeVidaRoutes);
 
 // ESTADISTICAS
 router.use('/dashboard',DashboardRoutes);

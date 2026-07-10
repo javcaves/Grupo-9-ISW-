@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 
+
 import routes from './routes/index.routes.js';
 import passport from 'passport';
 import { passportJwtSetup } from './config/passport.config.js';
