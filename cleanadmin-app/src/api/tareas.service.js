@@ -36,6 +36,15 @@ export const TareaService = {
   },
 
   /**
+   * Obtiene los empleados que están disponibles (según el turno vigente
+   * para la fecha/hora de la tarea) para ser asignados a esta tarea.
+   */
+  async obtenerEmpleadosDisponibles(idTarea) {
+    const response = await api.get(`${URL}/${idTarea}/empleados-disponibles`);
+    return response.data ?? response;
+  },
+
+  /**
    * Programa una nueva tarea.
    */
   async crear(datos) {
@@ -62,11 +71,18 @@ export const TareaService = {
   /**
    * Cancela una tarea con justificación.
    */
-  async cancelar(idTarea, comentario) {
+  async cancelar(idTarea, payload) {
     // Cambiado a 'comentario' para hacer match exacto con el validador y modelo del backend
-    const response = await api.patch(`${URL}/${idTarea}/cancelar`, {
-      comentario,
-    });
+    const response = await api.patch(`${URL}/${idTarea}/cancelar`,payload);
+    return response.data ?? response;
+  },
+
+  /**
+   * Marca como completada (FINALIZADA) una tarea asignada al empleado
+   * autenticado. El backend valida que la asignación vigente le pertenezca.
+   */
+  async completar(idTarea) {
+    const response = await api.patch(`${URL}/${idTarea}/completar`);
     return response.data ?? response;
   },
 

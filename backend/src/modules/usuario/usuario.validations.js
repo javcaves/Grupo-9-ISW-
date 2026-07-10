@@ -2,6 +2,31 @@ import Joi from "joi";
 
 const ROLES_PERMITIDOS = ["ROOT", "ADMIN", "ENCARGADO", "SUPERVISOR", "EMPLEADO", "SIN_ASIG"];
 
+//validacion de rut
+const validarRut = (rut) =>{
+    if (!rut) return false;
+    const rutLimpio = rut.replace(/\./g, '').replace(/-/g, '');
+    const cuerpo = rutLimpio.slice(0, -1);
+    const dv = rutLimpio.slice(-1).toUpperCase();
+
+    if (cuerpo.length < 7 || cuerpo.length > 8) return false;
+    if (!/^[0-9]+$/.test(cuerpo)) return false;
+
+    let suma = 0;
+    let multiplo = 2;
+
+    for (let i = cuerpo.length - 1; i >= 0; i--){
+        suma += parseInt(cuerpo[i]) * multiplo;
+        multiplo = multiplo === 7 ? 2 : multiplo + 1;
+    }
+
+    const dvEsperado = 11 - (suma % 11);
+    const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+
+    return dv === dvCalculado;
+}
+
+
 //validaciones de query para busqueda
 export const usuarioQueryValidation = Joi.object({
     id_usuario: Joi.number()
@@ -13,8 +38,12 @@ export const usuarioQueryValidation = Joi.object({
         "number.positive": "el id debe ser un numero positivo"
     }),
     rut: Joi.string()
-    .min(8)
-    .max(15)
+    .custom((value, helpers) => {
+        if (!validarRut(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    }, 'RUT chileno válido')
     .messages({
         "string.empty": "el rut no puede estar vacio",
         "string.min": "el rut debe tener al menos 8 caracteres",
@@ -77,8 +106,13 @@ export const usuarioCreateValidation = Joi.object({
         "any.required": "el apellido es obligatorio"
     }),
     rut: Joi.string()
-    .min(8)
-    .max(15)
+    .custom((value, helpers) => {
+        if (!validarRut(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    }, 'RUT chileno válido')
+    .required()
     .messages({
         "string.empty": "el rut no puede estar vacio",
         "string.min": "el rut debe tener al menos 8 caracteres",
@@ -115,7 +149,6 @@ export const usuarioCreateValidation = Joi.object({
         "string.pattern.base": "el numero debe ser en formato chilenoS"
     }),
     observacion: Joi.string().max(500).optional(),
-    powers: Joi.array().items(Joi.string()).optional(),
     search: Joi.string().max(100).optional(),
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).default(10).optional()
@@ -134,8 +167,12 @@ export const usuarioUpdateValidation = Joi.object({
     .pattern(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/)
     .optional(),
     rut: Joi.string()
-    .min(8)
-    .max(15)
+    .custom((value, helpers) => {
+        if (!validarRut(value)) {
+            return helpers.error('any.invalid');
+        }
+        return value;
+    }, 'RUT chileno válido')
     .optional(),
     email: Joi.string()
     .email()
@@ -152,8 +189,7 @@ export const usuarioUpdateValidation = Joi.object({
     .pattern(/^\+?569[0-9]{8}$/)
     .optional(),
     activo: Joi.boolean().optional(),
-    observacion: Joi.string().max(500).optional(),
-    powers: Joi.array().items(Joi.string()).optional()
+    observacion: Joi.string().max(500).optional()
 }).min(1).messages({
     'object.min': 'debe enviar al menos 1 campo para actualizar'
 });

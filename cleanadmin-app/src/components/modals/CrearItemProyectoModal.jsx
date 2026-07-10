@@ -57,6 +57,9 @@ export default function CrearItemProyectoModal({ isOpen, onClose, proyecto, actu
           tipo_movimiento: 'SOLICITUD',
           item_sugerido: formData.nombre,
           descripcion: formData.descripcion,
+          tipo: formData.tipo,
+          unidad_medida: formData.unidad_medida,
+          control: formData.control,
           cantidad: Number(formData.cantidad_inicial) || 1,
           id_proyecto: proyecto.id_proyecto,
           id_emisor: user.id_usuario || user.id,
@@ -156,62 +159,52 @@ export default function CrearItemProyectoModal({ isOpen, onClose, proyecto, actu
             />
           </div>
 
-          {esEncargado ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+            <select
+              name="tipo" value={formData.tipo} onChange={handleChange} required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="">Selecciona...</option>
+              {TIPOS_ITEM.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Unidad de medida</label>
+            <select
+              name="unidad_medida" value={formData.unidad_medida} onChange={handleChange} required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="">Selecciona...</option>
+              {UNIDADES_MEDIDA.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Control</label>
+            <select
+              name="control" value={formData.control} onChange={handleChange} required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="">Selecciona...</option>
+              {TIPOS_CONTROL.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {!esEncargado && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad solicitada</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cantidad inicial en este proyecto
+              </label>
               <input
-                type="number" name="cantidad_inicial" min="1" value={formData.cantidad_inicial} onChange={handleChange} required
+                type="number" name="cantidad_inicial" min="0" value={formData.cantidad_inicial} onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               />
+              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                Déjalo en 0 si solo quieres agregarlo al catálogo sin stock en este proyecto todavía.
+              </p>
             </div>
-          ) : (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                <select
-                  name="tipo" value={formData.tipo} onChange={handleChange} required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">Selecciona...</option>
-                  {TIPOS_ITEM.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Unidad de medida</label>
-                <select
-                  name="unidad_medida" value={formData.unidad_medida} onChange={handleChange} required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">Selecciona...</option>
-                  {UNIDADES_MEDIDA.map((u) => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Control</label>
-                <select
-                  name="control" value={formData.control} onChange={handleChange} required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">Selecciona...</option>
-                  {TIPOS_CONTROL.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cantidad inicial en este proyecto
-                </label>
-                <input
-                  type="number" name="cantidad_inicial" min="0" value={formData.cantidad_inicial} onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-                <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                  Déjalo en 0 si solo quieres agregarlo al catálogo sin stock en este proyecto todavía.
-                </p>
-              </div>
-            </>
           )}
         </div>
       </FormContainer>

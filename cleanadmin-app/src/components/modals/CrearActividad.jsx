@@ -3,22 +3,28 @@ import { Modal } from '../Modal';
 import { FormContainer } from '../Formulario';
 import { ActividadesService } from '../../api/actividades.service';
 
-export default function CrearActividad({ isOpen, onClose, categorias, actualizarLista }) {
-  const [formData, setFormData] = useState({ nombre: '', id_categoria: '', descripcion: '', recurrencia: 'DIARIA' });
+export default function CrearActividad({ isOpen, onClose, categorias, actualizarLista,idProyecto }) {
+  const [formData, setFormData] = useState({ descripcion_esp: '', id_cat: '', recurrencia: 'DIARIA' });
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const datosProcesados = {
+      ...formData,
+      id_proyecto: parseInt(idProyecto, 10)
+    };
+    
     try {
-      await ActividadesService.crear(formData);
+      await ActividadesService.crear(datosProcesados);
       
       alert("¡Actividad base creada con éxito!");
       actualizarLista();
       onClose();
-      setFormData({ nombre: '', id_categoria: '', descripcion: '', recurrencia: 'DIARIA' });
+      setFormData({ descripcion_esp: '', id_cat: '', recurrencia: 'DIARIA' });
     } catch (error) {
       console.error(error);
+      alert(`No se pudo crear la actividad:\n\n${error.message}`);
     }
   };
 
@@ -29,21 +35,22 @@ export default function CrearActividad({ isOpen, onClose, categorias, actualizar
         description="Define una actividad específica dentro de una categoría."
         onSubmit={handleSubmit}
         onCancel={onClose}
-        submitText="Crear Actividad"
-      >
+        submitText="Crear Actividad">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de Actividad</label>
-            <input type="text" name="nombre" value={formData.nombre} onChange={handleChange} required 
+            <input type="text" name="descripcion_esp" value={formData.descripcion_esp} onChange={handleChange} required
+              maxLength={255} placeholder="Ej: Inventario y conteo de herramientas en bodega"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <p className="text-xs text-gray-400 mt-1 text-right">{formData.descripcion_esp.length}/255 caracteres</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Categoría Asociada</label>
-            <select name="id_categoria" value={formData.id_categoria} onChange={handleChange} required
+            <select name="id_cat" value={formData.id_cat} onChange={handleChange} required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg">
               <option value="">Selecciona una categoría...</option>
               {categorias?.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                <option key={cat.id_cat} value={cat.id_cat}>{cat.nombre}</option>
               ))}
             </select>
           </div>

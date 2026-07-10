@@ -9,10 +9,12 @@ const rolesPermitidos = ["ROOT", "ADMIN", "SUPERVISOR", "ENCARGADO"];
 router.get('/', authenticateJwt, TareaCtrl.listarTareas);
 router.get("/mis-tareas",authenticateJwt,TareaCtrl.obtenerMisTareas);
 router.get('/:id', authenticateJwt, TareaCtrl.obtenerTarea);
+router.get('/:id/empleados-disponibles', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.obtenerEmpleadosDisponibles);
 router.post('/', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.programar);
 router.put('/:id', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.actualizar);
 router.delete('/:id', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.eliminar);
 router.patch('/:id/cancelar', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.cancelar);
+router.patch('/:id/completar', authenticateJwt, TareaCtrl.completar);
 
 
 export default router;

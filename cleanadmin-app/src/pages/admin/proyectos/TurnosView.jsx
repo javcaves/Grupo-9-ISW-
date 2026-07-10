@@ -1,25 +1,77 @@
 // pages/admin/proyectos/TurnosView.jsx
-import { useState, useEffect }  from "react";
-import LayoutContent            from "../../../layouts/LayoutContent";
-import { Card }                 from "../../../components/Card";
-import { Modal }                from "../../../components/Modal";
-import { TurnoCard }            from "../../../layouts/turnoCard";
-import { FormularioTurno }      from "../../../layouts/form_turno";
-import { TurnoService }         from "../../../api/turno.service";
+import { useState, useEffect } from "react";
+import LayoutContent from "../../../layouts/LayoutContent";
+import { Card } from "../../../components/Card";
+import { Modal } from "../../../components/Modal";
+import { TurnoCard } from "../../../layouts/turnoCard";
+import { FormularioTurno } from "../../../layouts/form_turno";
+import { ColacionManager } from "../../../layouts/ColacionManager";
+import { TurnoService } from "../../../api/turno.service";
+import { AsistenciaService } from "../../../api/asistencia.service";
+import QRGenerator from "../../../components/qr/QRGenerator";
+import { qrExpirado } from "../../../components/qr/qr.utils";
 import { FaClock, FaUserClock, FaCircleCheck } from "react-icons/fa6";
+import ConfirmarEliminacion from "../../../components/modals/Eliminar";
 
 export default function TurnosView({ proyecto }) {
-  const [turnos,      setTurnos]      = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [modalCrear,  setModalCrear]  = useState(false);
+  const [turnos, setTurnos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalCrear, setModalCrear] = useState(false);
   const [turnoEditar, setTurnoEditar] = useState(null);
+  const [turnoColacionManager, setTurnoColacionManager] = useState(null);
+  const [modalEliminarTurno, setModalEliminarTurno] = useState(false);
+  const [turnoAEliminar, setTurnoAEliminar] = useState(null);
+  const [modalAnularJornada, setModalAnularJornada] = useState(false);
+  const [qrTurno, setQrTurno] = useState(null);
+  const [qrToken, setQrToken] = useState(null);
+  const [qrExp, setQrExp] = useState(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState(null);
+  const [qrEstado, setQrEstado] = useState(null);
+  const [qrTipo, setQrTipo] = useState("ENTRADA");
+  const [qrEmpleados, setQrEmpleados] = useState([]);
+  const [cerrandoJornada, setCerrandoJornada] = useState(false);
+  // NUEVO: mapa { [id_turno]: boolean } que indica si ese turno ya tiene una
+  // jornada/QR activo hoy. Se usa para pintar el botón de la card como
+  // "Ver QR" en vez de "Generar QR" incluso después de recargar la página.
+  const [jornadasActivas, setJornadasActivas] = useState({});
+
+  // Determina, consultando el turno (no al usuario logeado), si existe una
+  // jornada de asistencia vigente hoy para ese turno.
+  async function consultarEstadoJornada(idTurno) {
+    try {
+      const snapshot = await AsistenciaService.obtenerActual(idTurno);
+      const asistenciaActual = snapshot?.data?.asistencia ?? snapshot?.asistencia ?? null;
+      const empleados = snapshot?.data?.empleados ?? snapshot?.empleados ?? [];
+
+      const vigente =
+        !!asistenciaActual?.token &&
+        !asistenciaActual?.finalizada;
+
+      return { vigente, asistenciaActual, empleados };
+    } catch {
+      return { vigente: false, asistenciaActual: null, empleados: [] };
+    }
+  }
 
   async function cargarDatos() {
     if (!proyecto?.id_proyecto) return;
     setLoading(true);
     try {
       const res = await TurnoService.listarPorProyecto(proyecto.id_proyecto);
-      setTurnos(res?.data ?? res ?? []);
+      const listaTurnos = res?.data ?? res ?? [];
+      setTurnos(listaTurnos);
+
+      // Revisamos en paralelo qué turnos ya tienen una jornada/QR vigente,
+      // para que el botón "Ver QR" aparezca correcto ni bien carga la vista
+      // (sin depender de haber hecho clic antes en esta misma sesión).
+      const estados = await Promise.all(
+        listaTurnos.map(async (t) => {
+          const { vigente } = await consultarEstadoJornada(t.id_turno);
+          return [t.id_turno, vigente];
+        })
+      );
+      setJornadasActivas(Object.fromEntries(estados));
     } catch {
       setTurnos([]);
     } finally {
@@ -29,40 +81,67 @@ export default function TurnosView({ proyecto }) {
 
   useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
 
+  useEffect(() => {
+    if (!qrTurno?.id_turno) return undefined;
+
+    const intervalId = window.setInterval(async () => {
+      const { vigente, asistenciaActual, empleados } = await consultarEstadoJornada(qrTurno.id_turno);
+
+      setQrEmpleados((prev) =>
+        JSON.stringify(prev) === JSON.stringify(empleados) ? prev : empleados
+      );
+      setJornadasActivas((prev) =>
+        prev[qrTurno.id_turno] === vigente ? prev : { ...prev, [qrTurno.id_turno]: vigente }
+      );
+      if (!vigente && qrToken) {
+        // La jornada se cerró o el token expiró mientras el modal estaba abierto
+        // (ej. se acabó el horario del turno) -> se inhabilita el QR en pantalla.
+        setQrToken(null);
+        setQrExp(null);
+        setQrEstado("La jornada de este turno ya finalizó.");
+      } else if (vigente && asistenciaActual?.token && asistenciaActual.token !== qrToken) {
+        setQrToken(asistenciaActual.token);
+        setQrExp(asistenciaActual.token_expira);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [qrTurno?.id_turno, qrToken]);
+
   // ── Stats derivadas ───────────────────────────────────────────
-  const totalTurnos    = turnos.length;
+  const totalTurnos = turnos.length;
   const totalEmpleados = turnos.reduce((acc, t) => acc + (t.empleados?.length ?? 0), 0);
-  const ingresoMinimo  = turnos.length
+  const ingresoMinimo = turnos.length
     ? turnos.reduce((min, t) => (t.hora_ingreso < min ? t.hora_ingreso : min), turnos[0].hora_ingreso)
     : null;
-  const salidaMaxima   = turnos.length
+  const salidaMaxima = turnos.length
     ? turnos.reduce((max, t) => (t.hora_salida > max ? t.hora_salida : max), turnos[0].hora_salida)
     : null;
 
   const statsCards = [
     {
-      title:  "Turnos Configurados",
+      title: "Turnos Configurados",
       number: totalTurnos,
-      icon:   FaClock,
+      icon: FaClock,
       detail: totalTurnos === 0 ? "Sin turnos aún" : `${totalTurnos} turno${totalTurnos !== 1 ? "s" : ""} activo${totalTurnos !== 1 ? "s" : ""}`,
     },
     {
-      title:  "Personal Asignado",
+      title: "Personal Asignado",
       number: totalEmpleados,
-      icon:   FaUserClock,
+      icon: FaUserClock,
       detail: totalEmpleados === 0 ? "Sin empleados asignados" : `En ${totalTurnos} turno${totalTurnos !== 1 ? "s" : ""}`,
     },
     {
-      title:  "Hora de Ingreso",
+      title: "Hora de Ingreso",
       number: ingresoMinimo ?? "—",
-      icon:   FaCircleCheck,
+      icon: FaCircleCheck,
       detail: ingresoMinimo ? "Más temprana del proyecto" : "Sin datos aún",
       isTime: true,
     },
     {
-      title:  "Hora de Salida",
+      title: "Hora de Salida",
       number: salidaMaxima ?? "—",
-      icon:   FaClock,
+      icon: FaClock,
       detail: salidaMaxima ? "Más tardía del proyecto" : "Sin datos aún",
       isTime: true,
     },
@@ -70,11 +149,128 @@ export default function TurnosView({ proyecto }) {
 
   const acciones = [
     {
-      text:      "+ Crear Turno",
+      text: "+ Crear Turno",
       className: "bg-indigo-600 text-white",
-      onClick:   () => setModalCrear(true),
+      onClick: () => setModalCrear(true),
     },
   ];
+
+  function anularJornada() {
+    if (!qrTurno?.id_turno) return;
+    setModalAnularJornada(true);
+  }
+
+  async function ejecutarAnularJornada(id_turno) {
+    setCerrandoJornada(true);
+    try {
+      const snapshot = await AsistenciaService.obtenerActual(id_turno).catch(() => null);
+      const idAsistencia = snapshot?.data?.asistencia?.id_asistencia ?? snapshot?.asistencia?.id_asistencia;
+      if (!idAsistencia) throw new Error("No hay una jornada abierta para anular.");
+
+      await AsistenciaService.eliminar(idAsistencia);
+    } finally {
+      setCerrandoJornada(false);
+    }
+  }
+
+  function handlePostAnular() {
+    setQrEstado("Jornada anulada correctamente.");
+    setQrToken(null);
+    setQrExp(null);
+    setQrEmpleados([]);
+    setJornadasActivas((prev) => ({ ...prev, [qrTurno.id_turno]: false }));
+  }
+
+  async function cerrarJornada() {
+    if (!qrTurno?.id_turno) return;
+    setCerrandoJornada(true);
+    try {
+      const snapshot = await AsistenciaService.obtenerActual(qrTurno.id_turno).catch(() => null);
+      const idAsistencia = snapshot?.data?.asistencia?.id_asistencia ?? snapshot?.asistencia?.id_asistencia;
+      if (!idAsistencia) throw new Error("No hay una jornada abierta para cerrar.");
+
+      await AsistenciaService.finalizar(idAsistencia);
+      setQrEstado("Jornada cerrada correctamente.");
+      setQrToken(null);
+      setQrExp(null);
+      setQrEmpleados([]);
+      // El turno vuelve a quedar sin QR activo -> la card debe volver a
+      // mostrar "Generar QR" para la próxima jornada.
+      setJornadasActivas((prev) => ({ ...prev, [qrTurno.id_turno]: false }));
+    } catch (err) {
+      setQrError(err?.message || "No se pudo cerrar la jornada.");
+    } finally {
+      setCerrandoJornada(false);
+    }
+  }
+
+  // FIX (bugs 1 y 2): antes se usaba AsistenciaService.obtenerMiAsistenciaActual,
+  // que consulta la asistencia del USUARIO logeado (pensado para el empleado
+  // que escanea). Como el encargado normalmente no es "empleado" del turno,
+  // el backend respondía "MARCA_EXISTENTE" sin token adjunto y el QR se
+  // perdía para siempre al cerrar el modal, sin forma de recuperarlo.
+  //
+  // Ahora se usa AsistenciaService.obtenerActual(idTurno), que consulta el
+  // estado del TURNO en sí (ya se usaba para la lista de empleados y para
+  // cerrar la jornada), así que siempre encuentra el token vigente sin
+  // depender de quién está logeado. Además se valida expiración/cierre para
+  // decidir si hay que reutilizar el QR existente o generar uno nuevo.
+  async function generarQrAsistencia(turno, tipo = "ENTRADA") {
+    setQrTurno(turno);
+    setQrTipo(tipo);
+    setQrToken(null);
+    setQrExp(null);
+    setQrError(null);
+    setQrEstado(null);
+    setQrEmpleados([]);
+    setQrLoading(true);
+
+    try {
+      const { vigente, asistenciaActual, empleados } = await consultarEstadoJornada(turno.id_turno);
+
+      if (vigente) {
+        // Ya existe una jornada/QR vigente para hoy -> se reutiliza el mismo
+        // token (así el QR que ya vieron/escanearon los empleados sigue
+        // siendo válido, en vez de invalidarlo generando uno nuevo).
+        setQrToken(asistenciaActual.token);
+        setQrExp(asistenciaActual.token_expira);
+        setQrEstado("Jornada ya iniciada para hoy.");
+        setQrEmpleados(empleados);
+        setJornadasActivas((prev) => ({ ...prev, [turno.id_turno]: true }));
+        return;
+      }
+
+      // No hay jornada vigente (no existe, ya expiró o ya se cerró) -> se
+      // crea una nueva para este turno.
+      const res = await AsistenciaService.crear({ id_turno: turno.id_turno });
+      const token = res?.data?.token ?? res?.token ?? null;
+      const exp = res?.data?.token_expira ?? res?.token_expira ?? null;
+
+      if (!token) throw new Error("No se pudo obtener el token de la jornada.");
+
+      setQrToken(token);
+      setQrExp(exp);
+      setQrEstado("Jornada iniciada correctamente.");
+      setJornadasActivas((prev) => ({ ...prev, [turno.id_turno]: true }));
+
+      try {
+        const snapshot = await AsistenciaService.obtenerActual(turno.id_turno);
+        const empleadosNuevos = snapshot?.data?.empleados ?? snapshot?.empleados ?? [];
+        setQrEmpleados(empleadosNuevos);
+      } catch {
+        setQrEmpleados([]);
+      }
+    } catch (err) {
+      setQrError(err?.message || "No se pudo generar la asistencia.");
+    } finally {
+      setQrLoading(false);
+    }
+  }
+
+  function handleEliminarTurno(turno) {
+    setTurnoAEliminar(turno);
+    setModalEliminarTurno(true);
+  }
 
   const tablaContenido = loading ? (
     <div className="flex items-center justify-center py-16">
@@ -98,6 +294,10 @@ export default function TurnosView({ proyecto }) {
           key={turno.id_turno}
           turno={turno}
           onEdit={(t) => setTurnoEditar(t)}
+          onGenerarQr={(t, tipo) => generarQrAsistencia(t, tipo)}
+          tieneQrActivo={!!jornadasActivas[turno.id_turno]}
+          onManageColaciones={(t) => setTurnoColacionManager(t)}
+          onEliminar={(t) => handleEliminarTurno(t)}
         />
       ))}
     </div>
@@ -107,7 +307,7 @@ export default function TurnosView({ proyecto }) {
     <>
       <LayoutContent
         header={{
-          title:    "Gestión de Turnos",
+          title: "Gestión de Turnos",
           subtitle: proyecto?.nombre_proy ?? "Asignación horaria del personal",
         }}
         actions={acciones}
@@ -156,6 +356,80 @@ export default function TurnosView({ proyecto }) {
       />
 
       <Modal
+        isOpen={!!qrTurno}
+        onClose={() => {
+          setQrTurno(null);
+          setQrToken(null);
+          setQrExp(null);
+          setQrError(null);
+          setQrEstado(null);
+        }}
+        title="QR de Asistencia"
+        variant="wide"
+      >
+        <div className="flex flex-col items-center gap-4 p-2">
+          <p className="text-sm text-center text-slate-600">
+            Turno: <span className="font-semibold text-slate-800">{qrTurno?.nombre}</span>
+            <span className="ml-2 font-medium">({qrTipo === "ENTRADA" ? "Entrada" : "Salida"})</span>
+          </p>
+          {qrLoading && <p className="text-sm text-slate-500">Verificando estado y generando QR...</p>}
+          {qrEstado && <p className="text-sm text-violet-700">{qrEstado}</p>}
+          {qrError && <p className="text-sm text-red-600">{qrError}</p>}
+          {!qrLoading && !qrError && qrToken && (
+            <QRGenerator token={qrToken} proyecto={proyecto?.nombre_proy} turno={qrTurno?.nombre} exp={qrExp} tipo={qrTipo} />
+          )}
+          {!qrLoading && !qrError && (
+            <div className="flex gap-3">
+              <button
+                onClick={anularJornada}
+                disabled={cerrandoJornada}
+                className="rounded-lg bg-red-100 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-200 disabled:opacity-60"
+              >
+                Anular jornada
+              </button>
+              <button
+                onClick={cerrarJornada}
+                disabled={cerrandoJornada}
+                className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
+              >
+                {cerrandoJornada ? "Cerrando..." : "Cerrar jornada"}
+              </button>
+            </div>
+          )}
+
+          {qrEmpleados.length > 0 && (
+            <div className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-2 text-sm font-semibold text-slate-700">Empleados inscritos en la jornada</p>
+              <div className="space-y-2">
+                {qrEmpleados.map((empleado, index) => {
+                  const nombre = empleado?.empleado?.nombres || empleado?.empleado?.nombre || empleado?.nombre || `Empleado ${index + 1}`;
+                  const estado = (empleado?.estado || "EN_ESPERA").toUpperCase();
+                  const estadoConfig = {
+                    PRESENTE: { label: "Presente", bg: "bg-green-100", text: "text-green-700" },
+                    ATRASO: { label: "Atraso", bg: "bg-amber-100", text: "text-amber-700" },
+                    EN_ESPERA: { label: "En espera", bg: "bg-violet-100", text: "text-violet-700" },
+                    RETIRADO: { label: "Retirado", bg: "bg-blue-100", text: "text-blue-700" },
+                    FALTA_JUSTIFICADA: { label: "Justificado", bg: "bg-amber-100", text: "text-amber-700" },
+                    FALTA_INJUSTIFICADA: { label: "Inasistencia", bg: "bg-red-100", text: "text-red-700" },
+                  };
+                  const cfg = estadoConfig[estado] || estadoConfig.EN_ESPERA;
+
+                  return (
+                    <div key={empleado?.id_asistencia_empleado || `${nombre}-${index}`} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm shadow-sm">
+                      <span className="font-medium text-slate-700">{nombre}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.text}`}>
+                        {cfg.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      <Modal
         isOpen={modalCrear}
         onClose={() => setModalCrear(false)}
         title="Configurar Nuevo Turno"
@@ -179,6 +453,44 @@ export default function TurnosView({ proyecto }) {
           onSuccess={() => { setTurnoEditar(null); cargarDatos(); }}
         />
       </Modal>
+
+      <Modal
+        isOpen={!!turnoColacionManager}
+        onClose={() => setTurnoColacionManager(null)}
+        title="Gestor de Horarios de Colación"
+        variant="wide"
+      >
+        <ColacionManager
+          turno={turnoColacionManager}
+          onSuccess={() => { setTurnoColacionManager(null); cargarDatos(); }}
+        />
+      </Modal>
+
+      {modalEliminarTurno && (
+        <ConfirmarEliminacion
+          isOpen={modalEliminarTurno}
+          onClose={() => { setModalEliminarTurno(false); setTurnoAEliminar(null); }}
+          tituloElemento={`el turno "${turnoAEliminar?.nombre}"`}
+          idElemento={turnoAEliminar?.id_turno}
+          servicioEliminar={(idTurno) => TurnoService.eliminar(idTurno)}
+          actualizarLista={cargarDatos}
+          mensajeConfirmacion="Esta acción eliminará el turno y todas las asignaciones de empleados asociados."
+          mensajeExito={`El turno ha sido eliminado exitosamente.`}
+        />
+      )}
+
+      {modalAnularJornada && (
+        <ConfirmarEliminacion
+          isOpen={modalAnularJornada}
+          onClose={() => setModalAnularJornada(false)}
+          tituloElemento="la jornada actual"
+          idElemento={qrTurno?.id_turno}
+          servicioEliminar={ejecutarAnularJornada}
+          actualizarLista={handlePostAnular}
+          mensajeConfirmacion="Se eliminará el registro de todos los empleados de este turno para el día de hoy."
+          mensajeExito="Jornada anulada correctamente."
+        />
+      )}
     </>
   );
 }

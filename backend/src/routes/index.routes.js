@@ -6,10 +6,17 @@ import AuthRoutes from './auth.routes.js';
 // MIDDLEWARE INTERCEPTOR GLOBAL
 import { authenticateJwt } from '../middlewares/auth.middleware.js';
 
+// Controller usado directo acá solo para la ÚNICA ruta pública de
+// notificaciones (solicitud de recuperación de contraseña). El resto de
+// rutas de notificaciones vive en notificacion.routes.js y se monta más
+// abajo, después del filtro global.
+import * as NotificacionController from '../modules/notificaciones/notificacion.controller.js';
+
 // MÓDULO DE ACTIVIDADES
 import ActividadesRoutes from '../modules/actividades/actividades.routes.js';
 import CategoriasRoutes from '../modules/categoria/categoria.routes.js';
 import CalificacionRoutes from '../modules/calificacion/calificacion.routes.js';
+import EvaluacionRoutes from '../modules/evaluacion/evaluacion.routes.js';
 import TareasRoutes from '../modules/tarea/tarea.routes.js';
 import AsignacionRoutes from '../modules/asignacion/asignacion.routes.js';
 
@@ -25,7 +32,9 @@ import ProyectoUsuarioRoutes from '../modules/proyecto/proyecto_usuario.routes.j
 import UsuarioRoutes from '../modules/usuario/usuario.routes.js';
 import AsistenciaRoutes from '../modules/asistencia/asistencia.routes.js';
 import TurnoRoutes from '../modules/turno/turno.routes.js';
-import PowerRoutes from '../modules/power/power.routes.js';
+
+// DASHBOARD
+import DashboardRoutes from '../modules/dashboard/dashboard.routes.js';
 
 const router = Router();
 
@@ -34,6 +43,7 @@ const router = Router();
 // =============================================
 // Rutas de login y logout que no requieren token previo
 router.use('/auth', AuthRoutes); 
+router.post('/notificaciones/solicitud-password', NotificacionController.solicitarRecuperacionPassword);
 
 
 // =============================================
@@ -63,7 +73,10 @@ router.use('/notificaciones', NotificacionesRouter);
 router.use('/usuarios', UsuarioRoutes);
 router.use('/asistencia', AsistenciaRoutes);
 router.use('/turno', TurnoRoutes);
-router.use('/power', PowerRoutes); 
 router.use('/calificaciones', CalificacionRoutes);
+router.use('/evaluaciones', EvaluacionRoutes);
+
+// ESTADISTICAS
+router.use('/dashboard',DashboardRoutes);
 
 export default router;

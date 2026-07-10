@@ -19,7 +19,7 @@ export const turnoCreateValidation = Joi.object({
     empleados: Joi.array().items(
         Joi.object({
             id_empleado:      Joi.number().integer().positive().required(),
-            fecha_egreso:     Joi.date().iso().optional().allow(null),
+            fecha_egreso:     Joi.date().iso().raw().optional().allow(null),
             trabaja_feriados: Joi.boolean().optional().default(false),
         })
     ).min(1).required()
@@ -37,8 +37,8 @@ export const turnoUpdateValidation = Joi.object({
 
 export const turnoEmpleadoAddValidation = Joi.object({
     id_empleado:      Joi.number().integer().positive().required(),
-    fecha_ingreso:    Joi.date().iso().optional().allow(null),
-    fecha_egreso:     Joi.date().iso().optional().allow(null),
+    fecha_ingreso:    Joi.date().iso().raw().optional().allow(null),
+    fecha_egreso:     Joi.date().iso().raw().optional().allow(null),
     trabaja_feriados: Joi.boolean().optional().default(false),
 }).options({ allowUnknown: false, stripUnknown: true, abortEarly: false });
 

@@ -6,6 +6,9 @@ export const Table = ({
   onRowClick,
   onEdit,
   onDelete,
+  editTitle = "Editar",
+  deleteTitle = "Eliminar",
+  extraActions = [],
   emptyMessage = "no hay datos disponibles",
   className = "",
 }) => {
@@ -22,7 +25,7 @@ export const Table = ({
         backdropFilter: "blur(16px)",
       }}
     >
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto thin-scrollbar">
         <table className="w-full">
 
           {/* Header */}
@@ -76,11 +79,36 @@ export const Table = ({
                       style={{ color: "var(--table-row-text)" }}
                     >
                       {col.key === "actions" ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          {extraActions.map((action, actionIdx) => {
+                            const visible = !action.show || action.show(item);
+                            return (
+                              <button
+                                key={actionIdx}
+                                onClick={visible ? (e) => { e.stopPropagation(); action.onClick(item); } : undefined}
+                                title={visible ? action.title : undefined}
+                                tabIndex={visible ? 0 : -1}
+                                className={`p-1.5 rounded-xl transition-all duration-200 ${visible ? "" : "opacity-0 pointer-events-none"}`}
+                                style={{ color: "var(--table-action-text)" }}
+                                onMouseEnter={(e) => {
+                                  if (!visible) return;
+                                  e.currentTarget.style.background = action.hoverBg   || "var(--table-action-edit-hover-bg)";
+                                  e.currentTarget.style.color      = action.hoverText || "var(--table-action-edit-hover-text)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "transparent";
+                                  e.currentTarget.style.color      = "var(--table-action-text)";
+                                }}
+                              >
+                                <i className={`fas ${action.icon} text-sm`} />
+                              </button>
+                            );
+                          })}
                           {onEdit && (
                             <button
                               onClick={(e) => handleEdit(e, item)}
-                              className="p-2 rounded-xl transition-all duration-200"
+                              title={editTitle}
+                              className="p-1.5 rounded-xl transition-all duration-200"
                               style={{ color: "var(--table-action-text)" }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.background = "var(--table-action-edit-hover-bg)";
@@ -97,7 +125,8 @@ export const Table = ({
                           {onDelete && (
                             <button
                               onClick={(e) => handleDelete(e, item)}
-                              className="p-2 rounded-xl transition-all duration-200"
+                              title={deleteTitle}
+                              className="p-1.5 rounded-xl transition-all duration-200"
                               style={{ color: "var(--table-action-text)" }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.background = "var(--table-action-del-hover-bg)";

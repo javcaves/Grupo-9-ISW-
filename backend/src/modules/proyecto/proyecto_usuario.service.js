@@ -7,29 +7,33 @@
  * @property {boolean} activo - Define si la vinculación está vigente actualmente
  */
 import { AppDataSource } from '../../config/ConfigDB.js';
+import { ROLES_PROYECTO } from './proyecto_usuario.validations.js';
 
 const ProyectoUsuarioRepository = AppDataSource.getRepository('ProyectoUsuario');
 const UsuarioRepository          = AppDataSource.getRepository('Usuario');
 
 export const obtenerUsuariosDelProyecto = async (idProyecto, filtros = {}) => {
   try {
-    const where = { id_proyecto: parseInt(idProyecto), activo: true };
-    if (filtros.rolproyecto) {
-      where.rol_proyecto = filtros.rolproyecto;
-    }
-
+    // FIX: antes se filtraba por "rol_proyecto" en el WHERE de ProyectoUsuario,
+    // una columna que "asignarUsuarioAProyecto" nunca llenaba (siempre quedaba
+    // null), así que el filtro nunca encontraba nada. El rol de una persona
+    // es su rol GLOBAL (Usuario.rol) — se filtra en memoria tras el join.
     const asignaciones = await ProyectoUsuarioRepository.find({
-      where,
-      relations: { usuario: true },   // ← sintaxis nueva TypeORM v1
+      where: { id_proyecto: parseInt(idProyecto), activo: true },
+      relations: { usuario: true },
     });
 
-    const usuarios = asignaciones.map(a => ({
+    const filtradas = filtros.rolproyecto
+      ? asignaciones.filter((a) => a.usuario?.rol === filtros.rolproyecto)
+      : asignaciones;
+
+    const usuarios = filtradas.map(a => ({
       id_usuario:       a.id_usuario,
       nombre:           a.usuario?.nombre,
       apellido:         a.usuario?.apellido,
       rut:              a.usuario?.rut,
       email:            a.usuario?.email,
-      rol:              a.usuario?.rol,      // ← faltaba para RolBadge y stats
+      rol:              a.usuario?.rol,
       fecha_asignacion: a.fecha_asignacion,
       fecha_termino:    a.fecha_termino,
       activo:           a.activo,
@@ -48,6 +52,17 @@ export const asignarUsuarioAProyecto = async (idProyecto, data, ejecutor) => {
       where: { id_usuario: data.id_usuario },
     });
     if (!usuario) throw new Error('usuario no encontrado');
+
+    // Solo se puede vincular a alguien cuyo rol global sea de proyecto
+    // (evita vincular por error una cuenta ROOT/ADMIN/SIN_ASIG).
+    if (!ROLES_PROYECTO.includes(usuario.rol)) {
+      throw new Error(`solo se pueden vincular usuarios con rol ${ROLES_PROYECTO.join(', ')}`);
+    }
+
+    // Un ENCARGADO solo puede vincular personal con rol EMPLEADO a su proyecto.
+    if (ejecutor.rol === 'ENCARGADO' && usuario.rol !== 'EMPLEADO') {
+      throw new Error('como encargado solo puedes vincular personal con rol EMPLEADO');
+    }
 
     const existe = await ProyectoUsuarioRepository.findOne({
       where: { id_proyecto: parseInt(idProyecto), id_usuario: data.id_usuario, activo: true },

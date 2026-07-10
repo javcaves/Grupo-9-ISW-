@@ -11,8 +11,8 @@ export const ActividadesService = {
    * Obtener todo el catálogo de actividades.
    * GET /actividades
    */
-  async listar() {
-    const response = await api.get("/actividades");
+  async listar(incluirInactivas = false) {
+    const response = await api.get("/actividades", incluirInactivas ? { incluirInactivas: "true" } : {});
     return response.data ?? response;
   },
 
@@ -95,6 +95,15 @@ export const ActividadesService = {
       `/actividades/${id}`
     );
 
+    return response.data ?? response;
+  },
+
+  /**
+   * Reactivar una actividad previamente desactivada.
+   * PATCH /actividades/:id/reactivar
+   */
+  async reactivar(id) {
+    const response = await api.patch(`/actividades/${id}/reactivar`);
     return response.data ?? response;
   },
 };

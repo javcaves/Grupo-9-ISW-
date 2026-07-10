@@ -85,13 +85,13 @@
   --table-shadow:                 0 10px 30px rgba(0, 0, 0, 0.35);
   --table-header-from:            rgba(255, 255, 255, 0.06);
   --table-header-to:              rgba(255, 255, 255, 0.02);
-  --table-header-text:            #94a3b8;
+  --table-header-text:            #d1d7df;
   --table-header-border:          rgba(255, 255, 255, 0.08);
-  --table-row-text:               #cbd5e1;
+  --table-row-text:               #e1e5ea;
   --table-row-border:             rgba(255, 255, 255, 0.05);
   --table-row-hover:              rgba(124, 58, 237, 0.10);
   --table-empty-text:             #64748b;
-  --table-action-text:            #64748b;
+  --table-action-text:            #b4c1d5;
   --table-action-edit-hover-bg:   rgba(139, 92, 246, 0.15);
   --table-action-edit-hover-text: #a78bfa;
   --table-action-del-hover-bg:    rgba(239, 68, 68, 0.15);

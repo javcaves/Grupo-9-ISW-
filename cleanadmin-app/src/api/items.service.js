@@ -12,6 +12,10 @@ export const ItemsService = {
     return api.get("/items", params);
   },
 
+  listarPorProyecto(idProyecto) {
+    return api.get(`/items/proyecto/${idProyecto}`);
+  },
+
   listarActivos() {
     return api.get("/items/activos");
   },
@@ -79,6 +83,18 @@ export const ItemsService = {
     return api.get(
       `/items/proyecto/${idProyecto}/bajo-stock`
     );
+  },
+
+  listarBajoStockGlobal() {
+    return api.get("/items/bajo-stock");
+  },
+
+  vincularProyecto(idProyecto, data) {
+    return api.post(`/items/proyecto/${idProyecto}/vincular`, data);
+  },
+
+  desvincularProyecto(idProyecto, idItem) {
+    return api.delete(`/items/proyecto/${idProyecto}/item/${idItem}`);
   },
 
   // ==========================

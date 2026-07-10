@@ -5,6 +5,7 @@ import { Card } from "../../components/Card";
 import { AuthService } from "../../api/auth.service";
 import { TareaService } from "../../api/tareas.service";
 import { AsistenciaService } from "../../api/asistencia.service";
+import { formatHora } from "../../utils/formatTime";
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -96,7 +97,10 @@ export default function EmployeeDashboard() {
   }
 
   const estadoAsistencia   = attendanceRecord?.estado ?? "SIN_TURNO";
-  const horaIngresoMarcada = attendanceRecord?.hora_ingreso ?? null;
+  // FIX: hora_ingreso de la asistencia es un timestamp real de marcaje, no una
+  // columna TIME como la del turno programado; se formatea con formatHora()
+  // para evitar mostrar el timestamp crudo o cortarlo mal con substring().
+  const horaIngresoMarcada = formatHora(attendanceRecord?.hora_ingreso);
   const puedeTrabajarTareas = ["PRESENTE", "ATRASO"].includes(estadoAsistencia);
   const esFinDeSemana       = apiCode === "FIN_DE_SEMANA";
   const sinTurnoAsignado    = apiCode === "SIN_TURNO_ASIGNADO" || !shift;
@@ -135,7 +139,7 @@ export default function EmployeeDashboard() {
             {shift ? (
               <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
                 <i className="fas fa-business-time"></i>
-                {shift.nombre} · {shift.hora_ingreso?.substring(0, 5) ?? "--:--"} – {shift.hora_salida?.substring(0, 5) ?? "--:--"}
+                {shift.nombre} · {formatHora(shift.hora_ingreso) ?? "--:--"} – {formatHora(shift.hora_salida) ?? "--:--"}
               </div>
             ) : (
               <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 text-gray-500 text-xs font-semibold">
@@ -162,9 +166,9 @@ export default function EmployeeDashboard() {
                 : sinTurnoAsignado
                 ? "No tienes un turno vinculado activamente."
                 : horaIngresoMarcada
-                ? `Entrada registrada a las ${horaIngresoMarcada.substring(0, 5)} hrs`
+                ? `Entrada registrada a las ${horaIngresoMarcada} hrs`
                 : estadoAsistencia === "EN_ESPERA" || apiCode === "ESPERANDO_INGRESO"
-                ? `Tu turno comienza a las ${shift?.hora_ingreso?.substring(0, 5) ?? "--:--"} hrs`
+                ? `Tu turno comienza a las ${formatHora(shift?.hora_ingreso) ?? "--:--"} hrs`
                 : "Sin marcas de asistencia registradas hoy."}
             </div>
           </div>
@@ -176,12 +180,12 @@ export default function EmployeeDashboard() {
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div className="p-3 rounded-xl border bg-white/50 text-center">
               <div className="text-xs opacity-50 mb-1">Hora Entrada</div>
-              <div className="font-bold text-sm">{attendanceRecord.hora_ingreso?.substring(0, 5) ?? "--:--"}</div>
+              <div className="font-bold text-sm">{formatHora(attendanceRecord.hora_ingreso) ?? "--:--"}</div>
             </div>
             <div className="p-3 rounded-xl border bg-white/50 text-center">
               <div className="text-xs opacity-50 mb-1">Hora Salida</div>
               <div className={`font-bold text-sm ${!attendanceRecord.hora_egreso ? "text-amber-500" : ""}`}>
-                {attendanceRecord.hora_egreso?.substring(0, 5) ?? "Pendiente"}
+                {formatHora(attendanceRecord.hora_egreso) ?? "Pendiente"}
               </div>
             </div>
           </div>

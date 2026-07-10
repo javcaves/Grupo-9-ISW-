@@ -10,7 +10,8 @@ import {
     itemUpdateValidation,
     movimientoCreateValidation,
     solicitudResolucionValidation,
-    actualizarInventarioValidation
+    actualizarInventarioValidation,
+    vincularItemValidation
 } from './items.validation.js';
 import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handlers/responseHandlers.js"; // IMPORTANTE: Ajustar ruta según tu estructura de carpetas
 
@@ -47,6 +48,15 @@ export const listarItemsActivos = async (req, res) => {
         return handleSuccess(res, 200, "Items activos obtenidos", items);
     } catch (error) {
         return handleErrorServer(res, 500, "Error al obtener items activos", error.message);
+    }
+};
+
+export const listarItemsProyecto = async (req, res) => {
+    try {
+        const items = await ItemsService.obtenerPorProyecto(parseInt(req.params.id_proyecto));
+        return handleSuccess(res, 200, "Items del proyecto obtenidos", items);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error al obtener items del proyecto", error.message);
     }
 };
  
@@ -142,6 +152,37 @@ export const auditarInventarioProyecto = async (req, res) => {
     }
 };
 
+export const vincularItemProyecto = async (req, res) => {
+    try {
+        const { error, value } = vincularItemValidation.validate({
+            ...req.body,
+            id_proyecto: parseInt(req.params.id_proyecto),
+        });
+        if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
+
+        const [resultado, err] = await ItemsService.vincularItemAProyecto(value);
+        if (err) return handleErrorClient(res, 400, "No se pudo vincular el item", err);
+
+        return handleSuccess(res, 201, "Item vinculado al proyecto", resultado);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
+    }
+};
+
+export const desvincularItemProyecto = async (req, res) => {
+    try {
+        const [resultado, err] = await ItemsService.desvincularItemDeProyecto(
+            parseInt(req.params.id_item),
+            parseInt(req.params.id_proyecto)
+        );
+        if (err) return handleErrorClient(res, 400, "No se pudo desvincular el item", err);
+
+        return handleSuccess(res, 200, "Item desvinculado", resultado.message);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error de servidor", error.message);
+    }
+};
+
 export const removeMovimiento = async (req, res) => {
     try {
         const [resultado, err] = await ItemsService.eliminarMovimiento(parseInt(req.params.id_mov));
@@ -184,6 +225,15 @@ export const listarBajoStockProyecto = async (req, res) => {
     try {
         const alertas = await ItemsService.obtenerBajoStockPorProyecto(parseInt(req.params.id_proyecto));
         return handleSuccess(res, 200, "Alertas de bajo stock obtenidas", alertas);
+    } catch (error) {
+        return handleErrorServer(res, 500, "Error al obtener alertas", error.message);
+    }
+};
+
+export const listarBajoStockGlobal = async (req, res) => {
+    try {
+        const alertas = await ItemsService.obtenerBajoStockGlobal();
+        return handleSuccess(res, 200, "Alertas de bajo stock (todos los proyectos) obtenidas", alertas);
     } catch (error) {
         return handleErrorServer(res, 500, "Error al obtener alertas", error.message);
     }

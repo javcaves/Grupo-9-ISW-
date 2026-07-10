@@ -58,11 +58,11 @@ async function request(endpoint, options = {}, queryParams = {}) {
   }
 
   if (!response.ok) {
+    const motivoReal = data?.errorDetails || data?.details || data?.error || data?.data || "";
+    const detalleError = motivoReal ? `\n\nMotivo: ${typeof motivoReal === 'string' ? motivoReal : JSON.stringify(motivoReal)}` : '';
+
     throw new Error(
-      data?.message ||
-      data?.error ||
-      data ||
-      "Error en la petición."
+      (data?.message || "Error en la petición.") + detalleError
     );
   }
 

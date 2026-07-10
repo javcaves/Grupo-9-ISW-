@@ -9,6 +9,11 @@ export const proyectoQueryValidation = Joi.object({
     .valid(...ESTADOS_VALIDOS)
     .optional(),
     activo: Joi.boolean().optional(),
+    incluirInactivos: Joi.boolean()
+    .truthy('true')
+    .falsy('false')
+    .optional()
+    .default(false),
     search: Joi.string().max(100).optional(),
     page: Joi.number().integer().min(1).default(1).optional(),
     limit: Joi.number().integer().min(1).default(10).optional()
@@ -55,6 +60,33 @@ export const proyectoCreateValidation = Joi.object({
         "string.min": "la ubicación debe tener al menos 5 caracteres",
         "any.required": "la ubicacion es un campo obligatorio"
     }),
+    // Coordenadas reales para validar geolocalización en el marcaje de
+    // asistencia por QR. "ubicacion" de arriba es texto libre (dirección),
+    // por eso van separadas. Opcionales para no romper proyectos existentes,
+    // pero si no se completan, el marcaje de asistencia se rechaza (fail-safe).
+    latitud: Joi.number()
+    .min(-90)
+    .max(90)
+    .optional()
+    .messages({
+        "number.min": "la latitud debe estar entre -90 y 90",
+        "number.max": "la latitud debe estar entre -90 y 90"
+    }),
+    longitud: Joi.number()
+    .min(-180)
+    .max(180)
+    .optional()
+    .messages({
+        "number.min": "la longitud debe estar entre -180 y 180",
+        "number.max": "la longitud debe estar entre -180 y 180"
+    }),
+    radio_geocerca: Joi.number()
+    .integer()
+    .min(10)
+    .optional()
+    .messages({
+        "number.min": "el radio permitido debe ser de al menos 10 metros"
+    }),
     fecha_inicio: Joi.date()
     .iso()
     .required()
@@ -90,6 +122,9 @@ export const proyectoUpdateValidation = Joi.object({
     min_emp: Joi.number().integer().min(1).optional(),
     max_emp: Joi.number().integer().min(Joi.ref('min_emp')).optional(),
     ubicacion: Joi.string().min(5).max(200).optional(),
+    latitud: Joi.number().min(-90).max(90).optional(),
+    longitud: Joi.number().min(-180).max(180).optional(),
+    radio_geocerca: Joi.number().integer().min(10).optional(),
     fecha_inicio: Joi.date().iso().optional(),
     fecha_termino: Joi.date().iso().optional(),
     estado: Joi.string()

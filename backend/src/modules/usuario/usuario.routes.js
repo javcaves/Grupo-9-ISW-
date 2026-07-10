@@ -25,4 +25,6 @@ router.put('/:id_usuario', authenticateJwt, UsuarioController.actualizarUsuario)
 // --- ELIMINACIÓN (Soft Delete) ---
 router.delete('/:id_usuario', authenticateJwt, checkRole(['ROOT', 'ADMIN']), UsuarioController.eliminarUsuario);
 
+router.put('/:id_usuario/reset-password', authenticateJwt, checkRole(['ROOT', 'ADMIN', 'SUPERVISOR']), UsuarioController.resetearPassword);
+
 export default router;

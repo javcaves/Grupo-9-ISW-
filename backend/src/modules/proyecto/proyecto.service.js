@@ -5,6 +5,9 @@
  * @property {number} min_emp - Cantidad mínima de empleados requerida
  * @property {number} max_emp - Cantidad máxima de empleados permitida
  * @property {string} ubicacion - Dirección o geolocalización de la faena
+ * @property {number} [latitud] - Latitud numérica real, usada para validar geolocalización de asistencia
+ * @property {number} [longitud] - Longitud numérica real, usada para validar geolocalización de asistencia
+ * @property {number} [radio_geocerca] - Radio permitido en metros para marcar asistencia (default 200)
  * @property {string} fecha_inicio - Fecha de inicio programada (ISO string)
  * @property {string} fecha_termino - Fecha de término estimada (ISO string)
  * @property {('EN_PREPARACION'|'EN_CURSO'|'FINALIZADO')} estado - Estado operativo del proyecto
@@ -31,6 +34,9 @@ export const crearProyecto = async (data, ejecutor) => {
             min_emp: data.min_emp,
             max_emp: data.max_emp,
             ubicacion: data.ubicacion,
+            latitud: data.latitud ?? null,
+            longitud: data.longitud ?? null,
+            radio_geocerca: data.radio_geocerca ?? null,
             fecha_inicio: data.fecha_inicio,
             fecha_termino: data.fecha_termino,
             estado: data.estado || "EN_PREPARACION",
@@ -46,11 +52,12 @@ export const crearProyecto = async (data, ejecutor) => {
 
 /**
  * 2. Obtener todos los proyectos del sistema (con personal enriquecido)
+ * @param {boolean} incluirInactivos - si es true, trae también los soft-deleted (activo=false)
  */
-export const obtenerTodosProyectos = async () => {
+export const obtenerTodosProyectos = async (incluirInactivos = false) => {
     try {
         const proyectos = await proyectoRepository.find({
-            where: { activo: true },
+            where: incluirInactivos ? {} : { activo: true },
             order: { id_proyecto: 'ASC' }
         });
         const enriquecidos = await enriquecerProyectosConPersonal(proyectos);
@@ -140,6 +147,9 @@ export const editarProyecto = async (id_proyecto, data, ejecutor) => {
             min_emp: data.min_emp,
             max_emp: data.max_emp,
             ubicacion: data.ubicacion,
+            latitud: data.latitud ?? proyecto.latitud,
+            longitud: data.longitud ?? proyecto.longitud,
+            radio_geocerca: data.radio_geocerca ?? proyecto.radio_geocerca,
             fecha_inicio: data.fecha_inicio,
             fecha_termino: data.fecha_termino,
             estado: data.estado
@@ -171,6 +181,31 @@ export const eliminarProyecto = async (id, ejecutor) => {
         await proyectoRepository.save(proyecto);
 
         return [{ message: 'proyecto eliminado de forma exitosa' }, null];
+    } catch (error) {
+        return [null, error.message];
+    }
+};
+
+/**
+ * 7. Reactivar un proyecto previamente desactivado (soft-delete inverso)
+ */
+export const reactivarProyecto = async (id, ejecutor) => {
+    try {
+        if (!['ROOT', 'ADMIN'].includes(ejecutor.rol)) {
+            throw new Error("solo administradores pueden reactivar proyectos");
+        }
+
+        const proyecto = await proyectoRepository.findOne({
+            where: { id_proyecto: parseInt(id) }
+        });
+
+        if (!proyecto) throw new Error('proyecto no encontrado');
+        if (proyecto.activo) throw new Error('el proyecto ya está activo');
+
+        proyecto.activo = true;
+        const reactivado = await proyectoRepository.save(proyecto);
+
+        return [reactivado, null];
     } catch (error) {
         return [null, error.message];
     }

@@ -3,22 +3,21 @@ import { useState, useEffect }  from "react";
 import LayoutContent            from "../../../layouts/LayoutContent";
 import { Card }                 from "../../../components/Card";
 import { Table }                from "../../../components/Table";
+import { ListToolbar }          from "../../../components/ListToolbar";
 import CrearActividad           from "../../../components/modals/CrearActividad";
-import ProgramarTarea           from "../../../components/modals/ProgramarTarea";
-import AsignarTarea             from "../../../components/modals/AsignarTarea";
+import EditarActividad          from "../../../components/modals/EditarActividad";
+import ConfirmarEliminacion     from "../../../components/modals/Eliminar";
 import { CategoriaService }     from "../../../api/categorias.service";
 import { ActividadesService }   from "../../../api/actividades.service";
-import { TareaService }         from "../../../api/tareas.service";
-import { UsuarioService }       from "../../../api/usuario.service";
-import { FaClipboardCheck, FaCalendarCheck, FaListCheck, FaRotate } from "react-icons/fa6";
+import { FaClipboardCheck, FaListCheck, FaCalendarDay, FaRotate } from "react-icons/fa6";
 
-const COLUMNAS_ACTIVIDADES = [
+const COLUMNAS_ACTIVIDADES_BASE = [
   {
     key:   "descripcion_esp",
     label: "Actividad",
     icon:  "fa-bolt",
     render: (val) => (
-      <span className="font-semibold text-slate-700">{val ?? "—"}</span>
+      <span className="font-semibold" style={{ color: "var(--table-row-text)" }}>{val ?? "—"}</span>
     ),
   },
   {
@@ -37,53 +36,62 @@ const COLUMNAS_ACTIVIDADES = [
       </span>
     ),
   },
-  {
-    key:   "proyecto",
-    label: "Proyecto",
-    icon:  "fa-building",
-    render: (val) => val?.nombre_proy ?? "—",
-  },
-  {
-    key:   "activo",
-    label: "Estado",
-    render: (val) => (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
-        {val ? "Activa" : "Inactiva"}
-      </span>
-    ),
-  },
-  { key: "actions", label: "Acciones" },
 ];
 
-export default function ActividadesView({ proyecto }) {
-  const [listaCategorias,       setListaCategorias]       = useState([]);
-  const [listaActividades,      setListaActividades]      = useState([]);
-  const [listaTareasPendientes, setListaTareasPendientes] = useState([]);
-  const [listaEmpleados,        setListaEmpleados]        = useState([]);
-  const [loading,               setLoading]               = useState(true);
+function construirColumnas() {
+  return [
+    ...COLUMNAS_ACTIVIDADES_BASE,
+    {
+      key:   "activo",
+      label: "Estado",
+      render: (val) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${val ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+          {val ? "Activa" : "Inactiva"}
+        </span>
+      ),
+    },
+    { key: "actions", label: "Acciones" },
+  ];
+}
 
+export default function ActividadesView({ proyecto }) {
+  const [listaCategorias,  setListaCategorias]  = useState([]);
+  const [listaActividades, setListaActividades] = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [mostrarInactivas, setMostrarInactivas] = useState(false);
+
+  // Controladores de Modales
   const [abrirActividad, setAbrirActividad] = useState(false);
-  const [abrirProgramar, setAbrirProgramar] = useState(false);
-  const [abrirAsignar,   setAbrirAsignar]   = useState(false);
+  const [abrirEditarAct, setAbrirEditarAct] = useState(false);
+  const [actividadAEditar, setActividadAEditar] = useState(null);
+  const [abrirEliminarAct, setAbrirEliminarAct] = useState(false);
+  const [actividadAEliminar, setActividadAEliminar] = useState(null);
+
+  // Búsqueda / filtro / orden de la lista
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [ordenDescendente, setOrdenDescendente] = useState(false);
 
   async function cargarDatos() {
     setLoading(true);
     try {
-      const [resCat, resAct, resTar, resEmp] = await Promise.all([
+      const idProy = proyecto?.id_proyecto;
+      if (!idProy) return;
+
+      const [resCat, resAct] = await Promise.all([
         CategoriaService.listar().catch(() => []),
-        ActividadesService.listar().catch(() => []),
-        TareaService.listar().catch(() => []),
-        UsuarioService.listar().catch(() => []),
+        ActividadesService.listar(mostrarInactivas).catch(() => []),
       ]);
 
-      console.log("Actividades Service: ", resAct);
-      setListaCategorias(resCat?.data       ?? resCat  ?? []);
-      setListaActividades(
-        (resAct?.data ?? resAct ?? [])
-          .filter(a => a.proyecto?.id_proyecto === proyecto?.id_proyecto)
+      setListaCategorias(resCat?.data ?? resCat ?? []);
+
+      // Filtramos exclusivamente las actividades de este proyecto
+      const actividadesCrudas = resAct?.data ?? resAct ?? [];
+      const actividadesFiltradas = actividadesCrudas.filter(
+        a => a.proyecto?.id_proyecto === idProy
       );
-      setListaTareasPendientes(resTar?.data ?? resTar  ?? []);
-      setListaEmpleados(resEmp?.data        ?? resEmp  ?? []);
+      setListaActividades(actividadesFiltradas);
+
     } catch (err) {
       console.error("ActividadesView cargarDatos:", err);
     } finally {
@@ -91,26 +99,79 @@ export default function ActividadesView({ proyecto }) {
     }
   }
 
-  useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto]);
+  useEffect(() => { cargarDatos(); }, [proyecto?.id_proyecto, mostrarInactivas]);
+
+  async function handleReactivar(actividad) {
+    try {
+      await ActividadesService.reactivar(actividad.id_act);
+      alert("¡Actividad reactivada con éxito!");
+      cargarDatos();
+    } catch (error) {
+      console.error("Error al reactivar la actividad:", error);
+      alert(`No se pudo reactivar:\n\n${error.message}`);
+    }
+  }
+
+  const COLUMNAS_ACTIVIDADES = construirColumnas();
+
+  // ── Búsqueda + filtro + orden ───────────────────────────────────────────
+  const actividadesFiltradas = listaActividades
+    .filter((a) => !busqueda.trim() || a.descripcion_esp?.toLowerCase().includes(busqueda.trim().toLowerCase()))
+    .filter((a) => !filtroCategoria || a.categoria?.id_cat === parseInt(filtroCategoria, 10))
+    .sort((a, b) => {
+      const cmp = (a.descripcion_esp ?? "").localeCompare(b.descripcion_esp ?? "");
+      return ordenDescendente ? -cmp : cmp;
+    });
+
+  const barraHerramientas = (
+    <ListToolbar
+      searchValue={busqueda}
+      onSearchChange={setBusqueda}
+      searchPlaceholder="Buscar actividad por nombre..."
+      filters={[
+        {
+          label: "Categoría",
+          allLabel: "Todas",
+          value: filtroCategoria,
+          onChange: setFiltroCategoria,
+          options: listaCategorias.map((c) => ({ value: String(c.id_cat), label: c.nombre })),
+        },
+      ]}
+      sortLabel={ordenDescendente ? "Z → A" : "A → Z"}
+      onToggleSort={() => setOrdenDescendente((v) => !v)}
+    />
+  );
 
   // ── Stats derivadas ───────────────────────────────────────────────────────
-  const totalActividades  = listaActividades.length;
-  const actRecurrentes    = listaActividades.filter(a => a.recurrencia && a.recurrencia !== "UNICA").length;
-  const totalTareas       = listaTareasPendientes.length;
-  const tareasFinalizadas = listaTareasPendientes.filter(t => t.estado === "FINALIZADA").length;
-  const tareasPendientes  = totalTareas - tareasFinalizadas;
+  // Las stats siempre reflejan solo lo activo, sin importar si "Ver Inactivas" está
+  // prendido — de lo contrario el conteo cambiaría solo por un filtro de visibilidad.
+  const actividadesActivas = listaActividades.filter(a => a.activo);
+  const totalActividades  = actividadesActivas.length;
+  const actRecurrentes    = actividadesActivas.filter(a => a.recurrencia && a.recurrencia !== "UNICA").length;
+  const actUnicas         = actividadesActivas.filter(a => a.recurrencia === "UNICA").length;
+  // Categoria es un catálogo global (no pertenece a un proyecto), así que
+  // "categorías de este proyecto" en realidad significa: categorías distintas
+  // que efectivamente usan las actividades de este proyecto. listaCategorias
+  // (el catálogo completo) se sigue usando tal cual para el filtro y los
+  // selects de crear/editar actividad, donde sí corresponde poder elegir
+  // cualquier categoría existente.
+  const categoriasEnUso   = new Set(actividadesActivas.map(a => a.categoria?.id_cat).filter(Boolean)).size;
 
   const statsCards = [
-    { title: "Actividades Activas",  number: totalActividades,  icon: FaClipboardCheck, detail: totalActividades  === 0 ? "Sin actividades aún"      : `${actRecurrentes} recurrentes`                                      },
-    { title: "Tareas Programadas",   number: totalTareas,       icon: FaCalendarCheck,  detail: totalTareas       === 0 ? "Sin tareas programadas"    : `${tareasPendientes} pendientes`                                     },
-    { title: "Procesos Finalizados", number: tareasFinalizadas, icon: FaListCheck,      detail: totalTareas       === 0 ? "Sin datos aún"             : `${Math.round((tareasFinalizadas / totalTareas) * 100)}% completado` },
-    { title: "Categorías",           number: listaCategorias.length, icon: FaRotate,   detail: listaCategorias.length === 0 ? "Sin categorías"        : "Tipos de actividad"                                                 },
+    { title: "Actividades Base",  number: totalActividades,  icon: FaClipboardCheck, detail: totalActividades  === 0 ? "Sin actividades aún" : "Catálogo del proyecto" },
+    { title: "Recurrentes",       number: actRecurrentes,    icon: FaRotate,         detail: actRecurrentes    === 0 ? "Sin rutinas" : "Tareas periódicas" },
+    { title: "Ejecución Única",   number: actUnicas,         icon: FaCalendarDay,    detail: actUnicas         === 0 ? "Sin actividades únicas" : "Eventos puntuales" },
+    { title: "Categorías en Uso", number: categoriasEnUso,   icon: FaListCheck,      detail: categoriasEnUso   === 0 ? "Sin categorías asignadas" : "Usadas en este proyecto" },
   ];
 
   const acciones = [
+    {
+      text: mostrarInactivas ? "Ocultar Inactivas" : "Ver Inactivas",
+      variant: "secondary",
+      className: "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
+      onClick: () => setMostrarInactivas(v => !v),
+    },
     { text: "Crear Actividad Base", className: "bg-indigo-600 text-white", onClick: () => setAbrirActividad(true) },
-    { text: "Programar Tarea",      className: "bg-indigo-600 text-white", onClick: () => setAbrirProgramar(true) },
-    { text: "Asignar Tarea",        className: "bg-indigo-600 text-white", onClick: () => setAbrirAsignar(true)   },
   ];
 
   const tablaContenido = loading ? (
@@ -120,10 +181,31 @@ export default function ActividadesView({ proyecto }) {
   ) : (
     <Table
       columns={COLUMNAS_ACTIVIDADES}
-      data={listaActividades}
-      emptyMessage="No hay actividades registradas para este proyecto."
-      onEdit={(item)   => console.log("Editar actividad:", item)}
-      onDelete={(item) => console.log("Eliminar actividad:", item)}
+      data={actividadesFiltradas}
+      emptyMessage={
+        listaActividades.length === 0
+          ? "No hay actividades registradas para este proyecto."
+          : "Ninguna actividad coincide con la búsqueda o el filtro aplicado."
+      }
+      deleteTitle="Desactivar actividad"
+      extraActions={[
+        {
+          icon: "fa-rotate-left",
+          title: "Reactivar actividad",
+          show: (item) => !item.activo,
+          onClick: handleReactivar,
+          hoverBg: "#dcfce7",
+          hoverText: "#16a34a",
+        },
+      ]}
+      onEdit={(item) => {
+        setActividadAEditar(item);
+        setAbrirEditarAct(true);
+      }}
+      onDelete={(item) => {
+        setActividadAEliminar(item);
+        setAbrirEliminarAct(true);
+      }}
     />
   );
 
@@ -131,10 +213,11 @@ export default function ActividadesView({ proyecto }) {
     <>
       <LayoutContent
         header={{
-          title:    "Actividades del Proyecto",
-          subtitle: proyecto?.nombre_proy ?? "Seguimiento de tareas y actividades",
+          title:    "Catálogo de Actividades",
+          subtitle: "Configuración de actividades base del proyecto",
         }}
         actions={acciones}
+        toolbar={barraHerramientas}
         stats={
           <>
             {statsCards.map((card, index) => {
@@ -176,25 +259,42 @@ export default function ActividadesView({ proyecto }) {
         table={tablaContenido}
       />
 
-      <CrearActividad
-        isOpen={abrirActividad}
-        onClose={() => setAbrirActividad(false)}
-        categorias={listaCategorias}
-        actualizarLista={cargarDatos}
-      />
-      <ProgramarTarea
-        isOpen={abrirProgramar}
-        onClose={() => setAbrirProgramar(false)}
-        actividades={listaActividades}
-        actualizarLista={cargarDatos}
-      />
-      <AsignarTarea
-        isOpen={abrirAsignar}
-        onClose={() => setAbrirAsignar(false)}
-        tareasPendientes={listaTareasPendientes}
-        empleados={listaEmpleados}
-        actualizarLista={cargarDatos}
-      />
+      {abrirActividad && (
+        <CrearActividad
+          isOpen={abrirActividad}
+          onClose={() => setAbrirActividad(false)}
+          categorias={listaCategorias}
+          actualizarLista={cargarDatos}
+          idProyecto={proyecto?.id_proyecto}
+        />
+      )}
+
+      {abrirEditarAct && (
+        <EditarActividad
+          isOpen={abrirEditarAct}
+          onClose={() => {
+            setAbrirEditarAct(false);
+            setActividadAEditar(null);
+          }}
+          categorias={listaCategorias}
+          actualizarLista={cargarDatos}
+          actividadActual={actividadAEditar}
+        />
+      )}
+
+      {abrirEliminarAct && (
+        <ConfirmarEliminacion
+          isOpen={abrirEliminarAct}
+          onClose={() => {
+            setAbrirEliminarAct(false);
+            setActividadAEliminar(null);
+          }}
+          tituloElemento={actividadAEliminar?.descripcion_esp}
+          idElemento={actividadAEliminar?.id_act}
+          servicioEliminar={ActividadesService.eliminar} 
+          actualizarLista={cargarDatos}
+        />
+      )}
     </>
   );
 }

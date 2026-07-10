@@ -21,18 +21,6 @@
 }
 
 
-// Power
-// POST /api/asignar/2
-{
-  "powers": [
-    "USUARIO:CREATE",
-    "USUARIO:READ",
-    "PROYECTO:READ",
-    "ASISTENCIA:CREATE"
-  ]
-}
-
-
 
 
 // TURNO

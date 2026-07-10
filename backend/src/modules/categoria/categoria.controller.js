@@ -5,7 +5,8 @@ import { handleSuccess, handleErrorClient, handleErrorServer } from "../../handl
 // ----- Listar -----
 export const listarCategorias = async (req, res) => {
     try {
-        const lista = await CategoriaService.obtenerTodas();
+        const incluirInactivas = req.query.incluirInactivas === "true";
+        const lista = await CategoriaService.obtenerTodas(incluirInactivas);
         return handleSuccess(res, 200, "Categorías obtenidas", lista);
     } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
 };

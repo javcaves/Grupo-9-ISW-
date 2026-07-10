@@ -10,24 +10,29 @@ import ProyectosView  from "./admin/ProyectosView";
 import PersonalView   from "./admin/PersonalView";
 import InventariosView from "./admin/InventariosView";
 import CategoriasView from "./admin/CategoriasView";
+import ReportesView from "./admin/ReportesView";
 
 // Módulos que todavía usan tabs hardcodeadas del TopBar
 const TABS_CONFIG = {
   personal:      ADMIN_CONFIG.personal?.topBar?.tabs      ?? [],
   inventarios:   ADMIN_CONFIG.inventarios?.topBar?.tabs   ?? [],
   categorias:    ADMIN_CONFIG.categorias?.topBar?.tabs    ?? [],
+  reportes:      ADMIN_CONFIG.reportes?.topBar?.tabs      ?? [],
 };
 
 const TOPBAR_CONFIG = {
   personal:    ADMIN_CONFIG.personal?.topBar    ?? {},
   inventarios: ADMIN_CONFIG.inventarios?.topBar ?? {},
   categorias:  ADMIN_CONFIG.categorias?.topBar  ?? {},
+  reportes:    ADMIN_CONFIG.reportes?.topBar    ?? {},
 };
 
 export default function AdminPage() {
   const { user, logoutUser } = useAuth();
   const [activeMenu, setActiveMenu] = useState("proyectos");
   const [activeTab,  setActiveTab]  = useState("");
+
+  const esEncargado = user?.rol === 'ENCARGADO';
 
   // Proyectos maneja su propio TopBar interno — no pasamos tabs ni config hardcodeada
   const esProyectos = activeMenu === "proyectos";
@@ -47,10 +52,12 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-screen" style={{ background: "var(--bg-color)" }}>
-      <Sidebar activeMenu={activeMenu} setActiveMenu={(menu) => {
-        setActiveMenu(menu);
-        setActiveTab(""); // reset tab al cambiar módulo
-      }} />
+      {!esEncargado && (
+        <Sidebar activeMenu={activeMenu} setActiveMenu={(menu) => {
+          setActiveMenu(menu);
+          setActiveTab(""); // reset tab al cambiar módulo
+        }} />
+      )}
 
       <main className="flex-1 flex flex-col overflow-auto p-7">
         <TopBar
@@ -65,6 +72,7 @@ export default function AdminPage() {
           {activeMenu === "personal"    && <PersonalView   activeTab={activeTab} />}
           {activeMenu === "inventarios" && <InventariosView activeTab={activeTab} />}
           {activeMenu === "categorias"  && <CategoriasView  activeTab={activeTab} />}
+          {activeMenu === "reportes" && <ReportesView />}
         </div>
       </main>
     </div>

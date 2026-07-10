@@ -49,4 +49,8 @@ router.delete('/:id_proyecto',
     authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.eliminarProyecto
 );
 
+router.patch('/:id_proyecto/reactivar', 
+    authenticateJwt, checkRole(['ROOT', 'ADMIN']), ProyectoController.reactivarProyecto
+);
+
 export default router;

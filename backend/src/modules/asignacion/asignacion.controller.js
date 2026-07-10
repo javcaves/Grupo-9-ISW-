@@ -24,7 +24,7 @@ export const crearAsignacion = async (req, res) => {
         const { error, value } = asignacionCreateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
 
-        const id_asignador = req.user.id;
+        const id_asignador = req.user.id_usuario;
         
         const [nueva, err] = await AsignacionService.asignarTarea(value, id_asignador);
         if (err) return handleErrorClient(res, 400, "Error de validación", err);

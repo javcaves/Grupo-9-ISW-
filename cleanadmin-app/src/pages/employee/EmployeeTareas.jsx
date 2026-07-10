@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Card } from "../../components/Card";
 import { TareaService } from "../../api/tareas.service";
 import { ItemsService } from "../../api/items.service";
+import { formatearFecha } from "../../utils/formatters";
 
 export default function EmployeeTareas() {
 
@@ -16,76 +17,88 @@ export default function EmployeeTareas() {
   const [list, setList] = useState([]);
   const [inventory, setInventory] = useState([]);
 
+  // Id de la tarea que se está marcando como completada en este momento
+  // (para deshabilitar solo ese botón y evitar doble clic, no toda la lista).
+  const [completandoId, setCompletandoId] = useState(null);
+
   // =========================
   // CARGA DE DATOS
   // =========================
-  useEffect(() => {
+  async function cargarTareas({ mostrarCargando = true } = {}) {
 
-    async function cargarTareas() {
+    try {
 
-      try {
+      if (mostrarCargando) console.log("[Tareas] Cargando tus asignaciones...");
 
-        console.log("[Tareas] Cargando tus asignaciones...");
+      // Llamamos al nuevo endpoint refactorizado que trae el array de AsignacionTarea
+      const tareasRes = await TareaService.misTareas();
 
-        // Llamamos al nuevo endpoint refactorizado que trae el array de AsignacionTarea
-        const tareasRes = await TareaService.misTareas();
-        console.log("[Tareas] response tareas =>", tareasRes);
+      const asignaciones = tareasRes?.data ?? tareasRes ?? [];
+      setList(asignaciones);
 
+      // =========================
+      // SUMMARY (Basado en el estado de la tarea vinculada)
+      // =========================
+      const assigned = asignaciones.length;
+      const completed = asignaciones.filter(a => a.tarea?.estado === "FINALIZADA").length;
 
-        const asignaciones = tareasRes?.data ?? tareasRes ?? [];
-        console.log(JSON.stringify(asignaciones[0], null, 2));
-        setList(asignaciones);
+      setSummary({
+        assigned,
+        completed,
+      });
 
-        // =========================
-        // SUMMARY (Basado en el estado de la tarea vinculada)
-        // =========================
-        const assigned = asignaciones.length;
-        const completed = asignaciones.filter(a => a.tarea?.estado === "FINALIZADA").length;
+      // =========================
+      // INVENTARIO
+      // =========================
+      const itemsRes = await ItemsService.listarActivos().catch(err => {
+        console.error("❌ Error cargando inventario:", err);
+        return [];
+      });
 
-        setSummary({
-          assigned,
-          completed,
-        });
+      const items = itemsRes?.data ?? itemsRes ?? [];
 
-        // =========================
-        // INVENTARIO
-        // =========================
-        console.log("[Tareas] Cargando inventario...");
+      setInventory(
+        items.map(i => ({
+          id: i.id_item,
+          name: i.nombre,
+          stock: i.stock,
+        }))
+      );
 
-        const itemsRes = await ItemsService.listarActivos().catch(err => {
-          console.error("❌ Error cargando inventario:", err);
-          return [];
-        });
-        console.log("[Tareas] inventario =>", itemsRes);
-
-        const items = itemsRes?.data ?? itemsRes ?? [];
-
-        console.log("IDs tareas:", asignaciones.map(a => a.id_asignacion));
-console.log("IDs items:", items.map(i => i.id_item));
-
-console.log(items);
-console.log(items[0]);
-
-
-        setInventory(
-          items.map(i => ({
-            id: i.id_item,
-            name: i.nombre,
-            stock: i.stock,
-          }))
-        );
-
-      } catch (err) {
-        console.error("[Tareas] Error cargando datos en la pantalla:", err);
-      } finally {
-        setLoading(false);
-      }
-
+    } catch (err) {
+      console.error("[Tareas] Error cargando datos en la pantalla:", err);
+    } finally {
+      setLoading(false);
     }
 
-    cargarTareas();
+  }
 
+  useEffect(() => {
+    cargarTareas();
   }, []);
+
+  // Refresco automático en segundo plano
+  useEffect(() => {
+    const INTERVALO_REFRESCO_MS = 20000;
+    const intervalo = setInterval(() => {
+      cargarTareas({ mostrarCargando: false });
+    }, INTERVALO_REFRESCO_MS);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  // Marca la tarea como completada y refresca la lista + el resumen.
+  async function marcarComoCompletada(idTarea) {
+    setCompletandoId(idTarea);
+    try {
+      await TareaService.completar(idTarea);
+      await cargarTareas();
+    } catch (err) {
+      console.error("[Tareas] Error al completar la tarea:", err);
+      alert(err?.message || "No se pudo marcar la tarea como completada.");
+    } finally {
+      setCompletandoId(null);
+    }
+  }
 
   // =========================
   // UI HELPERS (Adaptados a los Enums reales)
@@ -168,10 +181,9 @@ console.log(items[0]);
             // Desestructuramos con seguridad las capas anidadas que creamos en el backend
             const tareaInterna = item.tarea;
             const actividad = tareaInterna?.actividad;
-            const companeros = item.companeros ?? [];
             const nombreActividad = actividad?.descripcion_esp ?? "Tarea sin descripción definida";
             const horaProgramada = tareaInterna?.hora ? tareaInterna.hora.substring(0, 5) : "--:--";
-            const fechaProgramada = tareaInterna?.fecha ?? "--";
+            const fechaProgramada = tareaInterna?.fecha ? formatearFecha(tareaInterna.fecha) : "--";
             const estadoActual = tareaInterna?.estado ?? "PLANIFICADA";
             const comentarioAsignador = tareaInterna?.comentario ?? "Sin observaciones";
 
@@ -216,50 +228,40 @@ console.log(items[0]);
                   </span>
                 </div>
 
-                    <div className="mb-4">
-  <div className="text-xs font-semibold text-gray-500 mb-2">
-    Equipo asignado
-  </div>
-
-  {companeros.length === 0 ? (
-    <div className="text-xs text-gray-400 italic">
-      Trabajarás solo en esta tarea.
-    </div>
-  ) : (
-    <div className="space-y-2">
-      {companeros.map(persona => (
-        <div
-          key={persona.id_usuario}
-          className="flex items-center gap-3 p-2 rounded-xl bg-gray-50 border"
-        >
-          <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-600">
-            <i className="fas fa-user" />
-          </div>
-
-          <div>
-            <div className="text-sm font-medium">
-              {persona.nombre} {persona.apellido}
-            </div>
-
-            <div className="text-xs text-gray-500">
-              {persona.rol}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
-                <button
-                  className="w-full rounded-xl py-3 text-white font-semibold cursor-pointer hover:opacity-95 transition-opacity text-sm"
-                  style={{
-                    background: "linear-gradient(135deg,#7c3aed,#3b82f6)",
-                  }}
-                  onClick={() => console.log("[Tareas] Ver detalle completo del nodo:", item)}
-                >
-                  Ver Detalle
-                </button>
+                {estadoActual === "FINALIZADA" ? (
+                  <div className="mt-2 w-full rounded-xl py-3 text-center text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
+                    <i className="fas fa-circle-check mr-2"></i>
+                    Tarea completada
+                  </div>
+                ) : ["CANCELADA", "INCOMPLETA"].includes(estadoActual) ? null : estadoActual !== "EN_PROCESO" ? (
+                  <div className="mt-2 w-full rounded-xl py-3 text-center text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    <i className="fas fa-clock mr-2"></i>
+                    Aún no comienza el horario de esta tarea
+                  </div>
+                ) : (
+                  <button
+                    className="mt-2 w-full rounded-xl py-3 font-semibold text-sm border transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                      color: "#059669",
+                      borderColor: "#a7f3d0",
+                      background: "#ecfdf5",
+                    }}
+                    disabled={completandoId === tareaInterna?.id_tarea}
+                    onClick={() => marcarComoCompletada(tareaInterna?.id_tarea)}
+                  >
+                    {completandoId === tareaInterna?.id_tarea ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin mr-2"></i>
+                        Marcando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-check mr-2"></i>
+                        Marcar como Completada
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             );
           })}

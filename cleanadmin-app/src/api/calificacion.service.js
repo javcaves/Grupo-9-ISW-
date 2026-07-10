@@ -9,15 +9,15 @@ export const CalificacionService = {
   // ==========================
 
   listar(params = {}) {
-    return api.get("/calificacion", params);
+    return api.get("/calificaciones", params);
   },
 
   obtener(id) {
-    return api.get(`/calificacion/${id}`);
+    return api.get(`/calificaciones/${id}`);
   },
 
   listarPorCategoria(idCategoria) {
-    return api.get(`/calificacion/categoria/${idCategoria}`);
+    return api.get(`/calificaciones/categoria/${idCategoria}`);
   },
 
   // ==========================
@@ -25,11 +25,11 @@ export const CalificacionService = {
   // ==========================
 
   otorgar(data) {
-    return api.post("/calificacion", data);
+    return api.post("/calificaciones", data);
   },
 
   revocar(id) {
-    return api.delete(`/calificacion/${id}`);
+    return api.delete(`/calificaciones/${id}`);
   },
 
 };

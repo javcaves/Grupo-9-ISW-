@@ -4,10 +4,14 @@ import { Modal } from "../Modal";
 import { FormContainer } from "../Formulario";
 import { UsuarioService } from "../../api/usuario.service";
 import { ProyectoUsuarioService } from "../../api/proyecto_usuario.service";
+import { validarRut } from "../../utils/rut";
 
 // Quien ejecuta con estos roles puede elegir el cargo del nuevo ingreso.
 // Cualquier otro rol (ej. ENCARGADO) solo puede sumar EMPLEADO, sin preguntar.
 const ROLES_QUE_ELIGEN_CARGO = ["SUPERVISOR", "ADMIN", "ROOT"];
+
+// Mismo patrón que numero en usuario.validations.js (backend): +569XXXXXXXX
+const PATRON_NUMERO_CHILENO = /^\+?569[0-9]{8}$/;
 
 // TODO: no tengo usuarioCreateValidation (Joi) del backend — estos campos
 // están tomados de la entidad Usuario. Si el schema real difiere en nombres
@@ -23,7 +27,22 @@ const FORM_VACIO = {
   observacion: "Personal registrado desde gestión de proyecto.",
 };
 
-export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEjecutor, onSuccess }) {
+/**
+ * modo: "crear" (default, comportamiento original: crea usuario + lo vincula
+ *        al proyecto idProyecto) | "editar" (actualiza un usuario existente,
+ *        sin tocar RUT ni contraseña, sin vincular a ningún proyecto).
+ * usuario: objeto del usuario a editar (requerido si modo === "editar").
+ */
+export default function NuevoPersonalModal({
+  isOpen,
+  onClose,
+  idProyecto,
+  rolEjecutor,
+  onSuccess,
+  modo = "crear",
+  usuario = null,
+}) {
+  const esEdicion       = modo === "editar";
   const puedeElegirCargo = ROLES_QUE_ELIGEN_CARGO.includes(rolEjecutor);
 
   const [form, setForm]           = useState(FORM_VACIO);
@@ -33,20 +52,51 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
 
   useEffect(() => {
     if (!isOpen) return;
-    setForm(FORM_VACIO);
-    setCargo("EMPLEADO");
+
+    if (esEdicion && usuario) {
+      setForm({
+        rut:         usuario.rut ?? "",
+        nombre:      usuario.nombre ?? "",
+        apellido:    usuario.apellido ?? "",
+        email:       usuario.email ?? "",
+        numero:      usuario.numero ?? "",
+        password:    "",
+        observacion: usuario.observacion ?? "",
+      });
+      setCargo(usuario.rol ?? "EMPLEADO");
+    } else {
+      setForm(FORM_VACIO);
+      setCargo("EMPLEADO");
+    }
+
     setError(null);
-  }, [isOpen]);
+  }, [isOpen, esEdicion, usuario]);
 
   const actualizarCampo = (campo, valor) => setForm((f) => ({ ...f, [campo]: valor }));
 
   const validar = () => {
-    if (!form.rut.trim()) return "El RUT es obligatorio.";
+    if (!esEdicion) {
+      if (!form.rut.trim()) return "El RUT es obligatorio.";
+      if (!validarRut(form.rut.trim())) {
+        return "El RUT ingresado no es válido. Revisa el número y el dígito verificador (ej: 12345678-9).";
+      }
+    }
+
     if (!form.nombre.trim()) return "El nombre es obligatorio.";
     if (!form.apellido.trim()) return "El apellido es obligatorio.";
     if (!form.email.trim()) return "El email es obligatorio.";
+
     if (!form.numero.trim()) return "El número de contacto es obligatorio.";
-    if (!form.password || form.password.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+    if (!PATRON_NUMERO_CHILENO.test(form.numero.trim())) {
+      return "El número debe tener formato chileno, ej: +56912345678.";
+    }
+
+    if (!esEdicion) {
+      if (!form.password || form.password.length < 6 || form.password.length > 8) {
+        return "La contraseña debe tener entre 6 y 8 caracteres.";
+      }
+    }
+
     if (!form.observacion.trim()) return "La observación es obligatoria.";
     return null;
   };
@@ -62,9 +112,24 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
     setGuardando(true);
     setError(null);
 
-    const cargoFinal = puedeElegirCargo ? cargo : "EMPLEADO";
+    const cargoFinal = esEdicion ? cargo : (puedeElegirCargo ? cargo : "EMPLEADO");
 
     try {
+      if (esEdicion) {
+        await UsuarioService.actualizar(usuario.id_usuario, {
+          nombre:      form.nombre.trim(),
+          apellido:    form.apellido.trim(),
+          email:       form.email.trim(),
+          numero:      form.numero.trim(),
+          observacion: form.observacion.trim(),
+          rol:         cargoFinal,
+        });
+
+        onSuccess?.();
+        onClose();
+        return;
+      }
+
       const creado = await UsuarioService.registrar({
         rut: form.rut.trim(),
         nombre: form.nombre.trim(),
@@ -106,7 +171,7 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
       setError(
         err?.response?.data?.errorDetails ??
         err?.response?.data?.message ??
-        "Ocurrió un error al registrar a la persona."
+        (esEdicion ? "Ocurrió un error al actualizar a la persona." : "Ocurrió un error al registrar a la persona.")
       );
     } finally {
       setGuardando(false);
@@ -114,17 +179,19 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Agregar Personal">
+    <Modal isOpen={isOpen} onClose={onClose} title={esEdicion ? "Editar Personal" : "Agregar Personal"}>
       <FormContainer
-        title="Nuevo integrante"
+        title={esEdicion ? "Editar integrante" : "Nuevo integrante"}
         description={
-          puedeElegirCargo
-            ? "Crea un usuario nuevo y queda vinculado de inmediato a este proyecto."
-            : "Crea un empleado nuevo y queda vinculado de inmediato a este proyecto."
+          esEdicion
+            ? "Actualiza los datos de este usuario. El RUT no se puede modificar."
+            : puedeElegirCargo
+              ? "Crea un usuario nuevo y queda vinculado de inmediato a este proyecto."
+              : "Crea un empleado nuevo y queda vinculado de inmediato a este proyecto."
         }
         onSubmit={handleSubmit}
         onCancel={onClose}
-        submitText={guardando ? "Guardando..." : "Agregar"}
+        submitText={guardando ? "Guardando..." : esEdicion ? "Guardar cambios" : "Agregar"}
       >
         {error && (
           <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -139,7 +206,12 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
               type="text"
               value={form.rut}
               onChange={(e) => actualizarCampo("rut", e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={esEdicion}
+              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none ${
+                esEdicion
+                  ? "border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed"
+                  : "border-gray-300 focus:ring-2 focus:ring-indigo-500"
+              }`}
               placeholder="12345678-9"
             />
           </div>
@@ -186,16 +258,18 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña temporal</label>
-          <input
-            type="password"
-            value={form.password}
-            onChange={(e) => actualizarCampo("password", e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Mínimo 8 caracteres"
-          />
-        </div>
+        {!esEdicion && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña temporal</label>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => actualizarCampo("password", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Entre 6 y 8 caracteres"
+            />
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Observación</label>
@@ -207,9 +281,9 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
           />
         </div>
 
-        {puedeElegirCargo && (
+        {esEdicion ? (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cargo en el proyecto</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
             <select
               value={cargo}
               onChange={(e) => setCargo(e.target.value)}
@@ -217,8 +291,24 @@ export default function NuevoPersonalModal({ isOpen, onClose, idProyecto, rolEje
             >
               <option value="EMPLEADO">Empleado</option>
               <option value="ENCARGADO">Encargado</option>
+              <option value="SUPERVISOR">Supervisor</option>
+              <option value="ADMIN">Admin</option>
             </select>
           </div>
+        ) : (
+          puedeElegirCargo && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cargo en el proyecto</label>
+              <select
+                value={cargo}
+                onChange={(e) => setCargo(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="EMPLEADO">Empleado</option>
+                <option value="ENCARGADO">Encargado</option>
+              </select>
+            </div>
+          )
         )}
       </FormContainer>
     </Modal>

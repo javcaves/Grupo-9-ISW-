@@ -28,7 +28,7 @@ export const programar = async (req, res) => {
         const { error, value } = tareaCreateValidation.validate(req.body);
         if (error) return handleErrorClient(res, 400, "Datos inválidos", error.message);
 
-        const id_programador = req.user.id; // Extraído del JWT
+        const id_programador = req.user.id_usuario; // Extraído del JWT
         
         const [nueva, err] = await TareaService.programarTarea(value, id_programador);
         if (err) return handleErrorClient(res, 400, "Error de negocio", err);
@@ -76,6 +76,28 @@ export const cancelar = async (req, res) => {
         const [resultado, err] = await TareaService.cancelarTarea(id, value);
         if (err) return handleErrorClient(res, 400, "No se pudo cancelar", err);
         return handleSuccess(res, 200, "Operación exitosa", resultado);
+    } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
+};
+
+// Completar (el empleado marca su propia tarea asignada como realizada)
+export const completar = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const idEmpleado = req.user.id_usuario; // Extraído del JWT
+
+        const [resultado, err] = await TareaService.completarTarea(id, idEmpleado);
+        if (err) return handleErrorClient(res, 400, "No se pudo completar la tarea", err);
+        return handleSuccess(res, 200, "Tarea marcada como completada", resultado);
+    } catch (error) { return handleErrorServer(res, 500, "Error al completar la tarea", error.message); }
+};
+
+// Empleados disponibles para asignar (según el turno que cubre la fecha/hora de la tarea)
+export const obtenerEmpleadosDisponibles = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [empleados, err] = await TareaService.obtenerEmpleadosDisponibles(id);
+        if (err) return handleErrorClient(res, 404, "No encontrado", err);
+        return handleSuccess(res, 200, "Empleados disponibles obtenidos", empleados);
     } catch (error) { return handleErrorServer(res, 500, "Error", error.message); }
 };
 
