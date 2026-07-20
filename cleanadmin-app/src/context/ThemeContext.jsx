@@ -11,9 +11,6 @@ export function ThemeProvider({ children }) {
   });
 
   useEffect(() => {
-    document.body.classList.remove('theme-light', 'theme-dark');
-    document.body.classList.add(`theme-${theme}`);
-
     localStorage.setItem('theme', theme);
   }, [theme]);
 
@@ -41,9 +38,15 @@ export function ThemeProvider({ children }) {
     [theme, setTheme, toggleTheme]
   );
 
+  // El tema se aplica como clase en un wrapper propio (display: contents,
+  // no altera el layout) en vez de en document.body. Así queda scopeado
+  // solo al subárbol donde se monta ThemeProvider (MainLayout /
+  // EmployeeLayout) y páginas fuera de ese árbol (como Login) nunca lo heredan.
   return (
     <ThemeContext.Provider value={value}>
-      {children}
+      <div className={`theme-${theme}`} style={{ display: 'contents' }}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   );
 }

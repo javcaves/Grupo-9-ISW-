@@ -67,6 +67,20 @@ export const DashboardService = {
   },
 
   /**
+   * Turnos generados vs completados por proyecto (barras horizontales).
+   */
+  async obtenerTurnosPorProyecto(filtros = {}) {
+
+    const response = await api.get(
+      `${URL}/turnos`,
+      filtros
+    );
+
+    return response.data;
+
+  },
+
+  /**
    * Stock crítico, solicitudes pendientes y consumo mensual.
    */
   async obtenerInventario(filtros = {}) {

@@ -1,7 +1,9 @@
 import { AppDataSource } from '../../config/ConfigDB.js';
+import { formatFechaLocal, hoyLocal } from '../../shared/dateUtils.js';
 
 const proyectoRepository           = AppDataSource.getRepository('Proyecto');
 const usuarioRepository            = AppDataSource.getRepository('Usuario');
+const asistenciaRepository         = AppDataSource.getRepository('Asistencia');
 const asistenciaEmpleadoRepository = AppDataSource.getRepository('AsistenciaEmpleado');
 const programarTareaRepository     = AppDataSource.getRepository('ProgramarTarea');
 const itemProyectoRepository       = AppDataSource.getRepository('ItemProyecto');
@@ -23,8 +25,7 @@ const obtenerRangoFechas = (dias = 30) => {
     const desde = new Date();
     desde.setDate(desde.getDate() - (dias - 1));
 
-    const aISO = (fecha) => fecha.toISOString().split('T')[0];
-    return { desde: aISO(desde), hasta: aISO(hasta) };
+    return { desde: formatFechaLocal(desde), hasta: formatFechaLocal(hasta) };
 };
 
 /**
@@ -259,7 +260,81 @@ export const obtenerRendimientoPorProyecto = async (filtros = {}) => {
 };
 
 /**
- * 5. Inventario: stock crítico, solicitudes pendientes, consumo mensual
+ * 5. Turnos generados vs completados por proyecto (para las barras
+ *    horizontales de la pestaña "Proyectos y Turnos").
+ *    - turnos_generados: instancias de Asistencia (una por turno activado/día)
+ *      del proyecto dentro del rango de fechas.
+ *    - turnos_completados: de esas instancias, aquellas donde todos sus
+ *      AsistenciaEmpleado activos ya registraron hora_egreso (turno cerrado).
+ */
+export const obtenerTurnosPorProyecto = async (filtros = {}) => {
+    try {
+        const { dias = 30, id_proyecto } = filtros;
+        const { desde, hasta } = obtenerRangoFechas(dias);
+
+        const proyectos = await proyectoRepository.find({
+            where: id_proyecto
+                ? { activo: true, id_proyecto }
+                : { activo: true },
+            order: { id_proyecto: 'ASC' },
+        });
+
+        if (proyectos.length === 0) return [[], null];
+
+        const idsProyectos = proyectos.map((p) => p.id_proyecto);
+
+        const generadosRaw = await asistenciaRepository
+            .createQueryBuilder('a')
+            .select('a.id_proyecto', 'id_proyecto')
+            .addSelect('COUNT(*)', 'total')
+            .where('a.fecha BETWEEN :desde AND :hasta', { desde, hasta })
+            .andWhere('a.id_proyecto IN (:...ids)', { ids: idsProyectos })
+            .groupBy('a.id_proyecto')
+            .getRawMany();
+
+        // Una fila por (proyecto, asistencia) con la cantidad de empleados
+        // activos que todavía NO tienen hora_egreso registrada.
+        const filasPorAsistencia = await asistenciaRepository
+            .createQueryBuilder('a')
+            .innerJoin('a.asistenciaEmpleados', 'ae', 'ae.activo = true')
+            .select('a.id_proyecto', 'id_proyecto')
+            .addSelect('a.id_asistencia', 'id_asistencia')
+            .addSelect(`COUNT(*) FILTER (WHERE ae.hora_egreso IS NULL)`, 'pendientes')
+            .where('a.fecha BETWEEN :desde AND :hasta', { desde, hasta })
+            .andWhere('a.id_proyecto IN (:...ids)', { ids: idsProyectos })
+            .groupBy('a.id_proyecto')
+            .addGroupBy('a.id_asistencia')
+            .getRawMany();
+
+        const mapaGenerados = new Map(
+            generadosRaw.map((f) => [f.id_proyecto, Number(f.total)])
+        );
+
+        const mapaCompletados = new Map();
+        for (const fila of filasPorAsistencia) {
+            if (Number(fila.pendientes) === 0) {
+                mapaCompletados.set(
+                    fila.id_proyecto,
+                    (mapaCompletados.get(fila.id_proyecto) ?? 0) + 1
+                );
+            }
+        }
+
+        const resultado = proyectos.map((p) => ({
+            id_proyecto: p.id_proyecto,
+            nombre_proy: p.nombre_proy,
+            turnos_generados: mapaGenerados.get(p.id_proyecto) ?? 0,
+            turnos_completados: mapaCompletados.get(p.id_proyecto) ?? 0,
+        }));
+
+        return [resultado, null];
+    } catch (error) {
+        return [null, error.message];
+    }
+};
+
+/**
+ * 6. Inventario: stock crítico, solicitudes pendientes, consumo mensual
  */
 export const obtenerInventario = async (filtros = {}) => {
     try {
@@ -306,7 +381,7 @@ export const obtenerInventario = async (filtros = {}) => {
             .select(`TO_CHAR(mi.fecha, 'YYYY-MM')`, 'mes')
             .addSelect('SUM(mi.cantidad)', 'total')
             .where('mi.tipo_movimiento = :tipo', { tipo: 'SALIDA' })
-            .andWhere('mi.fecha >= :desde', { desde: seisAtras.toISOString() })
+            .andWhere('mi.fecha >= :desde', { desde: formatFechaLocal(seisAtras) })
             .groupBy(`TO_CHAR(mi.fecha, 'YYYY-MM')`)
             .orderBy('mes', 'ASC');
 
@@ -327,7 +402,7 @@ export const obtenerInventario = async (filtros = {}) => {
 };
 
 /**
- * 6. Alertas: reglas de negocio calculadas al vuelo (no hay tabla propia)
+ * 7. Alertas: reglas de negocio calculadas al vuelo (no hay tabla propia)
  */
 export const obtenerAlertas = async (filtros = {}) => {
     try {
@@ -378,7 +453,7 @@ export const obtenerAlertas = async (filtros = {}) => {
         }
 
         // --- Tareas vencidas por proyecto ---
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = hoyLocal();
 
         const tareasVencidasPorProyecto = await programarTareaRepository
             .createQueryBuilder('pt')

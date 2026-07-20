@@ -199,15 +199,7 @@ export default function AsistenciaHistorialView({ proyecto }) {
 
     return (
         <div className="space-y-4">
-            <Card title="Historial de Asistencias" icon="fa-calendar-days">
-                <Table
-                    columns={columnas}
-                    data={datosTablaFiltrados}
-                    emptyMessage="No hay registros de asistencia que coincidan con los filtros."
-                />
-            </Card>
-
-            <div className="pt-4">
+            <div>
                 {barraHerramientas}
                 {(filtroPersona || filtroFecha || filtroEstado) && (
                     <button
@@ -218,6 +210,14 @@ export default function AsistenciaHistorialView({ proyecto }) {
                     </button>
                 )}
             </div>
+
+            <Card title="Historial de Asistencias" icon="fa-calendar-days">
+                <Table
+                    columns={columnas}
+                    data={datosTablaFiltrados}
+                    emptyMessage="No hay registros de asistencia que coincidan con los filtros."
+                />
+            </Card>
 
             <EditarAsistenciaModal
                 isOpen={!!editarRegistro}

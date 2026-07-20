@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/Card";
 import { AsistenciaService } from "../../api/asistencia.service";
 import { useAuth } from "../../context/AuthContext";
-import { formatearFecha } from "../../utils/formatters";
+import { formatearFecha, parseFechaLocal } from "../../utils/formatters";
 import SolicitarCorreccionAsistenciaModal from "../../components/modals/SolicitarCorreccionAsistenciaModal";
+import CambiarMiPasswordModal from "../../components/modals/CambiarMiPasswordModal";
 
 const ETIQUETAS_ESTADO_SOLICITUD = {
   PENDIENTE: { label: "Pendiente", className: "bg-amber-100 text-amber-700" },
@@ -23,6 +24,7 @@ export default function EmployeeHistorial() {
   const [solicitudes, setSolicitudes] = useState([]);
   const [registroParaCorregir, setRegistroParaCorregir] = useState(null);
   const [filtroFecha, setFiltroFecha] = useState("");
+  const [modalPasswordAbierto, setModalPasswordAbierto] = useState(false);
 
   const [monthlySummary, setMonthlySummary] = useState({
     workedDays: 0,
@@ -97,7 +99,7 @@ export default function EmployeeHistorial() {
   const gruposPorMes = useMemo(() => {
     const mapa = new Map();
     for (const r of historialFiltrado) {
-      const fecha = new Date(r.fecha);
+      const fecha = parseFechaLocal(r.fecha);
       const clave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}`;
       if (!mapa.has(clave)) {
         mapa.set(clave, {
@@ -313,6 +315,22 @@ export default function EmployeeHistorial() {
 
       </Card>
 
+      {/* CAMBIAR CONTRASEÑA */}
+      <Card>
+        <button
+          onClick={() => setModalPasswordAbierto(true)}
+          className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          style={{
+            background: "var(--card-bg)",
+            border: "1px solid var(--card-border)",
+            color: "var(--card-title)",
+          }}
+        >
+          <i className="fas fa-key" />
+          Cambiar contraseña
+        </button>
+      </Card>
+
       {/* LOGOUT */}
       <Card>
         <button
@@ -332,6 +350,11 @@ export default function EmployeeHistorial() {
         registro={registroParaCorregir}
         onClose={() => setRegistroParaCorregir(null)}
         onSuccess={cargarHistorial}
+      />
+
+      <CambiarMiPasswordModal
+        isOpen={modalPasswordAbierto}
+        onClose={() => setModalPasswordAbierto(false)}
       />
 
     </div>

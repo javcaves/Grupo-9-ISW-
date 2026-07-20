@@ -260,27 +260,29 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   ];
 
   const FILTROS_ROL = [
-    { key: "TODOS",      label: "Todos"      },
-    { key: "ENCARGADO",  label: "Encargado"  },
-    { key: "SUPERVISOR", label: "Supervisor" },
-    { key: "EMPLEADO",   label: "Empleado"   },
+    { key: "TODOS",      label: "Todos",      icon: "fa-users"       },
+    { key: "ENCARGADO",  label: "Encargado",  icon: "fa-user-tie"    },
+    { key: "SUPERVISOR", label: "Supervisor", icon: "fa-user-shield" },
+    { key: "EMPLEADO",   label: "Empleado",   icon: "fa-user"        },
   ];
+
+  const coincideBusqueda = (u) => {
+    if (!busqueda.trim()) return true;
+    const termino = busqueda.trim().toLowerCase();
+    const nombreCompleto = `${u.nombre ?? ""} ${u.apellido ?? ""}`.toLowerCase();
+    return (
+      nombreCompleto.includes(termino) ||
+      (u.rut ?? "").toLowerCase().includes(termino) ||
+      (u.email ?? "").toLowerCase().includes(termino)
+    );
+  };
 
   const usuariosFiltrados = usuarios
     .filter((u) => filtroRol === "TODOS" || u.rol === filtroRol)
-    .filter((u) => {
-      if (!busqueda.trim()) return true;
-      const termino = busqueda.trim().toLowerCase();
-      const nombreCompleto = `${u.nombre ?? ""} ${u.apellido ?? ""}`.toLowerCase();
-      return (
-        nombreCompleto.includes(termino) ||
-        (u.rut ?? "").toLowerCase().includes(termino) ||
-        (u.email ?? "").toLowerCase().includes(termino)
-      );
-    });
+    .filter(coincideBusqueda);
 
   const barraBusqueda = (
-    <div className="relative mb-4 max-w-sm">
+    <div className="relative max-w-sm">
       <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400" />
       <input
         type="text"
@@ -293,23 +295,45 @@ function PersonalTab({ proyecto, rolEjecutor }) {
   );
 
   const filtroBar = (
-    <div className="flex items-center gap-2 mb-4 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap">
       {FILTROS_ROL.map((f) => {
         const activo = filtroRol === f.key;
+        const cantidad = usuarios
+          .filter((u) => f.key === "TODOS" || u.rol === f.key)
+          .filter(coincideBusqueda).length;
+
         return (
           <button
             key={f.key}
             onClick={() => setFiltroRol(f.key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
-              activo
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+            className={`flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 cursor-pointer ${
+              activo ? "shadow-md shadow-indigo-500/20 scale-[1.03] border-transparent text-white" : "hover:scale-[1.02]"
             }`}
+            style={
+              activo
+                ? { background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }
+                : { background: "var(--card-bg)", borderColor: "var(--card-border)", color: "var(--card-subtitle)" }
+            }
           >
+            <i className={`fas ${f.icon} text-[11px] ${activo ? "opacity-90" : "opacity-50"}`} />
             {f.label}
+            <span
+              className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
+                activo ? "bg-white/25 text-white" : "bg-black/5 text-gray-500"
+              }`}
+            >
+              {cantidad}
+            </span>
           </button>
         );
       })}
+    </div>
+  );
+
+  const barraHerramientas = (
+    <div className="flex flex-col gap-3">
+      {barraBusqueda}
+      {filtroBar}
     </div>
   );
 
@@ -319,8 +343,6 @@ function PersonalTab({ proyecto, rolEjecutor }) {
     </div>
   ) : (
     <>
-      {barraBusqueda}
-      {filtroBar}
       <Table
         columns={COLUMNAS_PERSONAL}
         data={usuariosFiltrados}
@@ -380,6 +402,7 @@ function PersonalTab({ proyecto, rolEjecutor }) {
           subtitle: proyecto?.nombre_proy ?? "Personal asignado al proyecto",
         }}
         actions={acciones}
+        toolbar={barraHerramientas}
         stats={
           <>
             {statsCards.map((card, index) => {

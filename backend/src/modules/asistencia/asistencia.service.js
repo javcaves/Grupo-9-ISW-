@@ -1,6 +1,7 @@
 // /src/module/asistencia/asistencia.service.js
 import { AppDataSource } from "../../config/ConfigDB.js";
 import { LessThanOrEqual, MoreThanOrEqual } from "typeorm";
+import { hoyLocal } from "../../shared/dateUtils.js";
 
 const asistenciaRepo = AppDataSource.getRepository("Asistencia");
 const asistenciaEmpleadoRepo = AppDataSource.getRepository("AsistenciaEmpleado");
@@ -35,7 +36,7 @@ const calcularDistanciaMetros = (lat1, lon1, lat2, lon2) => {
 // RF-ASISTENCIA-1: Crear asistencia (Generar Token/QR + Snapshot)
 // ─────────────────────────────────────────────────────────────────────────────
 export const crearAsistenciaService = async (id_turno, id_encargado) => {
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = hoyLocal();
 
     // 1. Validar que el turno exista y esté activo
     const turno = await turnoRepo.findOne({ where: { id_turno, activo: true }, relations: { proyecto: true } });
@@ -106,7 +107,7 @@ export const crearAsistenciaService = async (id_turno, id_encargado) => {
 // /src/module/asistencia/asistencia.service.js
 
 export const mostrarAsistenciaActualService = async (id_turno) => {
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = hoyLocal();
 
     // 1. Obtener la asistencia de hoy
     const asistencia = await asistenciaRepo.findOne({
@@ -448,13 +449,11 @@ export const obtenerMiHistorialService = async (id_usuario) => {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function obtenerMiAsistenciaActual(idEmpleado, idTurno) {
     try {
-        // 1. OBTENER LA FECHA LOCAL (Evita desfases de servidores en la nube/UTC)
-        const tzOffset = (new Date()).getTimezoneOffset() * 60000; // Desfase en ms
-        const localISODate = (new Date(Date.now() - tzOffset)).toISOString();
-        const hoyStr = localISODate.split("T")[0]; // YYYY-MM-DD Local exacto
-
-        const fechaActual = new Date(Date.now() - tzOffset);
-        const diaSemana = fechaActual.getDay(); // 0 = Domingo, 6 = Sábado
+        // 1. OBTENER LA FECHA LOCAL (mismo criterio que el resto del backend,
+        // ver shared/dateUtils.js -- ya no hace falta ningún truco de offset
+        // manual una vez que process.env.TZ está fijado en ConfigEnv.js).
+        const hoyStr = hoyLocal();
+        const diaSemana = new Date().getDay(); // 0 = Domingo, 6 = Sábado
 
         // 2. BUSCAR SI YA EXISTE UN REGISTRO EN EL SNAPSHOT DE HOY (Asistencia ya iniciada)
         const registro = await asistenciaEmpleadoRepo

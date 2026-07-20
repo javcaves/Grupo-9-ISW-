@@ -164,6 +164,55 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
     />
   );
 
+  // Fila de filtros por fecha + "Limpiar filtros". Va junto con
+  // `barraHerramientas` como cabecera de la grilla de proyectos (ver
+  // `contenido` más abajo) -- LayoutContent renderiza `stats` antes que
+  // `toolbar`, así que si se pasaran por separado la barra quedaría abajo
+  // de las tarjetas en vez de arriba.
+  const filtrosFecha = (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Desde:</span>
+        <input
+          type="date"
+          value={fechaDesde}
+          onChange={(e) => setFechaDesde(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:border-violet-400"
+        />
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Hasta:</span>
+        <input
+          type="date"
+          value={fechaHasta}
+          onChange={(e) => setFechaHasta(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:border-violet-400"
+        />
+      </div>
+      {(fechaDesde || fechaHasta || filtroEstado || busqueda) && (
+        <button
+          type="button"
+          onClick={() => {
+            setBusqueda("");
+            setFiltroEstado("");
+            setFechaDesde("");
+            setFechaHasta("");
+          }}
+          className="text-xs font-semibold text-violet-600 hover:text-violet-700"
+        >
+          Limpiar filtros
+        </button>
+      )}
+    </div>
+  );
+
+  const barraCompleta = (
+    <div className="col-span-full flex flex-col gap-3">
+      {barraHerramientas}
+      {filtrosFecha}
+    </div>
+  );
+
   function renderTarjeta(proyecto) {
     const badge = ESTADO_BADGE[proyecto.estado] ?? { label: proyecto.estado, cls: "bg-gray-100 text-gray-500" };
     const cantidadEmpleados = proyecto.cantidad_empleados ?? 0;
@@ -346,14 +395,18 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
   const totalFiltrado = proyectosActivos.length + (mostrarInactivos ? proyectosInactivos.length : 0);
 
   const contenido = totalFiltrado === 0 ? (
-    <div className="col-span-full text-center py-16 text-sm text-gray-400">
-      <i className="fas fa-folder-open text-3xl mb-3 block opacity-30" />
-      {proyectos.length === 0
-        ? "No hay proyectos disponibles."
-        : "Ningún proyecto coincide con los filtros aplicados."}
-    </div>
+    <>
+      {barraCompleta}
+      <div className="col-span-full text-center py-16 text-sm text-gray-400">
+        <i className="fas fa-folder-open text-3xl mb-3 block opacity-30" />
+        {proyectos.length === 0
+          ? "No hay proyectos disponibles."
+          : "Ningún proyecto coincide con los filtros aplicados."}
+      </div>
+    </>
   ) : (
     <>
+      {barraCompleta}
       {proyectosActivos.map(renderTarjeta)}
 
       {/* Reubicados en su propia sección para no mezclarse con los activos
@@ -379,45 +432,6 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
           subtitle: esAdmin ? "Todos los proyectos del sistema" : "Proyectos en los que participas",
         }}
         actions={acciones}
-        toolbar={
-          <div className="flex flex-col gap-3">
-            {barraHerramientas}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Desde:</span>
-                <input
-                  type="date"
-                  value={fechaDesde}
-                  onChange={(e) => setFechaDesde(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:border-violet-400"
-                />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Hasta:</span>
-                <input
-                  type="date"
-                  value={fechaHasta}
-                  onChange={(e) => setFechaHasta(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:border-violet-400"
-                />
-              </div>
-              {(fechaDesde || fechaHasta || filtroEstado || busqueda) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBusqueda("");
-                    setFiltroEstado("");
-                    setFechaDesde("");
-                    setFechaHasta("");
-                  }}
-                  className="text-xs font-semibold text-violet-600 hover:text-violet-700"
-                >
-                  Limpiar filtros
-                </button>
-              )}
-            </div>
-          </div>
-        }
         stats={contenido}
       />
 
