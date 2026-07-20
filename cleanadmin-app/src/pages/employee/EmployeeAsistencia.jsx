@@ -6,7 +6,7 @@ import { AsistenciaService } from "../../api/asistencia.service";
 import QRScannerModal from "../../components/qr/QRScannerModal";
 import SolicitarCorreccionAsistenciaModal from "../../components/modals/SolicitarCorreccionAsistenciaModal";
 import { formatHora } from "../../utils/formatTime";
-import { formatearFecha } from "../../utils/formatters";
+import { formatearFecha, hoyLocalISO } from "../../utils/formatters";
 import { useToast } from "../../context/ToastContext";
 
 const ETIQUETAS_ESTADO_SOLICITUD = {
@@ -83,7 +83,7 @@ export default function EmployeeAsistencia() {
             // mismo shape que usa EmployeeHistorial.jsx.
             setRegistroActual({
               id_asistencia: registroDb.id_asistencia,
-              fecha: registroDb.asistencia?.fecha ?? new Date().toISOString().slice(0, 10),
+              fecha: registroDb.asistencia?.fecha ?? hoyLocalISO(),
               hora_ingreso: registroDb.hora_ingreso,
               hora_egreso: registroDb.hora_egreso,
               estado: registroDb.estado,

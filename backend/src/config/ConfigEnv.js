@@ -7,6 +7,12 @@ const _dirname = path.dirname(_filename);
 const envFilePath = path.resolve(_dirname, '.env');
 dotenv.config({path:envFilePath});
 
+// Fuerza la zona horaria del proceso de Node, sin depender de que el SO/host
+// donde se despliegue ya la tenga configurada. Todo el manejo de fechas
+// calendario (asistencia, turnos, reportes) asume esta TZ -- ver
+// shared/dateUtils.js.
+process.env.TZ = process.env.TZ || 'America/Santiago';
+
 export const PORT = process.env.PORT
 export const HOST = process.env.HOST
 export const DATABASE = process.env.DATABASE

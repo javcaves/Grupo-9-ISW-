@@ -97,14 +97,9 @@ export default function ReportesView() {
         DashboardService.obtenerRendimiento(filtros),
         DashboardService.obtenerInventario(filtros),
         DashboardService.obtenerAlertas(filtros),
-        // NUEVO -- todavía no existe en el backend. Se deja el llamado
-        // ya armado y con fallback a [] para que la sección no rompa;
-        // solo hay que implementar DashboardService.obtenerTurnosPorProyecto
-        // + su endpoint (algo como GET /dashboard/turnos?dias=&id_proyecto=)
-        // devolviendo [{ id_proyecto, nombre_proy, turnos_generados, turnos_completados }].
-        typeof DashboardService.obtenerTurnosPorProyecto === 'function'
-          ? DashboardService.obtenerTurnosPorProyecto(filtros).catch(() => [])
-          : Promise.resolve([]),
+        // GET /dashboard/turnos -- fallback a [] para que la sección no
+        // rompa el resto del dashboard si este endpoint en particular falla.
+        DashboardService.obtenerTurnosPorProyecto(filtros).catch(() => []),
         // Ya existe: GET /items/stats/consumo (top 5 histórico)
         ItemsService.estadisticasConsumo().catch(() => ({ data: [] })),
       ]);
@@ -394,7 +389,7 @@ export default function ReportesView() {
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <EstadoVacio texto="Sin datos de turnos todavía (falta conectar el endpoint de turnos por proyecto)." />
+                      <EstadoVacio texto="No hay turnos generados para el período seleccionado." />
                     )}
                   </Card>
                 </div>

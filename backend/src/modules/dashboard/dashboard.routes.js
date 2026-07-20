@@ -30,6 +30,12 @@ router.get('/proyectos/estado', DashboardController.obtenerEstadoProyectos);
 router.get('/rendimiento', DashboardController.obtenerRendimientoPorProyecto);
 
 /**
+ * Turnos generados vs completados por proyecto (para las barras
+ * horizontales de "Proyectos y Turnos")
+ */
+router.get('/turnos', DashboardController.obtenerTurnosPorProyecto);
+
+/**
  * Stock crítico, solicitudes pendientes y consumo mensual
  */
 router.get('/inventario', DashboardController.obtenerInventario);

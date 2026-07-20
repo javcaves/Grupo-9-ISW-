@@ -71,6 +71,23 @@ export const obtenerRendimientoPorProyecto = async (req, res) => {
 };
 
 /**
+ * GET /dashboard/turnos
+ */
+export const obtenerTurnosPorProyecto = async (req, res) => {
+    try {
+        const { error, value } = dashboardFiltrosValidation.validate(req.query);
+        if (error) return handleErrorClient(res, 400, 'error de validacion', error.message);
+
+        const [turnos, err] = await DashboardService.obtenerTurnosPorProyecto(value);
+        if (err) return handleErrorClient(res, 400, 'error al obtener turnos por proyecto', err);
+
+        return handleSuccess(res, 200, 'turnos por proyecto obtenidos de forma exitosa', turnos);
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    }
+};
+
+/**
  * GET /dashboard/inventario
  */
 export const obtenerInventario = async (req, res) => {

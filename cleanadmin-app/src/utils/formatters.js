@@ -1,4 +1,29 @@
 /**
+ * Convierte un string "YYYY-MM-DD" (columna `date` del backend, sin hora ni
+ * zona) a un Date anclado en medianoche LOCAL. Nunca usar `new Date(fecha)`
+ * directo sobre estos strings: el constructor de Date interpreta fechas
+ * "solo-fecha" como medianoche UTC (spec de JS), lo que en Chile (UTC-3/-4)
+ * se desplaza al día anterior al leer con getters locales.
+ */
+export function parseFechaLocal(fecha) {
+  if (!fecha) return null;
+  const [anio, mes, dia] = String(fecha).split("T")[0].split("-").map(Number);
+  if (!anio || !mes || !dia) return null;
+  return new Date(anio, mes - 1, dia);
+}
+
+/**
+ * Fecha de hoy en formato "YYYY-MM-DD", en hora LOCAL del navegador (nunca
+ * usar `new Date().toISOString().slice(0,10)`, que es UTC y se adelanta un
+ * día en la tarde/noche en Chile).
+ */
+export function hoyLocalISO() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
  * Convierte una fecha en formato YYYY-MM-DD a DD-MM-AAAA para mostrar.
  */
 export function formatearFecha(fecha) {

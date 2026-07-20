@@ -32,7 +32,7 @@ import ProyectoUsuarioRoutes from '../modules/proyecto/proyecto_usuario.routes.j
 import UsuarioRoutes from '../modules/usuario/usuario.routes.js';
 import AsistenciaRoutes from '../modules/asistencia/asistencia.routes.js';
 import TurnoRoutes from '../modules/turno/turno.routes.js';
-import HojaDeVidaRoutes from '../modules/hoja_de_vida/HojaDeVida.routes.js';
+import HojaDeVidaRoutes from '../modules/hoja_de_vida/hojaDeVida.routes.js';
 
 
 // DASHBOARD

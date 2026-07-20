@@ -1,5 +1,6 @@
 // turno.service.js: Lógica de negocio para gestión de turnos y asignación de empleados a turnos, con validaciones robustas y manejo de casos especiales como solapamientos, pertenencia a proyectos y restricciones jerárquicas. También incluye helpers privados para cálculos de horarios y validaciones complejas. [cite: 2788, 2808, 1631]
 import { AppDataSource } from '../../config/ConfigDB.js';
+import { hoyLocal } from '../../shared/dateUtils.js';
 
 // ==================== TURNO ====================
 
@@ -32,7 +33,7 @@ export const crearTurno = async (data) => {
 
     // 1. Validar todos los empleados primero
     const turnoEmpleadoRepo = AppDataSource.getRepository("TurnoEmpleado");
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = hoyLocal();
 
     for (const emp of data.empleados) {
         const { id_empleado } = emp;
@@ -253,7 +254,7 @@ export const agregarEmpleadoATurno = async (id_turno, data) => {
     }
 
     // 3. Creación del registro en el turno (Tu código existente) [cite: 2808]
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = hoyLocal();
     const nuevoRegistro = turnoEmpleadoRepo.create({
         id_turno: id_turno,
         id_empleado: data.id_empleado,
@@ -305,7 +306,7 @@ export const eliminarEmpleadoDeTurno = async (id_turno, id_empleado) => {
     });
     if (!turnoEmpleado) return [{ message: "El empleado ya no está asignado a este turno." }, null];
 
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = hoyLocal();
     const asistenciaHoy = await asistenciaRepo.findOne({
         where: { turno: { id_turno }, fecha: hoy, activo: true }
     });
@@ -346,7 +347,7 @@ export const confirmarEliminacionConAsistencia = async (id_turno, id_empleado) =
     const asistenciaRepo = AppDataSource.getRepository("Asistencia");
     const asistenciaEmpleadoRepo = AppDataSource.getRepository("AsistenciaEmpleado");
 
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = hoyLocal();
 
     const asistenciaHoy = await asistenciaRepo.findOne({
         where: { turno: { id_turno }, fecha: hoy, activo: true }
