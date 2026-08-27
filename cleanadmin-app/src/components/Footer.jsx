@@ -1,7 +1,7 @@
 // src/components/Footer.jsx
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Modal } from "./Modal";
-import { Linkedin, Github, Star, Users, Code2 } from "lucide-react";
 
 const ANIO = new Date().getFullYear();
 
@@ -80,8 +80,8 @@ function Avatar({ dev }) {
 
   if (dev.icono === "star") {
     return (
-      <div className={`${base} text-white`} style={{ background: "linear-gradient(135deg,#f59e0b,#f97316)" }}>
-        <Star size={28} fill="currentColor" />
+      <div className={`${base} text-white text-2xl`} style={{ background: "linear-gradient(135deg,#f59e0b,#f97316)" }}>
+        <i className="fas fa-star" />
       </div>
     );
   }
@@ -106,8 +106,16 @@ function Avatar({ dev }) {
   );
 }
 
-function BotonSocial({ url, icon: Icon, label, hoverColor }) {
+// Botón social basado en Font Awesome (ya cargado en la app), para no depender
+// de lucide-react (cuyos nombres de iconos cambian entre versiones).
+function BotonSocial({ url, faIcon, label, hoverColor }) {
   const claseBase = "flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors";
+
+  const contenido = (
+    <>
+      <i className={`${faIcon} text-sm`} /> {label}
+    </>
+  );
 
   if (url) {
     return (
@@ -117,7 +125,7 @@ function BotonSocial({ url, icon: Icon, label, hoverColor }) {
         rel="noopener noreferrer"
         className={`${claseBase} text-slate-700 border-slate-200 bg-white hover:text-white ${hoverColor}`}
       >
-        <Icon size={14} /> {label}
+        {contenido}
       </a>
     );
   }
@@ -129,7 +137,7 @@ function BotonSocial({ url, icon: Icon, label, hoverColor }) {
       title="Próximamente"
       className={`${claseBase} text-slate-400 border-slate-200 bg-slate-50 cursor-not-allowed`}
     >
-      <Icon size={14} /> {label}
+      {contenido}
     </button>
   );
 }
@@ -148,8 +156,8 @@ function TarjetaDev({ dev }) {
       <p className="text-sm text-slate-500 leading-snug">{dev.modulo}</p>
 
       <div className="flex gap-2 mt-auto">
-        <BotonSocial url={dev.linkedin} icon={Linkedin} label="LinkedIn" hoverColor="hover:bg-[#0a66c2] hover:border-[#0a66c2]" />
-        <BotonSocial url={dev.github} icon={Github} label="GitHub" hoverColor="hover:bg-slate-800 hover:border-slate-800" />
+        <BotonSocial url={dev.linkedin} faIcon="fab fa-linkedin-in" label="LinkedIn" hoverColor="hover:bg-[#0a66c2] hover:border-[#0a66c2]" />
+        <BotonSocial url={dev.github} faIcon="fab fa-github" label="GitHub" hoverColor="hover:bg-slate-800 hover:border-slate-800" />
       </div>
     </div>
   );
@@ -157,6 +165,42 @@ function TarjetaDev({ dev }) {
 
 export default function Footer({ className = "" }) {
   const [equipoAbierto, setEquipoAbierto] = useState(false);
+
+  // Las 2 primeras arriba, las 3 restantes abajo.
+  const filaSuperior = DESARROLLADORES.slice(0, 2);
+  const filaInferior = DESARROLLADORES.slice(2);
+
+  // El Modal se renderiza en document.body (portal) porque el <footer> usa
+  // backdrop-blur, y backdrop-filter convierte al footer en el contenedor de
+  // referencia de los elementos position:fixed -> sin el portal, el modal se
+  // posicionaba respecto al footer (al fondo de la página) en vez de la ventana.
+  const modal = createPortal(
+    <Modal
+      isOpen={equipoAbierto}
+      onClose={() => setEquipoAbierto(false)}
+      title="Equipo de desarrollo"
+      variant="wide"
+    >
+      <div className="mb-5 flex items-center gap-2 text-sm text-slate-500">
+        <i className="fas fa-code text-violet-500" />
+        <span>Grupo 9 — ISW. Estas son las personas detrás de CleanAdmin y los módulos que trabajó cada una.</span>
+      </div>
+
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {filaSuperior.map((dev) => (
+            <TarjetaDev key={dev.nombre} dev={dev} />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {filaInferior.map((dev) => (
+            <TarjetaDev key={dev.nombre} dev={dev} />
+          ))}
+        </div>
+      </div>
+    </Modal>,
+    document.body
+  );
 
   return (
     <footer className={`w-full border-t border-slate-200/70 bg-white/40 backdrop-blur-sm ${className}`}>
@@ -182,27 +226,11 @@ export default function Footer({ className = "" }) {
           onClick={() => setEquipoAbierto(true)}
           className="order-1 md:order-3 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 hover:bg-violet-100 transition-colors shrink-0"
         >
-          <Users size={14} /> Desarrolladores
+          <i className="fas fa-users" /> Desarrolladores
         </button>
       </div>
 
-      <Modal
-        isOpen={equipoAbierto}
-        onClose={() => setEquipoAbierto(false)}
-        title="Equipo de desarrollo"
-        variant="wide"
-      >
-        <div className="mb-5 flex items-center gap-2 text-sm text-slate-500">
-          <Code2 size={16} className="text-violet-500" />
-          <span>Grupo 9 — ISW. Estas son las personas detrás de CleanAdmin y los módulos que trabajó cada una.</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {DESARROLLADORES.map((dev) => (
-            <TarjetaDev key={dev.nombre} dev={dev} />
-          ))}
-        </div>
-      </Modal>
+      {modal}
     </footer>
   );
 }
