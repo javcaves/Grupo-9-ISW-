@@ -155,6 +155,31 @@ const obtenerDestinatariosGestionAsistencia = async (id_proyecto) => {
 };
 
 /**
+ * Rechaza una solicitud de recuperación de contraseña: cierra
+ * (resuelto=true) las notificaciones SOLICITUD_PASSWORD del usuario SIN
+ * tocar su contraseña. Es la contraparte de resetearPasswordUsuario:
+ * ese "aprueba" (setea password + cierra), este solo "cierra".
+ */
+export const rechazarSolicitudPassword = async (id_usuario) => {
+    try {
+        if (id_usuario === undefined || id_usuario === null) {
+            return [null, "id_usuario es obligatorio."];
+        }
+
+        const [, err] = await marcarResueltasPorReferencia({
+            tipo_referencia: "USUARIO",
+            id_referencia: parseInt(id_usuario),
+            tipo: "SOLICITUD_PASSWORD",
+        });
+        if (err) return [null, err];
+
+        return [{ message: "Solicitud de contraseña rechazada." }, null];
+    } catch (error) {
+        return [null, error.message];
+    }
+};
+
+/**
  * Todos los usuarios activos con rol ADMIN o ROOT del sistema.
  */
 const obtenerAdminsYRoot = async () => {

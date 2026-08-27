@@ -29,4 +29,8 @@ export const NotificacionesService = {
     return api.post("/notificaciones/solicitud-password", { identifier });
   },
 
+  rechazarSolicitudPassword(idUsuario) {
+    return api.put(`/notificaciones/solicitud-password/${idUsuario}/rechazar`);
+  },
+
 };

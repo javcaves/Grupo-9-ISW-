@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as NotificacionController from './notificacion.controller.js';
 import { authenticateJwt } from '../../middlewares/auth.middleware.js';
+import { checkRole } from '../../middlewares/role.middleware.js';
 
 const router = Router();
 
@@ -21,6 +22,12 @@ router.put('/leido-todas',
 router.put('/:id_notificacion/leido',
     authenticateJwt,
     NotificacionController.marcarLeida
+);
+
+router.put('/solicitud-password/:id_usuario/rechazar',
+    authenticateJwt,
+    checkRole(['ROOT', 'ADMIN', 'SUPERVISOR']),
+    NotificacionController.rechazarSolicitudPassword
 );
 
 export default router;

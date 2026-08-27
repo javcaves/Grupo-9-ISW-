@@ -4,6 +4,7 @@ import { FaLayerGroup, FaShieldHalved, FaChartLine, FaUsers, FaBoxesStacked, FaE
 import { Modal } from "../components/Modal";
 import PasswordInput from "../components/PasswordInput";
 import { NotificacionesService } from "../api/notificaciones.service";
+import { AuthService } from "../api/auth.service";
 
 export default function Login() {
   const { loginUser } = useAuth();
@@ -43,32 +44,25 @@ export default function Login() {
     }
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      const response = await fetch("http://localhost:3000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
-        credentials: "include",
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        loginUser(data.user);
-      } else {
-        setError(data.detail || data.message || "Credenciales incorrectas");
-      }
-    } catch (err) {
-      setError("No se pudo conectar con el servidor. Inténtalo más tarde.");
-    } finally {
-      setLoading(false);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
+  try {
+    const res = await AuthService.login({ identifier: identifier.trim(), password });
+    const data = res?.data ?? res;
+    if (data?.success) {
+      loginUser(data.user);
+    } else {
+      setError(data?.detail || data?.message || "Credenciales incorrectas");
     }
-  };
+  } catch (err) {
+    const data = err?.response?.data;
+    setError(data?.detail || data?.message || "No se pudo conectar con el servidor. Inténtalo más tarde.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#f8fafc] via-[#eef2ff] to-[#f1f5f9] relative overflow-hidden font-sans text-[#0f172a]">

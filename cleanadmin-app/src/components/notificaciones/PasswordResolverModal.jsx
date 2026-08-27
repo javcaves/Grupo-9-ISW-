@@ -5,6 +5,7 @@ import { UsuarioService } from '../../api/usuario.service';
 import PasswordInput from '../PasswordInput';
 import { useNotificaciones } from '../../context/NotificacionesContext';
 import { extraerData } from '../../utils/apiResponse';
+import { NotificacionesService } from '../../api/notificaciones.service';
 
 export default function PasswordResolverModal({ isOpen, idUsuario, onClose }) {
   const { refrescar } = useNotificaciones();
@@ -15,6 +16,7 @@ export default function PasswordResolverModal({ isOpen, idUsuario, onClose }) {
   const [nuevaPassword, setNuevaPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [rechazando, setRechazando] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -66,6 +68,27 @@ export default function PasswordResolverModal({ isOpen, idUsuario, onClose }) {
       setError(err.message || 'No se pudo actualizar la contraseña.');
     } finally {
       setEnviando(false);
+    }
+  };
+
+  // FIX: el método vive en NotificacionesService, no en UsuarioService.
+  // Antes se llamaba con encadenamiento opcional sobre UsuarioService
+  // (rechazarSolicitudPassword?.), que al no existir el método se
+  // evaluaba como undefined y no lanzaba nada: el clic "no hacía nada"
+  // sin error visible ni petición en Network.
+  const handleRechazar = async (e) => {
+    e?.preventDefault();
+    setError(null);
+    setRechazando(true);
+    try {
+      await NotificacionesService.rechazarSolicitudPassword(idUsuario);
+      await refrescar();
+      onClose();
+    } catch (err) {
+      console.error('Error al rechazar solicitud:', err);
+      setError(err.message || 'No se pudo rechazar la solicitud.');
+    } finally {
+      setRechazando(false);
     }
   };
 
@@ -138,10 +161,19 @@ export default function PasswordResolverModal({ isOpen, idUsuario, onClose }) {
 
           <button
             type="submit"
-            disabled={enviando}
+            disabled={enviando || rechazando}
             className="w-full px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
           >
             {enviando ? 'Guardando...' : 'Asignar contraseña provisional'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleRechazar}
+            disabled={rechazando || enviando}
+            className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            {rechazando ? 'Rechazando...' : 'Rechazar solicitud'}
           </button>
         </form>
       )}
