@@ -40,15 +40,61 @@ export const otorgarCalificacion = async (data, id_otorga) => {
     return [await califRepo.save(nueva), null];
 };
 
-// quitar calificacion
+// quitar calificacion (con cascade sobre asignaciones)
 export const revocarCalificacion = async (id) => {
     const califRepo = AppDataSource.getRepository("CalificacionEmpleado");
-    const calificacion = await califRepo.findOne({ where: { id_calificacion: id } });
+    const asignRepo = AppDataSource.getRepository("AsignacionTarea");
+    const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
 
+    const calificacion = await califRepo.findOne({
+        where: { id_calificacion: id },
+        relations: { categoria: true, empleado: true },
+    });
     if (!calificacion) return [null, "Calificación no encontrada."];
+    if (!calificacion.activo) return [null, "La calificación ya estaba revocada."];
 
+    const idCat = calificacion.categoria?.id_cat;
+    const idEmpleado = calificacion.empleado?.id_usuario;
+
+    // Asignaciones del empleado a tareas cuya actividad pertenece a la
+    // categoría de esta certificación, en estados aún vigentes.
+    const asignacionesAfectadas = (idCat && idEmpleado)
+        ? await asignRepo.createQueryBuilder("a")
+            .innerJoinAndSelect("a.tarea", "t")
+            .innerJoin("t.actividad", "act")
+            .innerJoin("act.categoria", "cat")
+            .innerJoin("a.empleado", "emp")
+            .where("emp.id_usuario = :idEmpleado", { idEmpleado })
+            .andWhere("cat.id_cat = :idCat", { idCat })
+            .andWhere("t.estado IN (:...estados)", { estados: ["ASIGNADA", "EN_PROCESO"] })
+            .getMany()
+        : [];
+
+    // Revocar la certificación
     await califRepo.update(id, { activo: false });
-    return [{ message: "Calificación revocada correctamente" }, null];
+
+    // Cascada: quitar cada asignación y, si la tarea queda sin responsables,
+    // devolverla a PLANIFICADA para reasignarla a alguien certificado.
+    let tareasLiberadas = 0;
+    for (const a of asignacionesAfectadas) {
+        const idTarea = a.tarea.id_tarea;
+        await asignRepo.delete(a.id_asignacion);
+
+        const restantes = await asignRepo.count({ where: { tarea: { id_tarea: idTarea } } });
+        if (restantes === 0) {
+            await tareaRepo.update(idTarea, {
+                estado: "PLANIFICADA",
+                comentario: "Reabierta automáticamente: el empleado asignado perdió la certificación requerida.",
+            });
+            tareasLiberadas++;
+        }
+    }
+
+    const extra = asignacionesAfectadas.length > 0
+        ? ` Se retiraron ${asignacionesAfectadas.length} asignación(es); ${tareasLiberadas} tarea(s) volvieron a PLANIFICADA.`
+        : "";
+
+    return [{ message: `Calificación revocada correctamente.${extra}` }, null];
 };
 
 // Buscar por categoria
