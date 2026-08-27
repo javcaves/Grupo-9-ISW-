@@ -196,7 +196,7 @@ export const removeMovimiento = async (req, res) => {
 
 export const listarMovimientos = async (req, res) => {
     try {
-        const movimientos = await ItemsService.obtenerMovimientos();
+        const movimientos = await ItemsService.obtenerMovimientos(req.query);
         return handleSuccess(res, 200, "Lista de movimientos obtenida", movimientos);
     } catch (error) {
         return handleErrorServer(res, 500, "Error al obtener movimientos", error.message);

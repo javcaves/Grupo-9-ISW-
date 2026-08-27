@@ -122,10 +122,10 @@ const COLUMNAS_MOVIMIENTOS = [
     render: (val) => val?.nombre ?? "—",
   },
   {
-    key:   "item",
+    key:   "proyecto",
     label: "Proyecto",
     icon:  "fa-diagram-project",
-    render: (val) => val?.proyecto?.nombre_proy ?? "Sin asignar",
+    render: (val) => val?.nombre_proy ?? "Sin asignar",
   },
   {
     key:   "tipo_movimiento",
@@ -156,7 +156,7 @@ const COLUMNAS_MOVIMIENTOS = [
     render: (val) => val ? `${val.nombre} ${val.apellido}` : "—",
   },
   {
-    key:   "comentario",
+    key:   "descripcion",
     label: "Comentario",
     icon:  "fa-comment",
     render: (val) => (
@@ -176,22 +176,20 @@ const COLUMNAS_SOLICITUDES = [
     key:   "item",
     label: "Ítem",
     icon:  "fa-box",
-    render: (val) => val?.nombre ?? "—",
+    render: (val, row) => val?.nombre || row?.item_sugerido || "—",
   },
   {
-    key:   "item",
+    key:   "proyecto",
     label: "Proyecto",
     icon:  "fa-diagram-project",
-    render: (val) => val?.proyecto?.nombre_proy ?? "Sin asignar",
+    render: (val) => val?.nombre_proy ?? "Sin asignar",
   },
   {
-    key:   "tipo",
+    key:   "tipo_movimiento",
     label: "Tipo",
     icon:  "fa-arrows-left-right",
     render: (val) => (
-      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-        val === "ENTRADA" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"
-      }`}>
+      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
         {val ?? "—"}
       </span>
     ),
@@ -203,13 +201,13 @@ const COLUMNAS_SOLICITUDES = [
     render: (val) => val ?? "—",
   },
   {
-    key:   "usuario",
+    key:   "emisor",
     label: "Solicitado por",
     icon:  "fa-user",
     render: (val) => val ? `${val.nombre} ${val.apellido}` : "—",
   },
   {
-    key:   "comentario",
+    key:   "descripcion",
     label: "Comentario",
     icon:  "fa-comment",
     render: (val) => (
@@ -328,17 +326,17 @@ export default function InventariosView() {
 
   const movimientosFiltrados = movimientos
     .filter((m) => coincideBusqueda(m.item?.nombre))
-    .filter((m) => !filtroProyecto || m.item?.proyecto?.id_proyecto === parseInt(filtroProyecto, 10))
+    .filter((m) => !filtroProyecto || m.proyecto?.id_proyecto === parseInt(filtroProyecto, 10))
     .sort((a, b) => {
-      const cmp = (a.item?.nombre ?? "").localeCompare(b.item?.nombre ?? "");
+      const cmp = new Date(b.fecha) - new Date(a.fecha); // más recientes primero
       return ordenDescendente ? -cmp : cmp;
     });
 
   const solicitudesFiltradas = solicitudes
-    .filter((s) => coincideBusqueda(s.item?.nombre))
-    .filter((s) => !filtroProyecto || s.item?.proyecto?.id_proyecto === parseInt(filtroProyecto, 10))
+    .filter((s) => coincideBusqueda(s.item?.nombre || s.item_sugerido))
+    .filter((s) => !filtroProyecto || s.proyecto?.id_proyecto === parseInt(filtroProyecto, 10))
     .sort((a, b) => {
-      const cmp = (a.item?.nombre ?? "").localeCompare(b.item?.nombre ?? "");
+      const cmp = new Date(b.fecha) - new Date(a.fecha); // más recientes primero
       return ordenDescendente ? -cmp : cmp;
     });
 

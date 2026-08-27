@@ -177,7 +177,7 @@ export default function InventarioView({ proyecto }) {
   const movimientosFiltrados = movimientos
     .filter((m) => !busqueda.trim() || m.item?.nombre?.toLowerCase().includes(busqueda.trim().toLowerCase()))
     .sort((a, b) => {
-      const cmp = (a.item?.nombre ?? "").localeCompare(b.item?.nombre ?? "");
+      const cmp = new Date(b.fecha) - new Date(a.fecha); // más recientes primero
       return ordenDescendente ? -cmp : cmp;
     });
 
@@ -311,10 +311,10 @@ export default function InventarioView({ proyecto }) {
       key:   "item",
       label: "Ítem",
       icon:  "fa-box",
-      render: (val, row) => val?.nombre || row?.Item?.nombre || row?.nombre_item || (typeof val === 'string' ? val : "—"),
+      render: (val, row) => val?.nombre || row?.item_sugerido || "—",
     },
     {
-      key:   "tipo",
+      key:   "tipo_movimiento",
       label: "Tipo",
       icon:  "fa-arrows-left-right",
       render: (val) => (
@@ -336,13 +336,13 @@ export default function InventarioView({ proyecto }) {
       render: (val) => val ?? "—",
     },
     {
-      key:   "usuario",
+      key:   "emisor",
       label: "Registrado por",
       icon:  "fa-user",
       render: (val) => val ? `${val.nombre} ${val.apellido}` : "—",
     },
     {
-      key:   "comentario",
+      key:   "descripcion",
       label: "Comentario",
       icon:  "fa-comment",
       render: (val) => (
