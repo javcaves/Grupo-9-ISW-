@@ -156,13 +156,14 @@ export default function HojaDeVidaModal({ isOpen, onClose, empleado, idProyecto 
     if (ultimas.length > 0) {
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 8,
-        head: [["Fecha", "Tarea", "Calificación", "Cumplió", "Evaluador"]],
+        head: [["Fecha", "Tarea", "Calif.", "Cumplió", "Evaluador", "Comentario"]],
         body: ultimas.map((e) => [
           formatearFecha(e.fecha),
           e.tarea,
           e.calificacion,
           e.cumplio ? "Sí" : "No",
           e.evaluador,
+          e.comentario || "—",
         ]),
         theme: "grid",
         styles: { fontSize: 8 },
@@ -272,6 +273,12 @@ export default function HojaDeVidaModal({ isOpen, onClose, empleado, idProyecto 
                         <span className="text-[11px] font-semibold text-amber-600">Calidad: {e.calificacion}/5</span>
                       </div>
                     </div>
+                    {e.comentario && (
+                      <p className="text-xs text-slate-600 mt-1.5 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                        <i className="fas fa-comment-dots text-slate-400 mr-1.5" />
+                        {e.comentario}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

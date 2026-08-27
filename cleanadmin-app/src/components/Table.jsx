@@ -1,5 +1,25 @@
 import React, { useState, useEffect, useMemo } from "react";
 
+// Deriva un valor ordenable de la celda. Prioridad:
+// 1. col.sortAccessor(item)  -> control fino por columna
+// 2. item[col.key]           -> valor directo
+// Si el valor es un objeto (relaciones típicas de esta app: item, emisor,
+// proyecto), intenta un campo de nombre razonable para poder ordenar por
+// texto en vez de por "[object Object]".
+const valorOrdenable = (item, col) => {
+  const raw = col.sortAccessor ? col.sortAccessor(item) : item[col.key];
+  if (raw == null) return raw;
+  if (typeof raw === "object") {
+    if (raw.nombre != null) return `${raw.nombre} ${raw.apellido ?? ""}`.trim();
+    if (raw.nombre_proy != null) return raw.nombre_proy;
+    if (raw.item_sugerido != null) return raw.item_sugerido;
+    return "";
+  }
+  return raw;
+};
+
+const esOrdenable = (col) => col.key !== "actions" && col.sortable !== false;
+
 export const Table = ({
   columns,
   data,
@@ -18,7 +38,48 @@ export const Table = ({
 
   const [paginaActual, setPaginaActual] = useState(1);
 
-  const totalPaginas = Math.max(1, Math.ceil(data.length / pageSize));
+  // Orden por columna. index = posición de la columna en `columns`
+  // (no la key, para tolerar columnas que compartan key). dir null =
+  // sin orden activo -> se respeta el orden que ya trae `data`.
+  const [orden, setOrden] = useState({ index: null, dir: null });
+
+  const cambiarOrden = (idx, col) => {
+    if (!esOrdenable(col)) return;
+    setPaginaActual(1);
+    setOrden((prev) => {
+      if (prev.index !== idx) return { index: idx, dir: "asc" };
+      if (prev.dir === "asc")  return { index: idx, dir: "desc" };
+      return { index: null, dir: null }; // tercer click: vuelve al orden por defecto
+    });
+  };
+
+  const datosOrdenados = useMemo(() => {
+    if (orden.index == null || !orden.dir) return data;
+    const col = columns[orden.index];
+    if (!col) return data;
+
+    const arr = [...data];
+    arr.sort((a, b) => {
+      const va = valorOrdenable(a, col);
+      const vb = valorOrdenable(b, col);
+
+      // nulos siempre al final, sin importar la dirección
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+
+      let cmp;
+      if (typeof va === "number" && typeof vb === "number") {
+        cmp = va - vb;
+      } else {
+        cmp = String(va).localeCompare(String(vb), "es", { numeric: true, sensitivity: "base" });
+      }
+      return orden.dir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [data, orden, columns]);
+
+  const totalPaginas = Math.max(1, Math.ceil(datosOrdenados.length / pageSize));
 
   useEffect(() => {
     setPaginaActual((actual) => Math.min(actual, totalPaginas));
@@ -26,12 +87,12 @@ export const Table = ({
 
   const datosPagina = useMemo(() => {
     const inicio = (paginaActual - 1) * pageSize;
-    return data.slice(inicio, inicio + pageSize);
-  }, [data, paginaActual, pageSize]);
+    return datosOrdenados.slice(inicio, inicio + pageSize);
+  }, [datosOrdenados, paginaActual, pageSize]);
 
-  const mostrarPaginacion = data.length > pageSize;
-  const desde = data.length === 0 ? 0 : (paginaActual - 1) * pageSize + 1;
-  const hasta = Math.min(paginaActual * pageSize, data.length);
+  const mostrarPaginacion = datosOrdenados.length > pageSize;
+  const desde = datosOrdenados.length === 0 ? 0 : (paginaActual - 1) * pageSize + 1;
+  const hasta = Math.min(paginaActual * pageSize, datosOrdenados.length);
 
   return (
     <div
@@ -54,22 +115,39 @@ export const Table = ({
                 borderBottom: "1px solid var(--table-header-border)",
               }}
             >
-              {columns.map((col, idx) => (
-                <th
-                  key={idx}
-                  className={`text-left py-4 px-5 text-sm font-semibold ${col.width ? `w-[${col.width}]` : ""} ${col.className || ""}`}
-                  style={{ color: "var(--table-header-text)" }}
-                >
-                  {col.icon && <i className={`fas ${col.icon} mr-2 text-violet-500`} />}
-                  {col.label}
-                </th>
-              ))}
+              {columns.map((col, idx) => {
+                const ordenable = esOrdenable(col);
+                const activa = orden.index === idx;
+                return (
+                  <th
+                    key={idx}
+                    onClick={ordenable ? () => cambiarOrden(idx, col) : undefined}
+                    className={`text-left py-4 px-5 text-sm font-semibold ${col.width ? `w-[${col.width}]` : ""} ${col.className || ""} ${ordenable ? "cursor-pointer select-none" : ""}`}
+                    style={{ color: "var(--table-header-text)" }}
+                    title={ordenable ? "Ordenar por esta columna" : undefined}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      {col.icon && <i className={`fas ${col.icon} text-violet-500`} />}
+                      {col.label}
+                      {ordenable && (
+                        <i
+                          className={`fas text-[10px] ${
+                            activa
+                              ? (orden.dir === "asc" ? "fa-sort-up" : "fa-sort-down")
+                              : "fa-sort opacity-30"
+                          }`}
+                        />
+                      )}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 
           {/* Body */}
           <tbody>
-            {data.length === 0 ? (
+            {datosOrdenados.length === 0 ? (
               <tr>
                 <td
                   colSpan={columns.length}
@@ -180,7 +258,7 @@ export const Table = ({
           style={{ borderTop: "1px solid var(--table-row-border)" }}
         >
           <span className="text-xs" style={{ color: "var(--table-header-text)" }}>
-            Mostrando <strong>{desde}-{hasta}</strong> de <strong>{data.length}</strong> resultados
+            Mostrando <strong>{desde}-{hasta}</strong> de <strong>{datosOrdenados.length}</strong> resultados
           </span>
 
           <div className="flex items-center gap-1.5">

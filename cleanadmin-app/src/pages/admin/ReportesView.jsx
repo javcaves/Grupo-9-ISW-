@@ -64,7 +64,7 @@ export default function ReportesView() {
 
   // Lista de proyectos para el filtro y para la línea de tiempo
   // (se carga una sola vez; se asume que Proyecto trae fecha_inicio,
-  // fecha_fin y estado -- ajustar los nombres de campo si difieren).
+  // fecha_termino (nullable) y estado, según proyecto.entity.js.
   useEffect(() => {
     ProyectoService.listarTodos()
       .then((res) => setProyectos(Array.isArray(res) ? res : (res?.data ?? [])))
@@ -160,15 +160,21 @@ export default function ReportesView() {
 
   // ── Línea de tiempo de proyectos (a partir de ProyectoService, sin
   // endpoint nuevo) ─────────────────────────────────────────────────
+  // El campo real del entity es fecha_termino (no fecha_fin), y es nullable:
+  // un proyecto en curso aún no tiene término, así que se dibuja hasta hoy.
+  const finProyectoMs = (p) => (p.fecha_termino ? new Date(p.fecha_termino).getTime() : Date.now());
+
+  // Todos los proyectos tienen fecha_inicio (NOT NULL), así que todos entran
+  // a la línea de tiempo -- los activos se extienden hasta la fecha actual.
   const proyectosConFechas = useMemo(
-    () => proyectos.filter((p) => p.fecha_inicio && p.fecha_fin),
+    () => proyectos.filter((p) => p.fecha_inicio),
     [proyectos]
   );
 
   const rangoFechas = useMemo(() => {
     if (proyectosConFechas.length === 0) return null;
     const inicios = proyectosConFechas.map((p) => new Date(p.fecha_inicio).getTime());
-    const fines = proyectosConFechas.map((p) => new Date(p.fecha_fin).getTime());
+    const fines = proyectosConFechas.map((p) => finProyectoMs(p));
     const min = Math.min(...inicios);
     const max = Math.max(...fines);
     return { min, max, total: Math.max(max - min, 1) };
@@ -177,7 +183,7 @@ export default function ReportesView() {
   function posicionEnLinea(proyecto) {
     if (!rangoFechas) return { left: '0%', width: '0%' };
     const inicio = new Date(proyecto.fecha_inicio).getTime();
-    const fin = new Date(proyecto.fecha_fin).getTime();
+    const fin = finProyectoMs(proyecto);
     const left = ((inicio - rangoFechas.min) / rangoFechas.total) * 100;
     const width = Math.max(((fin - inicio) / rangoFechas.total) * 100, 1.5);
     return { left: `${left}%`, width: `${width}%` };
@@ -415,7 +421,7 @@ export default function ReportesView() {
                               <div
                                 className="absolute h-5 rounded-full"
                                 style={{ ...pos, backgroundColor: COLORES_ESTADO[p.estado] || '#94a3b8' }}
-                                title={`${p.fecha_inicio} → ${p.fecha_fin}`}
+                                title={`${new Date(p.fecha_inicio).toLocaleDateString('es-CL')} → ${p.fecha_termino ? new Date(p.fecha_termino).toLocaleDateString('es-CL') : 'en curso'}`}
                               />
                             </div>
                           </div>

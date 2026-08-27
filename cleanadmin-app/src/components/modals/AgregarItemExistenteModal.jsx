@@ -34,7 +34,7 @@ export default function AgregarItemExistenteModal({ isOpen, onClose, proyecto, i
   useEffect(() => {
     if (!isOpen) return;
     setCargandoCatalogo(true);
-    ItemsService.listar()
+    ItemsService.listarActivos()
       .then((res) => setCatalogo(extraerData(res) ?? res?.data ?? res ?? []))
       .catch(() => setCatalogo([]))
       .finally(() => setCargandoCatalogo(false));

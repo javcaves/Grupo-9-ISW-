@@ -1,4 +1,5 @@
 import { AppDataSource } from '../../config/ConfigDB.js';
+import { hoyLocal } from '../../shared/dateUtils.js'; 
 
 // ----- Crear -----
 export const programarTarea = async (data, id_programador) => {
@@ -96,18 +97,16 @@ export const cancelarTarea = async (id, data) => {
 // ----- Completar (el propio empleado marca su tarea como realizada) -----
 export const completarTarea = async (idTarea, idEmpleado) => {
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
+    const asistenciaEmpleadoRepo = AppDataSource.getRepository("AsistenciaEmpleado");
 
     const tarea = await tareaRepo.findOne({
         where: { id_tarea: idTarea },
-        relations: { asignaciones: { empleado: true } },
+        relations: { asignaciones: { empleado: true }, actividad: { proyecto: true } },
     });
 
     if (!tarea) return [null, "Tarea no encontrada"];
 
-    // Misma regla que obtenerMisTareas: solo la asignación más reciente
-    // (por hora_asignacion) es la vigente. Así, si la tarea fue reasignada
-    // a otra persona, el empleado anterior ya no puede marcarla como
-    // completada aunque conserve el id_tarea.
+    // Solo la asignación más reciente es la vigente.
     const asignacionVigente = [...(tarea.asignaciones ?? [])]
         .sort((a, b) => new Date(b.hora_asignacion) - new Date(a.hora_asignacion))[0];
 
@@ -122,10 +121,57 @@ export const completarTarea = async (idTarea, idEmpleado) => {
         return [null, `No se puede completar: la tarea aún no está EN_PROCESO (estado actual: ${tarea.estado}). Debe esperar a que comience su horario programado.`];
     }
 
+    // BUG #1: exigir marca de ingreso del día antes de completar.
+    const hoy = hoyLocal();
+    const idProyectoTarea = tarea.actividad?.proyecto?.id_proyecto;
+    const qbIngreso = asistenciaEmpleadoRepo
+        .createQueryBuilder("ae")
+        .innerJoin("ae.asistencia", "a")
+        .where("ae.id_empleado = :idEmpleado", { idEmpleado })
+        .andWhere("a.fecha = :hoy", { hoy })
+        .andWhere("ae.activo = true")
+        .andWhere("ae.hora_ingreso IS NOT NULL");
+    if (idProyectoTarea) qbIngreso.andWhere("a.id_proyecto = :idProyecto", { idProyecto: idProyectoTarea });
+
+    const marcaIngreso = await qbIngreso.getOne();
+    if (!marcaIngreso) {
+        return [null, "Debes registrar tu ingreso (marcar asistencia) antes de completar una tarea."];
+    }
+
     tarea.estado = "FINALIZADA";
     return [await tareaRepo.save(tarea), null];
 };
 
+// ----- Retractar (el empleado deshace una tarea que marcó completada por error) -----
+export const retractarTarea = async (idTarea, idEmpleado) => {
+    const tareaRepo = AppDataSource.getRepository("ProgramarTarea");
+    const evalRepo = AppDataSource.getRepository("EvaluacionDesempeno");
+
+    const tarea = await tareaRepo.findOne({
+        where: { id_tarea: idTarea },
+        relations: { asignaciones: { empleado: true } },
+    });
+    if (!tarea) return [null, "Tarea no encontrada"];
+
+    const asignacionVigente = [...(tarea.asignaciones ?? [])]
+        .sort((a, b) => new Date(b.hora_asignacion) - new Date(a.hora_asignacion))[0];
+    if (!asignacionVigente || asignacionVigente.empleado?.id_usuario !== idEmpleado) {
+        return [null, "Esta tarea no está asignada actualmente a tu usuario."];
+    }
+
+    if (tarea.estado !== "FINALIZADA") {
+        return [null, `Solo puedes retractarte de una tarea finalizada (estado actual: ${tarea.estado}).`];
+    }
+
+    // No permitir retractar si un supervisor ya la evaluó.
+    const yaEvaluada = await evalRepo.count({ where: { tarea: { id_tarea: idTarea }, activo: true } });
+    if (yaEvaluada > 0) {
+        return [null, "No puedes retractarte: esta tarea ya fue evaluada por un supervisor."];
+    }
+
+    tarea.estado = "EN_PROCESO";
+    return [await tareaRepo.save(tarea), null];
+};
 // ----- Empleados disponibles para asignar (según turno vigente a la fecha/hora de la tarea) -----
 export const obtenerEmpleadosDisponibles = async (idTarea) => {
     const tareaRepo = AppDataSource.getRepository("ProgramarTarea");

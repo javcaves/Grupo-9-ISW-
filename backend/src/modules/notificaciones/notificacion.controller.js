@@ -72,3 +72,23 @@ export const solicitarRecuperacionPassword = async (req, res) => {
         return handleErrorServer(res, 500, 'error de servidor', error.message);
     }
 };
+
+/**
+ * 5. Rechazar una solicitud de recuperación de contraseña.
+ * PUT /notificaciones/solicitud-password/:id_usuario/rechazar
+ */
+export const rechazarSolicitudPassword = async (req, res) => {
+    try {
+        const id_usuario = parseInt(req.params.id_usuario);
+        if (!id_usuario || id_usuario < 1) {
+            return handleErrorClient(res, 400, 'error de validacion', 'id_usuario inválido.');
+        }
+
+        const [resultado, err] = await NotificacionService.rechazarSolicitudPassword(id_usuario);
+        if (err) return handleErrorClient(res, 400, 'no se pudo rechazar la solicitud', err);
+
+        return handleSuccess(res, 200, resultado.message, null);
+    } catch (error) {
+        return handleErrorServer(res, 500, 'error de servidor', error.message);
+    }
+};

@@ -1,5 +1,5 @@
 // pages/AdminPage.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import Sidebar   from "../components/sidebar";
 import TopBar    from "../components/topBar";
@@ -27,10 +27,30 @@ const TOPBAR_CONFIG = {
   reportes:    ADMIN_CONFIG.reportes?.topBar    ?? {},
 };
 
+const MENUS_VALIDOS = ["proyectos", "personal", "inventarios", "categorias", "reportes"];
+const CLAVE_MENU = "admin_activeMenu";
+const CLAVE_TAB  = "admin_activeTab";
+
 export default function AdminPage() {
   const { user, logoutUser } = useAuth();
-  const [activeMenu, setActiveMenu] = useState("proyectos");
-  const [activeTab,  setActiveTab]  = useState("");
+
+  // Estado inicial leído de sessionStorage: así al refrescar (F5) se conserva
+  // la sección en la que estabas, en vez de volver siempre a "proyectos".
+  // Se valida contra la lista conocida por si quedó un valor viejo/ inválido.
+  const [activeMenu, setActiveMenu] = useState(() => {
+    const guardado = sessionStorage.getItem(CLAVE_MENU);
+    return MENUS_VALIDOS.includes(guardado) ? guardado : "proyectos";
+  });
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem(CLAVE_TAB) ?? "");
+
+  // Persistimos cada cambio para que sobreviva al refresco.
+  useEffect(() => {
+    sessionStorage.setItem(CLAVE_MENU, activeMenu);
+  }, [activeMenu]);
+
+  useEffect(() => {
+    sessionStorage.setItem(CLAVE_TAB, activeTab);
+  }, [activeTab]);
 
   const esEncargado = user?.rol === 'ENCARGADO';
 

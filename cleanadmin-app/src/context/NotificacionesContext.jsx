@@ -5,7 +5,7 @@ import { extraerListado } from '../utils/apiResponse';
 
 const NotificacionesContext = createContext(null);
 
-const INTERVALO_POLLING_MS = 10 * 60 * 1000; // 10 minutos
+const INTERVALO_POLLING_MS = 30 * 1000; // 30seg
 
 export function NotificacionesProvider({ children }) {
   const [notificaciones, setNotificaciones] = useState([]);

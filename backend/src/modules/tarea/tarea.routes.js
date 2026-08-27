@@ -15,6 +15,6 @@ router.put('/:id', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.actual
 router.delete('/:id', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.eliminar);
 router.patch('/:id/cancelar', authenticateJwt, checkRole(rolesPermitidos), TareaCtrl.cancelar);
 router.patch('/:id/completar', authenticateJwt, TareaCtrl.completar);
-
+router.patch('/:id/retractar', authenticateJwt, TareaCtrl.retractar);
 
 export default router;

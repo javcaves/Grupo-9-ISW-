@@ -79,9 +79,58 @@ export const resolverSolicitud = async (id_solicitud, decision, id_resuelve) => 
                 return [null, "Regla de negocio: no se puede editar un registro en estado FALTA_JUSTIFICADA."];
             }
 
-            if (solicitud.estado_solicitado) registro.estado = solicitud.estado_solicitado;
+            // Turno para validar contra el horario asignado
+            const asistencia = await asistenciaRepo().findOne({
+                where: { id_asistencia: solicitud.id_asistencia },
+                relations: { turno: true },
+            });
+            const turno = asistencia?.turno;
+
+            const aMinutos = (t) => {
+                if (!t) return null;
+                const [h, m] = String(t).split(":").map(Number);
+                if (Number.isNaN(h) || Number.isNaN(m)) return null;
+                return h * 60 + m;
+            };
+
+            // Horas resultantes tras aplicar la corrección (solicitadas o actuales)
+            const ingresoEff = solicitud.hora_ingreso_solicitada || registro.hora_ingreso;
+            const egresoEff  = solicitud.hora_egreso_solicitada  || registro.hora_egreso;
+            const minIngreso = aMinutos(ingresoEff);
+            const minEgreso  = aMinutos(egresoEff);
+
+            // Validaciones de coherencia (bug #2) -- mismas reglas que la edición directa
+            if (egresoEff && !ingresoEff) {
+                return [null, "No se puede registrar una hora de egreso sin una hora de ingreso."];
+            }
+            if (minIngreso != null && minEgreso != null && minEgreso < minIngreso) {
+                return [null, "La hora de egreso no puede ser anterior a la hora de ingreso."];
+            }
+            if (turno && minIngreso != null) {
+                const minSalidaTurno = aMinutos(turno.hora_salida);
+                if (minSalidaTurno != null && minIngreso > minSalidaTurno) {
+                    return [null, "La hora de ingreso no puede ser posterior a la hora de salida del turno."];
+                }
+            }
+
+            // Aplicar horas
             if (solicitud.hora_ingreso_solicitada) registro.hora_ingreso = solicitud.hora_ingreso_solicitada;
-            if (solicitud.hora_egreso_solicitada) registro.hora_egreso = solicitud.hora_egreso_solicitada;
+            if (solicitud.hora_egreso_solicitada)  registro.hora_egreso  = solicitud.hora_egreso_solicitada;
+
+            // Estado coherente (bug #4): si viene explícito se respeta; si no, se
+            // deriva para no quedar con ingreso pero estado EN_ESPERA, o con
+            // salida marcada sin cerrar el día (lo que dejaba el QR activo).
+            if (solicitud.estado_solicitado) {
+                registro.estado = solicitud.estado_solicitado;
+            } else if (registro.hora_egreso) {
+                registro.estado = "RETIRADO";
+            } else if (registro.hora_ingreso) {
+                const minTurnoIngreso = aMinutos(turno?.hora_ingreso);
+                registro.estado = (minTurnoIngreso != null && aMinutos(registro.hora_ingreso) <= minTurnoIngreso + 10)
+                    ? "PRESENTE"
+                    : "ATRASO";
+            }
+
             registro.editado_por = id_resuelve;
             registro.fecha_edicion = new Date();
             await asistenciaEmpleadoRepo().save(registro);

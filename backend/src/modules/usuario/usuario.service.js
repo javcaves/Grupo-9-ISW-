@@ -16,37 +16,6 @@ import { ILike } from 'typeorm';
 import bcrypt from "bcrypt";
 import * as NotificacionService from '../notificaciones/notificacion.service.js';
 
-//obtener usuario por query (id o rut)
-/*
-export async function getUsuarioService(query) {
-    try{
-        const usuarioRepository = AppDataSource.getRepository("Usuario");
-        const {id_usuario, rut} = query;
-
-        const queryBuilder = usuarioRepository.createQueryBuilder("usuario");
-
-        if(id_usuario){
-            queryBuilder.where("usuario.id_usuario = :id_usuario", { id_usuario });
-        } else if (rut){
-            queryBuilder.where("usuario.rut = :rut", { rut });
-        } else{
-            return[null, "debe proporcionar id o rut de usuario"];
-        }
-
-        const usuario = await queryBuilder.getOne();
-
-        if(!usuario){
-            return[null, "usuario no encontrado"];
-        }
-
-        return[usuario, null];
-    } catch(error){
-        console.log("error en getUsuarioService", error);
-        return[null, "error interno del servidor"];
-    }
-    
-};*/
-
 //crear**************
 export const crearUsuario = async(data, ejecutor)=>{
     try{
@@ -176,12 +145,8 @@ export const eliminarUsuarioService = async(id, ejecutor) =>{
 
             if (usuario.rol === 'ROOT') throw new Error('ROOT es intocable');
 
-            if(ejecutor.rol === 'ADMIN' && usuario.creado_por !== ejecutor.id_usuario){
-                throw new Error('solo puedes eliminar usuarios que tu mismo creaste');
-            }
-
             usuario.activo = false;
-            usuario.rol = "SIN_ASIGNAR";
+            usuario.rol = "SIN_ASIG";
             usuario.fecha_actualizacion = new Date();
 
             await usuarioRepository.save(usuario);
@@ -189,7 +154,7 @@ export const eliminarUsuarioService = async(id, ejecutor) =>{
 
         }catch(error){
             console.log("error en eliminarUsuarioService", error);
-            return[null, "error interno del servidor"];
+            return[null, error.message || "error interno del servidor"];
         }
     };
 

@@ -225,6 +225,7 @@ export const registrarMovimiento = async (data) => {
             } else if (TIPOS_QUE_RESTAN.includes(data.tipo_movimiento)) {
                 itemProj.cantidad -= data.cantidad;
             }
+            itemProj.ultima_revision = new Date();
             await repoItemProj.save(itemProj);
 
             return [guardado, null];
@@ -417,10 +418,13 @@ export const eliminarMovimiento = async (id_mov) => {
 };
 
 // ================= LECTURAS ADICIONALES =================
-export const obtenerMovimientos = async () => {
-    return await movRepo().find({ 
+export const obtenerMovimientos = async (filtros = {}) => {
+    const where = {};
+    if (filtros.id_proyecto) where.id_proyecto = Number(filtros.id_proyecto);
+    return await movRepo().find({
+        where,
         order: { fecha: 'DESC' },
-        relations: { emisor: true }
+        relations: { emisor: true, proyecto: true },
     });
 };
 
@@ -494,12 +498,14 @@ export const vincularItemAProyecto = async (data) => {
         return [null, 'Este item ya está vinculado a este proyecto.'];
     }
 
+    const ahora = new Date();
     if (itemProj) {
         itemProj.activo = true;
         itemProj.cantidad = cantidad;
         itemProj.stock_minimo = stock_minimo;
+        itemProj.ultima_revision = ahora;
     } else {
-        itemProj = repo.create({ id_item, id_proyecto, cantidad, stock_minimo, activo: true });
+        itemProj = repo.create({ id_item, id_proyecto, cantidad, stock_minimo, activo: true, ultima_revision: ahora });
     }
 
     const guardado = await repo.save(itemProj);
