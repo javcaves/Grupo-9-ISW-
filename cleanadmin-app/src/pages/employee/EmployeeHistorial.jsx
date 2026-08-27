@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/Card";
 import { AsistenciaService } from "../../api/asistencia.service";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 import { formatearFecha, parseFechaLocal } from "../../utils/formatters";
 import SolicitarCorreccionAsistenciaModal from "../../components/modals/SolicitarCorreccionAsistenciaModal";
 import CambiarMiPasswordModal from "../../components/modals/CambiarMiPasswordModal";
@@ -18,6 +19,7 @@ export default function EmployeeHistorial() {
 
   const navigate = useNavigate();
   const { user, logoutUser } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
@@ -137,21 +139,21 @@ export default function EmployeeHistorial() {
         <div className="grid grid-cols-3 gap-3">
 
           <div className="rounded-2xl p-4 text-center"
-            style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+            style={{ background: "var(--bg-card)", border: "1px solid var(--card-border)" }}>
             <i className="fas fa-calendar-check text-blue-500 text-xl mb-2" />
             <div className="text-2xl font-bold">{monthlySummary.workedDays}</div>
             <div className="text-xs text-gray-500">Días</div>
           </div>
 
           <div className="rounded-2xl p-4 text-center"
-            style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+            style={{ background: "var(--bg-card)", border: "1px solid var(--card-border)" }}>
             <i className="fas fa-clock text-amber-500 text-xl mb-2" />
             <div className="text-2xl font-bold">{monthlySummary.delays}</div>
             <div className="text-xs text-gray-500">Retrasos</div>
           </div>
 
           <div className="rounded-2xl p-4 text-center"
-            style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+            style={{ background: "var(--bg-card)", border: "1px solid var(--card-border)" }}>
             <i className="fas fa-user-check text-green-500 text-xl mb-2" />
             <div className="text-2xl font-bold">{monthlySummary.absences}</div>
             <div className="text-xs text-gray-500">Ausencias</div>
@@ -203,7 +205,7 @@ export default function EmployeeHistorial() {
             >
               <summary
                 className="cursor-pointer select-none px-4 py-3 text-sm font-semibold flex items-center justify-between"
-                style={{ background: "rgba(255,255,255,.5)" }}
+                style={{ background: "var(--bg-card)" }}
               >
                 <span className="capitalize">{grupo.etiqueta}</span>
                 <span className="text-xs font-normal text-gray-400">
@@ -215,7 +217,7 @@ export default function EmployeeHistorial() {
                 {grupo.registros.map((record) => (
                   <div key={record.id_asistencia}
                     className="rounded-2xl p-4"
-                    style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--card-border)" }}>
 
                     <div className="font-semibold mb-3">{formatearFecha(record.fecha)}</div>
 
@@ -296,7 +298,7 @@ export default function EmployeeHistorial() {
             return (
               <div key={solicitud.id_solicitud}
                 className="flex items-center justify-between rounded-2xl p-4"
-                style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+                style={{ background: "var(--bg-card)", border: "1px solid var(--card-border)" }}>
 
                 <div className="min-w-0">
                   <span className="text-sm font-medium">{formatearFecha(solicitud.fecha_solicitud)}</span>
@@ -313,6 +315,35 @@ export default function EmployeeHistorial() {
 
         </div>
 
+      </Card>
+
+      {/* TEMA (claro / oscuro) */}
+      <Card>
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center justify-between gap-3 py-4 rounded-2xl font-semibold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          style={{
+            background: "var(--card-bg)",
+            border: "1px solid var(--card-border)",
+            color: "var(--card-title)",
+          }}
+        >
+          <span className="flex items-center gap-3">
+            <i className={`fas ${isDarkMode ? "fa-moon" : "fa-sun"}`} />
+            {isDarkMode ? "Modo oscuro" : "Modo claro"}
+          </span>
+
+          {/* Switch visual */}
+          <span
+            className="relative inline-flex items-center w-11 h-6 rounded-full transition-colors shrink-0"
+            style={{ background: isDarkMode ? "#7c3aed" : "#cbd5e1" }}
+          >
+            <span
+              className="inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform"
+              style={{ transform: isDarkMode ? "translateX(22px)" : "translateX(2px)" }}
+            />
+          </span>
+        </button>
       </Card>
 
       {/* CAMBIAR CONTRASEÑA */}

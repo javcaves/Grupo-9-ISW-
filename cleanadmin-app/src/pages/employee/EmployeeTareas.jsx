@@ -247,12 +247,7 @@ export default function EmployeeTareas() {
                   </div>
                 ) : (
                   <button
-                    className="mt-2 w-full rounded-xl py-3 font-semibold text-sm border transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{
-                      color: "#059669",
-                      borderColor: "#a7f3d0",
-                      background: "#ecfdf5",
-                    }}
+                    className="mt-2 w-full rounded-xl py-3 font-semibold text-sm border transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
                     disabled={completandoId === tareaInterna?.id_tarea}
                     onClick={() => marcarComoCompletada(tareaInterna?.id_tarea)}
                   >

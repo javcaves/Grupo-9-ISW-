@@ -10,24 +10,27 @@ export const FormContainer = ({
   children
 }) => {
   return (
-    <div className="w-full bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-      {/* Cabecera del Formulario */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/50">
-        <h2 className="text-xl font-bold text-gray-800">{title}</h2>
-        {description && (
-          <p className="text-sm text-gray-500 mt-1">{description}</p>
-        )}
-      </div>
+    // Sin tarjeta propia: el Modal ya aporta el contenedor (fondo, borde,
+    // sombra, padding) y su cabecera. Antes este componente dibujaba una
+    // segunda tarjeta con borde/sombra y barras grises, lo que se veía como
+    // "un modal dentro de otro". Ahora solo aporta el encabezado del
+    // formulario, los campos y el pie de botones.
+    <div className="w-full">
+      {(title || description) && (
+        <div className="mb-5">
+          {title && <h2 className="text-base font-semibold text-gray-800">{title}</h2>}
+          {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
+        </div>
+      )}
 
-      {/* Cuerpo y Lógica del Formulario */}
       <form onSubmit={onSubmit}>
-        {/* Aquí se inyectan los campos personalizados de cada área */}
-        <div className="p-6 space-y-5">
+        {/* Campos personalizados de cada área */}
+        <div className="space-y-5">
           {children}
         </div>
 
-        {/* Pie del formulario (Botones de Acción) */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+        {/* Pie del formulario (botones de acción) */}
+        <div className="pt-5 mt-5 border-t border-gray-200 flex justify-end gap-3">
           {onCancel && (
             <button
               type="button"

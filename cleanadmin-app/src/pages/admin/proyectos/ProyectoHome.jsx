@@ -283,7 +283,7 @@ export default function ProyectoHome({ rol, onSeleccionarProyecto }) {
                     {menuAbierto && (
                       <div
                         className="absolute right-0 top-9 z-20 w-40 rounded-xl border shadow-lg py-1 text-sm"
-                        style={{ background: "var(--card-bg)", borderColor: "var(--card-border)" }}
+                        style={{ background: "var(--card-bg)", borderColor: "var(--card-border)", backdropFilter: "blur(16px)" }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button

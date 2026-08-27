@@ -407,7 +407,7 @@ async function registrarQR(datosQR) {
             return (
               <div key={solicitud.id_solicitud}
                 className="flex items-center justify-between rounded-2xl p-3"
-                style={{ background: "rgba(255,255,255,.75)", border: "1px solid var(--card-border)" }}>
+                style={{ background: "var(--bg-card)", border: "1px solid var(--card-border)" }}>
                 <div className="min-w-0">
                   <span className="text-xs font-medium">{formatearFecha(solicitud.fecha_solicitud)}</span>
                   <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]">{solicitud.motivo}</div>
