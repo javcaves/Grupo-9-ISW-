@@ -63,12 +63,17 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
           const resItem = await ItemsService.obtener(match.id_item);
           if (!cancelado) setItemExistente(extraerData(resItem));
         } else {
-          // item nuevo: pre-llenamos el nombre propuesto, el resto lo define quien aprueba
+          // FIX: item nuevo -- pre-llenamos con lo que el EMISOR propuso
+          // (nombre, tipo, unidad_medida, control). Antes se blanqueaban
+          // tipo/unidad/control, descartando lo que el solicitante había
+          // llenado en CrearItemProyectoModal: llegaba "solo el nombre".
+          // Ahora quien aprueba ve la propuesta y puede ajustarla o
+          // confirmarla tal cual.
           setFormData({
             nombre: match.item_sugerido || '',
-            tipo: '',
-            unidad_medida: '',
-            control: '',
+            tipo: match.tipo || '',
+            unidad_medida: match.unidad_medida || '',
+            control: match.control || '',
           });
         }
       } catch (error) {
@@ -83,6 +88,17 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
   }, [isOpen, idMovimiento]);
 
   const esItemNuevo = solicitud && !solicitud.id_item;
+
+  // El backend trae las relaciones proyecto y emisor (obtenerSolicitudesPendientes
+  // usa relations: { proyecto: true, emisor: true }). Mostramos el nombre real y
+  // dejamos el ID como fallback por si alguna llegara sin la relación cargada.
+  const nombreProyecto = solicitud?.proyecto?.nombre_proy
+    ? solicitud.proyecto.nombre_proy
+    : `#${solicitud?.id_proyecto ?? '-'}`;
+
+  const nombreEmisor = solicitud?.emisor
+    ? `${solicitud.emisor.nombre ?? ''} ${solicitud.emisor.apellido ?? ''}`.trim() || `Usuario #${solicitud.id_emisor}`
+    : `Usuario #${solicitud?.id_emisor ?? '-'}`;
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -139,8 +155,8 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
             className="rounded-2xl p-4 border space-y-2"
             style={{ background: 'var(--bg-color)', borderColor: 'var(--border-color)' }}
           >
-            <Dato label="Proyecto" valor={`#${solicitud.id_proyecto}`} />
-            <Dato label="Solicitado por" valor={`Usuario #${solicitud.id_emisor}`} />
+            <Dato label="Proyecto" valor={nombreProyecto} />
+            <Dato label="Solicitado por" valor={nombreEmisor} />
             <Dato label="Cantidad solicitada" valor={solicitud.cantidad} />
             {solicitud.descripcion && <Dato label="Descripción" valor={solicitud.descripcion} />}
           </div>
@@ -160,7 +176,10 @@ export default function SolicitudResolverModal({ isOpen, idMovimiento, onClose }
           {esItemNuevo && (
             <div className="space-y-3">
               <p className="text-xs font-bold uppercase tracking-wide text-indigo-500">
-                Item nuevo — completa antes de aprobar
+                Item nuevo — propuesto por quien solicita
+              </p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Estos son los datos que propuso el solicitante. Puedes confirmarlos tal cual o ajustarlos antes de aprobar.
               </p>
 
               <div>
