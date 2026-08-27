@@ -155,7 +155,11 @@ export default function EmployeeAsistencia() {
       }
     }
 
-    cargarDatos();
+        cargarDatos();
+    // Auto-refresco: refleja correcciones aprobadas por el encargado sin que
+    // el empleado tenga que recargar la página a mano.
+    const intervaloRefresco = setInterval(cargarDatos, 30000);
+    return () => clearInterval(intervaloRefresco);
   }, [activeShiftId]);
 
   function abrirScanner(tipo) {

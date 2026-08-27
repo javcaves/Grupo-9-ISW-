@@ -91,6 +91,17 @@ export const completar = async (req, res) => {
     } catch (error) { return handleErrorServer(res, 500, "Error al completar la tarea", error.message); }
 };
 
+// Retractar (el empleado deshace su propia tarea finalizada)
+export const retractar = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const idEmpleado = req.user.id_usuario;
+        const [resultado, err] = await TareaService.retractarTarea(id, idEmpleado);
+        if (err) return handleErrorClient(res, 400, "No se pudo retractar la tarea", err);
+        return handleSuccess(res, 200, "Tarea retractada; vuelve a estar en proceso", resultado);
+    } catch (error) { return handleErrorServer(res, 500, "Error al retractar la tarea", error.message); }
+};
+
 // Empleados disponibles para asignar (según el turno que cubre la fecha/hora de la tarea)
 export const obtenerEmpleadosDisponibles = async (req, res) => {
     try {

@@ -20,7 +20,7 @@ export default function EmployeeTareas() {
   // Id de la tarea que se está marcando como completada en este momento
   // (para deshabilitar solo ese botón y evitar doble clic, no toda la lista).
   const [completandoId, setCompletandoId] = useState(null);
-
+  const [retractandoId, setRetractandoId] = useState(null);
   // =========================
   // CARGA DE DATOS
   // =========================
@@ -79,6 +79,18 @@ export default function EmployeeTareas() {
       toast.error(err?.message || "No se pudo marcar la tarea como completada.");
     } finally {
       setCompletandoId(null);
+    }
+  }
+    async function retractarTareaHandler(idTarea) {
+    setRetractandoId(idTarea);
+    try {
+      await TareaService.retractar(idTarea);
+      await cargarTareas();
+    } catch (err) {
+      console.error("[Tareas] Error al retractar la tarea:", err);
+      toast.error(err?.message || "No se pudo retractar la tarea.");
+    } finally {
+      setRetractandoId(null);
     }
   }
 
@@ -211,9 +223,22 @@ export default function EmployeeTareas() {
                 </div>
 
                 {estadoActual === "FINALIZADA" ? (
-                  <div className="mt-2 w-full rounded-xl py-3 text-center text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
-                    <i className="fas fa-circle-check mr-2"></i>
-                    Tarea completada
+                  <div className="mt-2 space-y-2">
+                    <div className="w-full rounded-xl py-3 text-center text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
+                      <i className="fas fa-circle-check mr-2"></i>
+                      Tarea completada
+                    </div>
+                    <button
+                      className="w-full rounded-xl py-2.5 font-semibold text-sm border transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100"
+                      disabled={retractandoId === tareaInterna?.id_tarea}
+                      onClick={() => retractarTareaHandler(tareaInterna?.id_tarea)}
+                    >
+                      {retractandoId === tareaInterna?.id_tarea ? (
+                        <><i className="fas fa-spinner fa-spin mr-2"></i>Retractando...</>
+                      ) : (
+                        <><i className="fas fa-rotate-left mr-2"></i>Retractar (marqué por error)</>
+                      )}
+                    </button>
                   </div>
                 ) : ["CANCELADA", "INCOMPLETA"].includes(estadoActual) ? null : estadoActual !== "EN_PROCESO" ? (
                   <div className="mt-2 w-full rounded-xl py-3 text-center text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-200">
